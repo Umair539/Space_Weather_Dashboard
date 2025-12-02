@@ -1,20 +1,22 @@
 import pandas as pd
-from src.extract.extract_mag import extract_mag
-from src.extract.extract_plasma import extract_plasma
-
+from src.extract.extract_data_from_json import extract_data_from_json
 from src.utils.logging_utils import setup_logger
 
 logger = setup_logger("extract_data", "extract_data.log")
 
 mag_url = 'https://services.swpc.noaa.gov/products/solar-wind/mag-7-day.json'
 plasma_url = 'https://services.swpc.noaa.gov/products/solar-wind/plasma-7-day.json'
+dst_url = 'https://services.swpc.noaa.gov/products/kyoto-dst.json'
+kp_url = 'https://services.swpc.noaa.gov/products/noaa-planetary-k-index.json'
 
 def extract_data():
     try:
-        mag = extract_mag(mag_url)
-        plasma = extract_plasma(plasma_url)
+        mag = extract_data_from_json(mag_url)
+        plasma = extract_data_from_json(plasma_url)
+        dst = extract_data_from_json(dst_url)
+        kp = extract_data_from_json(kp_url)
     
-        return (mag, plasma)
+        return (mag, plasma, dst, kp)
     
     except Exception as e:
         logger.error(f"Data extraction failed: {str(e)}")

@@ -24,6 +24,7 @@ with col2:
     features = st.multiselect(
         label = 'Select features',
         options = solar.columns.str.title(),
+        default = solar.columns.str.title()[:2]
     )
     
 with col3:
@@ -64,7 +65,6 @@ s = st.slider(
     )
 
 st.markdown(f'{df.index[s]} to {df.index[s+win[resolution]-1]}')
-#st.dataframe(df)
 
 label = {
     'Density':"Particle density (n/cm3)",
@@ -74,7 +74,7 @@ label = {
     'Bz':'IMF Z-component (nT)',
     'Bt': 'IMF magnitude (nT)'
 }
-#st.dataframe(df)
+
 for feature in features:
     
     st.markdown(

@@ -24,7 +24,7 @@ def filter_columns(mag):
     return mag
 
 def format_column_name(mag):
-    mag = mag.rename(columns={'bz_gsm': 'bz'})
+    mag = mag.rename(columns={'bz_gsm': 'bz',})
     return mag
 
 def set_time_index(df):
@@ -32,7 +32,7 @@ def set_time_index(df):
     time_index_series = pd.to_datetime(df['time_tag']) 
     df = df.set_index(time_index_series)
     df = df.drop(columns=['time_tag'])
-    df.index.name = 'time_tag'
+    df.index.name = 'time'
     return df
 
 def match_time_index(mag, plasma):
@@ -49,13 +49,13 @@ def join_mag_plasma(mag, plasma):
     solar = plasma.join(mag, how='outer')
     return solar
 
-def cast_to_float(solar):
-    solar = solar.astype('float64')
-    return solar
+def cast_to_float(df):
+    df = df.astype('float64')
+    return df
 
-def interpolate_missing_data(solar):
-    solar = solar.interpolate(method = 'linear', axis = 0).ffill().bfill()
-    return solar
+def interpolate_missing_data(df):
+    df = df.interpolate(method = 'linear', axis = 0).ffill().bfill()
+    return df
 
 def add_pressure_column(solar):
     proton_mass = 1.6726e-27
