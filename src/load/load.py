@@ -15,9 +15,9 @@ def load_raw_data(extracted_data):
 def load_transformed_data(transformed_data):
     try:
         solar, solar_agg = transformed_data
-        solar = solar.rename_axis('time_tag')
+        solar = solar.rename_axis('time')
         solar.to_csv('data/transformed/solar.csv', index=True)
-        solar_agg = solar_agg.rename_axis('time_tag')
+        solar_agg = solar_agg.rename_axis('time')
         solar_agg.to_csv('data/transformed/solar_agg.csv', index=True)
         return
     except Exception as e:

@@ -4,34 +4,87 @@ import pandas as pd
 st.title("Real Time Solar Wind Properties")
 
 solar = pd.read_csv('data/transformed/solar.csv')
-solar.loc[:, 'time_tag'] = pd.to_datetime(solar['time_tag']) 
-solar.set_index('time_tag', inplace=True)
+solar.loc[:, 'time'] = pd.to_datetime(solar['time']) 
+solar.set_index('time', inplace=True)
 
-solar_agg = pd.read_csv('data/transformed/solar.csv')
-solar_agg.loc[:, 'time_tag'] = pd.to_datetime(solar_agg['time_tag']) 
-solar_agg.set_index('time_tag', inplace=True)
+solar_agg = pd.read_csv('data/transformed/solar_agg.csv')
+solar_agg.loc[:, 'time'] = pd.to_datetime(solar_agg['time']) 
+solar_agg.set_index('time', inplace=True)
 
-feature = st.selectbox(
-    label = 'Select feature',
-    options = solar_agg.columns[:],
-    index = 0
-)
+col1, col2, col3 = st.columns(3)
 
-st.dataframe(
-    solar_agg[[str(feature)]]
-)
-
-min_epoch = 0
-max_epoch = len(solar_agg)-24*60
-s = st.slider(
-    "",
-    min_epoch,
-    max_epoch,
-    step = 1,
-    label_visibility='hidden'
+with col1:
+    resolution = st.selectbox(
+        label = 'Select time resolution',
+        options = ['Minutely', 'Hourly'],
+        index = 0
     )
 
+with col2:
+    features = st.multiselect(
+        label = 'Select features',
+        options = solar.columns.str.title(),
+    )
+    
+with col3:
+    aggregation = st.selectbox(
+        label = 'Select aggregation method',
+        options = ['Mean', 'Standard deviation', 'Interquartile range'],
+        disabled = (resolution == 'Minutely')
+    )
 
-st.line_chart(
-    solar_agg[[str(feature)]].iloc[s:s+24*60]
-)
+if resolution == 'Hourly':
+    suffix = {
+        'Mean':'_mean',
+        'Standard deviation':'_std',
+        'Interquartile range':'_iqr'
+    }
+    filtered_cols = [col for col in solar_agg.columns if col.endswith(suffix[aggregation])]
+    df = solar_agg[filtered_cols]
+    rename_mapping = {col: col.replace(suffix[aggregation], '') for col in filtered_cols}
+    df.rename(columns=rename_mapping, inplace=True)
+else:
+    df = solar
+
+win = {
+    'Minutely': 24*60,
+    'Hourly': 24
+}
+
+min_val = 0
+max_val = len(df)-win[resolution] + (-1 if resolution == 'Hourly' else 0)
+
+s = st.slider(
+    "",
+    min_val,
+    max_val,
+    value = max_val,
+    step = 1,
+    label_visibility = 'hidden'
+    )
+
+st.markdown(f'{df.index[s]} to {df.index[s+win[resolution]-1]}')
+#st.dataframe(df)
+
+label = {
+    'Density':"Particle density (n/cm3)",
+    'Speed':'Solar wind speed (km/s)',
+    'Temperature':'Solar wind temperature (K)',
+    'Pressure':'Solar wind dynamic pressure (nPa)',
+    'Bz':'IMF Z-component (nT)',
+    'Bt': 'IMF magnitude (nT)'
+}
+#st.dataframe(df)
+for feature in features:
+    
+    st.markdown(
+    f"<div style='text-align: center;'><h3>Solar Wind {feature}</h3></div>", 
+    unsafe_allow_html=True
+    )
+    
+    st.line_chart(
+        df[[str(feature.lower())]].iloc[s:s+win[resolution]],
+        x_label='Time',
+        y_label=label[str(feature)],
+        color="#ff0000"
+    )

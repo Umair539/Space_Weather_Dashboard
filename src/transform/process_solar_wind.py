@@ -3,6 +3,7 @@ import pandas as pd
 def process_solar_wind(mag, plasma):
     
     mag = filter_columns(mag)
+    mag = format_column_name(mag)
 
     mag = set_time_index(mag)
     plasma = set_time_index(plasma)
@@ -19,7 +20,11 @@ def process_solar_wind(mag, plasma):
     return solar
 
 def filter_columns(mag):
-    mag = mag[['time_tag', 'bz_gsm']]
+    mag = mag[['time_tag', 'bz_gsm', 'bt']]
+    return mag
+
+def format_column_name(mag):
+    mag = mag.rename(columns={'bz_gsm': 'bz'})
     return mag
 
 def set_time_index(df):
