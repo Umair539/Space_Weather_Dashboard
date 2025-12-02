@@ -16,6 +16,7 @@ def process_solar_wind(mag, plasma):
     solar = interpolate_missing_data(solar)
     
     solar = add_pressure_column(solar)
+    solar = set_index_name(solar)
     
     return solar
 
@@ -28,11 +29,10 @@ def format_column_name(mag):
     return mag
 
 def set_time_index(df):
-    # new column was made and then assigned as index since assigning directly caused errors
+    # new column was made and then assigned as index since assigning directly caused future warnings to appear
     time_index_series = pd.to_datetime(df['time_tag']) 
     df = df.set_index(time_index_series)
     df = df.drop(columns=['time_tag'])
-    df.index.name = 'time'
     return df
 
 def match_time_index(mag, plasma):
@@ -66,3 +66,7 @@ def add_pressure_column(solar):
         * 1e9 #to convert to nano pascals
         )
     return solar
+
+def set_index_name(df):
+    df.index.name = 'time'
+    return df
