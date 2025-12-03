@@ -1,8 +1,13 @@
+from src.transform.process_solar_wind import round_values
+
+
 def aggregate_solar_wind(solar):
 
     solar_agg = resample(solar)
 
     solar_agg = join_columns(solar_agg)
+
+    solar_agg = round_values(solar_agg)
 
     return solar_agg
 

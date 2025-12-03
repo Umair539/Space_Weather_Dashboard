@@ -1,7 +1,10 @@
 import streamlit as st
 import pandas as pd
+from streamlit_autorefresh import st_autorefresh
 
-st.title("Real Time Geomgagnetic Indices")
+st_autorefresh(60000)
+
+st.title("Real Time Geomgagnetic Indices 📡")
 
 dst = pd.read_csv("data/transformed/dst.csv")
 dst.loc[:, "time"] = pd.to_datetime(dst["time"])

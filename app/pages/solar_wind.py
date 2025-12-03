@@ -4,7 +4,7 @@ from streamlit_autorefresh import st_autorefresh
 
 st_autorefresh(30000)
 
-st.title("Real Time Solar Wind Properties")
+st.title("Real Time Solar Wind Properties 🛰️")
 
 solar = pd.read_csv("data/transformed/solar.csv")
 solar.loc[:, "time"] = pd.to_datetime(solar["time"])
@@ -88,7 +88,7 @@ with c2:
     )
 
 label = {
-    "Density": "Particle density (n/cm3)",
+    "Density": "Particle density (p/cm3)",
     "Speed": "Solar wind speed (km/s)",
     "Temperature": "Solar wind temperature (K)",
     "Pressure": "Solar wind dynamic pressure (nPa)",

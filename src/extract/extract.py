@@ -4,12 +4,12 @@ from src.utils.logging_utils import setup_logger
 
 logger = setup_logger("extract_data", "extract_data.log")
 
-mag_url = "https://services.swpc.noaa.gov/products/solar-wind/mag-7-day.json"
-plasma_url = """"
-        https://services.swpc.noaa.gov/products/solar-wind/plasma-7-day.json
-    """
-dst_url = "https://services.swpc.noaa.gov/products/kyoto-dst.json"
-kp_url = "https://services.swpc.noaa.gov/products/noaa-planetary-k-index.json"
+base_url = "https://services.swpc.noaa.gov/products/"
+
+mag_url = base_url + "solar-wind/mag-7-day.json"
+plasma_url = base_url + "solar-wind/plasma-7-day.json"
+dst_url = base_url + "kyoto-dst.json"
+kp_url = base_url + "noaa-planetary-k-index.json"
 
 
 def extract_data():

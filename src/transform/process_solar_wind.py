@@ -17,6 +17,7 @@ def process_solar_wind(mag, plasma):
     solar = handle_missing_data(solar)
 
     solar = add_pressure_column(solar)
+    solar = round_values(solar)
     solar = set_index_name(solar)
 
     return solar
@@ -82,6 +83,10 @@ def add_pressure_column(solar):
         * 1e9  # to convert to nano pascals
     )
     return solar
+
+
+def round_values(df):
+    return df.round(2)
 
 
 def set_index_name(df):
