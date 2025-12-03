@@ -11,15 +11,20 @@ kp_url = 'https://services.swpc.noaa.gov/products/noaa-planetary-k-index.json'
 
 def extract_data():
     try:
+        logger.info("Starting data extraction process")
+        
         mag = extract_data_from_json(mag_url)
         plasma = extract_data_from_json(plasma_url)
         dst = extract_data_from_json(dst_url)
         kp = extract_data_from_json(kp_url)
-    
+
+        logger.info("Completed data extraction process")
+        
         return (mag, plasma, dst, kp)
     
     except Exception as e:
-        logger.error(f"Data extraction from json failed: {str(e)}. Switching to most recent saved files")
+        logger.error(f"Data extraction from json failed: {str(e)}.")
+        logger.info("Retrieving raw data from previous successful extraction.")
         
         try:
             plasma = pd.read_csv('data/raw/plasma.csv')

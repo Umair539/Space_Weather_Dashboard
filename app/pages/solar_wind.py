@@ -2,7 +2,7 @@ import streamlit as st
 import pandas as pd
 from streamlit_autorefresh import st_autorefresh
 
-st_autorefresh(60000)
+st_autorefresh(30000)
 
 st.title("Real Time Solar Wind Properties")
 
