@@ -1,5 +1,8 @@
 import streamlit as st
 import pandas as pd
+from streamlit_autorefresh import st_autorefresh
+
+st_autorefresh(60000)
 
 st.title("Real Time Solar Wind Properties")
 
@@ -43,7 +46,7 @@ if resolution == 'Hourly':
     filtered_cols = [col for col in solar_agg.columns if col.endswith(suffix[aggregation])]
     df = solar_agg[['time'] + filtered_cols]
     rename_mapping = {col: col.replace(suffix[aggregation], '') for col in filtered_cols}
-    df.rename(columns=rename_mapping, inplace=True)
+    df = df.rename(columns=rename_mapping)
 else:
     df = solar
 
@@ -64,7 +67,19 @@ s = st.slider(
     label_visibility = 'hidden'
     )
 
-st.markdown(f'{df['time'][s]} to {df['time'][s+win[resolution]-1]}')
+c1, c2 = st.columns(2)
+
+with c1:
+    st.markdown(
+        f"<div style='text-align: left;'>Displaying data from {df['time'][s]} to {df['time'][s+win[resolution]-1]}</div>",
+        unsafe_allow_html=True
+    )
+
+with c2:
+    st.markdown(
+        f"<div style='text-align: right;'>Data last updated at {solar["time"].iloc[-1]}</div>",
+        unsafe_allow_html=True
+    )
 
 label = {
     'Density':"Particle density (n/cm3)",
@@ -90,3 +105,18 @@ for feature in features:
         y_label=label[str(feature)],
         color="#ff0000"
     )
+    
+with st.expander("More information on Solar Wind"):
+    st.markdown("""
+        The solar wind is a continuous stream of charged particles
+        (plasma) emmited by the Sun's atmosphere. When this stream 
+        of particles reaches Earth, it transfers energy into the Earth's 
+        magnetosphere. Solar wind is made up of two components: the 
+        properties of the plasma (e.g. speed and density), and the 
+        properties of the embedded magnetic field, which is 
+        called the Interplanetary Magnetic Field (IMF). Geomganetic 
+        storms are typically triggered due to high speed solar wind 
+        combined with a strong IMF in the southward direction 
+        (Z-component). Storm intensity increases as the Bz value 
+        becomes more negative.
+    """)
