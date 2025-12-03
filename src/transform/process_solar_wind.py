@@ -77,7 +77,7 @@ def add_pressure_column(solar):
         proton_mass
         * solar["density"]
         * 1e6
-        * solar["speed"] ** 2
+        * (solar["speed"] ** 2)
         * 1e6
         * 1e9  # to convert to nano pascals
     )
