@@ -1,0 +1,16 @@
+[flake8]
+# Specify the directories to exclude
+exclude = 
+    .pytest_cache,
+    .venv,
+    __pycache__,
+    build,
+    dist,
+    data,
+    docs,
+    etl_example.egg-info,
+    htmlcov,
+    notebooks,
+    tests,
+
+ignore = E203
