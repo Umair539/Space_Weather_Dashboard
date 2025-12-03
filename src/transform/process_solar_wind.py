@@ -14,7 +14,7 @@ def process_solar_wind(mag, plasma):
     solar = join_mag_plasma(mag, plasma)
 
     solar = cast_to_float(solar)
-    solar = interpolate_missing_data(solar)
+    solar = handle_missing_data(solar)
 
     solar = add_pressure_column(solar)
     solar = set_index_name(solar)
@@ -66,7 +66,7 @@ def cast_to_float(df):
     return df
 
 
-def interpolate_missing_data(df):
+def handle_missing_data(df):
     df = df.interpolate(method="linear", axis=0).ffill().bfill()
     return df
 

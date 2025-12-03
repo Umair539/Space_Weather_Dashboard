@@ -12,7 +12,7 @@ def extract_data_from_json(url):
         # Fetch JSON data from NOAA and convert to DataFrame
         response = get_response(url)
         json_data = extract_json(response)
-        df = convert_to_df(json_data)
+        df = convert_json_to_df(json_data)
         return df
 
     except Exception as e:
@@ -27,5 +27,5 @@ def extract_json(response):
     return response.json()
 
 
-def convert_to_df(json_data):
+def convert_json_to_df(json_data):
     return pd.DataFrame(json_data[1:], columns=json_data[0])

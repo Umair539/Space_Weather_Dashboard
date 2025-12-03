@@ -1,0 +1,10 @@
+[run]
+omit = 
+    */__init__.py
+    tests/*
+
+[report]
+fail_under = 90
+
+[html]
+directory = htmlcov
