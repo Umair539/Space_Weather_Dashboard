@@ -13,6 +13,7 @@ def extract_data_from_json(url):
         response = get_response(url)
         json_data = extract_json(response)
         df = convert_json_to_df(json_data)
+        logger.info(f"Successfully retrieved data from {url}")
         return df
 
     except Exception as e:

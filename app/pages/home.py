@@ -1,6 +1,7 @@
 import streamlit as st
 import pandas as pd
 from streamlit_autorefresh import st_autorefresh
+import plotly.graph_objects as go
 
 st_autorefresh(60000)
 
@@ -31,9 +32,6 @@ dst.loc[:, "time"] = pd.to_datetime(dst["time"])
 kp = pd.read_csv("data/transformed/kp.csv")
 kp.loc[:, "time"] = pd.to_datetime(kp["time"])
 
-
-col1, col2, col3 = st.columns(3)
-
 speed_delta = solar["speed_mean"].iloc[-2] / solar["speed_mean"].iloc[-3]
 density_delta = solar["density_mean"].iloc[-2] / solar["density_mean"].iloc[-3]
 temp_delta = solar["temperature_mean"].iloc[-2] / solar["temperature_mean"].iloc[-3]
@@ -42,6 +40,66 @@ bz_delta = solar["bz_mean"].iloc[-2] / solar["bz_mean"].iloc[-3]
 bt_delta = solar["bt_mean"].iloc[-2] / solar["bt_mean"].iloc[-3]
 dst_delta = dst["dst"].iloc[-1] / dst["dst"].iloc[-2]
 kp_delta = kp["Kp"].iloc[-1] / kp["Kp"].iloc[-2]
+
+c1, c2 = st.columns((0.5, 0.5))
+
+with c1:
+    st.markdown("")
+    st.markdown("")
+    st.markdown(
+        f'<div style="font-size: 24px; text-align: center;">Dst Index: {dst["dst"].iloc[-1]} nT</div>',
+        unsafe_allow_html=True,
+    )
+    st.line_chart(
+        data=dst.iloc[-24:],
+        x="time",
+        y="dst",
+        x_label="Time",
+        y_label="Dst (nT)",
+        color="#ff0000",
+    )
+
+
+with c2:
+
+    step_colours = [
+        {"range": [0, 4.0], "color": "green"},
+        {"range": [4.0, 7.0], "color": "orange"},
+        {"range": [7.0, 9.0], "color": "red"},
+    ]
+
+    fig = go.Figure(
+        go.Indicator(
+            mode="gauge+number",
+            value=kp["Kp"].iloc[-1],
+            number={
+                "prefix": "Kp: ",
+            },
+            title={
+                "text": "Kp Index",
+                "font": {"size": 24},
+            },
+            gauge={
+                "shape": "angular",
+                "axis": {"range": [0, 9]},
+                "steps": step_colours,
+                "bar": {"color": "rgba(0, 0, 0, 0)"},
+                "threshold": {
+                    "line": {"color": "black", "width": 3},
+                    "value": kp["Kp"].iloc[-1],
+                    "thickness": 1,
+                },
+            },
+        )
+    )
+
+    fig.update_layout(
+        height=400,
+    )
+
+    st.plotly_chart(fig, width="stretch")
+
+col1, col2, col3 = st.columns(3)
 
 with col1:
     st.metric(
@@ -85,23 +143,5 @@ with col3:
         label="IMF Bt",
         value=f'{solar["bt_mean"].iloc[-2]} nT',
         delta=(f"{round(bt_delta * 100 - 100, 2)}%"),
-        border=True,
-    )
-
-c1, c2 = st.columns(2)
-
-with c1:
-    st.metric(
-        label="Dst Index",
-        value=f'{dst["dst"].iloc[-1]} nT',
-        delta=(f"{round(dst_delta * 100 - 100, 2)}%"),
-        border=True,
-    )
-
-with c2:
-    st.metric(
-        label="Kp Index",
-        value=f'{kp["Kp"].iloc[-1]} nT',
-        delta=(f"{round(kp_delta * 100 - 100, 2)}%"),
         border=True,
     )

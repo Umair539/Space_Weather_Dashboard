@@ -5,6 +5,8 @@ from src.load.load import load_transformed_data
 from src.utils.logging_utils import setup_logger
 import time
 
+loop = False
+
 
 def main():
     # Setup ETL pipeline logger
@@ -42,6 +44,9 @@ def main():
         except Exception as e:
             logger.error(f"ETL pipeline failed: {e}")
             print("ETL unsuccessful")
+
+        if not loop:
+            break
 
         print("Sleeping for 60 seconds")
         time.sleep(60)
