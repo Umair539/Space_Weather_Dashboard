@@ -26,6 +26,7 @@ class TestInterpolateMissingData:
             }
         )
         result = handle_missing_data(df)
+        assert result["speed"].iloc[4] == 5 and result["speed"].iloc[5] == 6
         assert result.isnull().sum().sum() == 0
 
     def test_handle_missing_data_forward_fills_data(self):
