@@ -4,8 +4,17 @@
 The goal of this project was to create a real-time space weather dashboard, a useful tool that provides people and organizations time to prepare for severe solar storms. This included creating a full ETL pipeline for space weather data with extraction, transformation and loading phases. The ETL pipeline was followed by an interactive web application developed using Streamlit.
 
 ---
-## Data
+## Data Source and Description
 The data used in this project is retrieved from the [NOAA Space Weather Prediction Center](https://www.swpc.noaa.gov) which is the  most reliable source of space weather data available. Each successful extraction retrieves the last week's worth of data, making it a suitable source for real-time analysis.
+
+The data used can be seen in the table below
+
+| Dataset | Resolution | Length | Primary Features Used | Notes |
+| :--- | :--- | :--- | :--- | :--- |
+| **Dst Index** | Hourly | 7 days | `time_tag`, `dst` | `dst` is the target variable. |
+| **Kp Index** | 3-Hourly | 7 days | `time_tag`, `Kp` | Features like `a_running` and `station_count` were available but not used. |
+| **Solar Wind Magnetometer** | Minute | 7 days | `time_tag`, `bt`, `bz_gsm` | Features like `by_gsm` and `bx_gsm` were available but not used. |
+| **Solar Wind Plasma** | Minute | 7 days | `time_tag`, `speed`, `density`, `temperature` | All primary features were used. |
 
 ---
 

@@ -4,7 +4,7 @@
 .venv/
 
 # Data
-*.csv
+data/transformed/
 
 # Logs
 logs/
