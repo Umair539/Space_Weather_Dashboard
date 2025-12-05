@@ -61,6 +61,7 @@ ETL pipeline will run only once.
 ## Future Work
 
  - Improve test coverage
+ - Improve real-time performance by making the app and ETL pipeline run together instead of running in separate terminals
  - Incorporate real-time sunspot data
  - Using real-time solar wind and sunspot data, provide real-time predictions for the Dst Index using a machine learning model
  - Deploy app on Streamlit Community Cloud
@@ -70,3 +71,5 @@ ETL pipeline will run only once.
 ## Challenges
 
  - Getting flake8 linting to work as the black formatter sometimes disagreed with flake8
+ - Unsure on how to implement more complex testing
+ - It was difficult to produce the guage chart for the Kp index on the app homepage
