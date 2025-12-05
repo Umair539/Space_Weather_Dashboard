@@ -9,4 +9,4 @@
  - [x] Incorporate real-time functionality into the streamlit app and ETL pipeline
  - [ ] Test the functions in the extract phase
  - [ ] Test the functions in the load phase
- - [ ] Test the functions in the transformation phase
+ - [x] Test the functions in the transformation phase

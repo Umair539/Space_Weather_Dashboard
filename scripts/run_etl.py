@@ -5,7 +5,7 @@ from src.load.load import load_transformed_data
 from src.utils.logging_utils import setup_logger
 import time
 
-loop = False
+loop = True
 
 
 def main():
