@@ -4,6 +4,7 @@
 .venv/
 
 # Data
+data/
 data/transformed/
 
 # Logs
