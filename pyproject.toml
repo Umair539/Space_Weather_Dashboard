@@ -3,7 +3,7 @@ requires = ["setuptools>=45", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "Capstone_Project"
+name = "Space_Weather_Dashboard"
 version = "0.1.0"
 description = "An ETL project for performing ETL on real time space weather data to display using a streamlit dashboard."
 authors = [{name = "Umair", email = "umohammed235@outlook.com"}]
