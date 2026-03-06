@@ -1,5 +1,4 @@
-# Capstone Project
-## Space Weather Dashboard
+# Space Weather Dashboard
 
 The goal of this project was to create a real-time space weather dashboard, a useful tool that provides people and organizations time to prepare for severe solar storms. This included creating a full ETL pipeline for space weather data with extraction, transformation and loading phases. The ETL pipeline was followed by an interactive web application developed using Streamlit.
 
