@@ -51,19 +51,16 @@ s = st.slider(
 )
 
 if resolution == "Hourly":
-    if aggregation == "Mean":
-        cols_to_query = []
-        for col in features:
+    cols_to_query = []
+    for col in features:
+        if aggregation == "Mean":
             cols_to_query.append(f", avg({col}) AS {col.lower()}")
-        cols_to_query = "".join(cols_to_query)
 
-    elif aggregation == "Standard deviation":
-        cols_to_query = []
-        for col in features:
+        elif aggregation == "Standard deviation":
             cols_to_query.append(
                 f", sqrt(avg({col}*{col}) - avg({col})*avg({col})) AS {col.lower()}"
             )
-        cols_to_query = "".join(cols_to_query)
+    cols_to_query = "".join(cols_to_query)
 
     data_query = (
         f"SELECT "
