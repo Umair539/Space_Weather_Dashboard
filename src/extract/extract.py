@@ -1,4 +1,3 @@
-import pandas as pd
 from src.extract.fetch_json import fetch_json
 from src.utils.logging_utils import setup_logger
 
@@ -26,21 +25,7 @@ def extract_data():
         return (mag, plasma, dst, kp)
 
     except Exception as e:
-        logger.error(f"Data extraction from json failed: {str(e)}.")
-        logger.info("Retrieving raw data from previous successful extraction.")
-
-        try:
-            plasma = pd.read_csv("data/raw/plasma.csv")
-            mag = pd.read_csv("data/raw/mag.csv")
-            kp = pd.read_csv("data/raw/kp.csv")
-            dst = pd.read_csv("data/raw/dst.csv")
-
-            return (mag, plasma, dst, kp)
-
-        except FileNotFoundError:
-            logger.error("No local files available")
-
-        except Exception as e:
-            logger.error(
-                f"An unexpected error occured when retrieving local files: {e}"
-            )
+        logger.error(f"Failed to retrieve NOAA JSON data: {str(e)}.")
+        logger.info(
+            "Transformation will be done on raw JSON data from previous successful extraction."
+        )
