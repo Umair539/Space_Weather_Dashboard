@@ -3,6 +3,13 @@ import streamlit as st
 
 def main():
 
+    if "noaa_data_db" not in st.session_state:
+        st.session_state.noaa_data_db = st.connection(
+            "noaa_data_db",
+            type="sql",
+            url="sqlite:///data/transformed/noaa_data.db?timeout=20",
+        )
+
     st.set_page_config(
         page_title="Space Weather Dashboard",
         page_icon="🪐",
@@ -17,10 +24,6 @@ def main():
     )
 
     pg = st.navigation([home_page, solar_wind_page, geomag_indices_page])
-
-    st.connection(
-        "noaa_db", type="sql", url="sqlite:///data/transformed/noaa_data.db?timeout=20"
-    )
 
     pg.run()
 
