@@ -137,7 +137,7 @@ chart_kp = (
         ),
         y=alt.Y("Kp:Q", title="Kp Index", scale=alt.Scale(domain=[0, 9])),
     )
-    .properties(height=300)
+    .properties(height=400)
 )
 
 st.altair_chart(chart_kp, use_container_width=True)
