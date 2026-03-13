@@ -29,13 +29,14 @@ with col3:
         disabled=(resolution == "Minutely"),
     )
 
-win = {"Minutely": 24 * 60, "Hourly": 24}
-
 if resolution == "Hourly":
-    query = f"SELECT COUNT(DISTINCT strftime('%Y-%m-%d %H', time)) AS unique_hour_count FROM solar;"
+    # f string needed to avoid python misinterpreting '%d'
+    query = f"SELECT COUNT(DISTINCT strftime('%Y-%m-%d %H', time)) AS unique_hour_count FROM solar{''};"
     total_rows = conn.query(query, ttl=60).squeeze()
 else:
     total_rows = conn.query("SELECT COUNT(*) FROM solar", ttl=60).squeeze()
+
+win = {"Minutely": 24 * 60, "Hourly": 24}
 
 min_val = 0
 max_val = total_rows - win[resolution] - (1 if resolution == "Hourly" else 0)
@@ -50,10 +51,19 @@ s = st.slider(
 )
 
 if resolution == "Hourly":
-    cols_to_query = []
-    for col in features:
-        cols_to_query.append(f", avg({col}) AS {col.lower()}")
-    cols_to_query = "".join(cols_to_query)
+    if aggregation == "Mean":
+        cols_to_query = []
+        for col in features:
+            cols_to_query.append(f", avg({col}) AS {col.lower()}")
+        cols_to_query = "".join(cols_to_query)
+
+    elif aggregation == "Standard deviation":
+        cols_to_query = []
+        for col in features:
+            cols_to_query.append(
+                f", sqrt(avg({col}*{col}) - avg({col})*avg({col})) AS {col.lower()}"
+            )
+        cols_to_query = "".join(cols_to_query)
 
     data_query = (
         f"SELECT "
@@ -65,36 +75,42 @@ if resolution == "Hourly":
         f"LIMIT {win[resolution]} "
         f"OFFSET {s};"
     )
-    x_axis = "hourly_bucket"
+    time_col = "hourly_bucket"
 else:
     cols_to_query = ", ".join(["time"] + features)
     data_query = (
         f"SELECT {cols_to_query} FROM solar LIMIT {win[resolution]} OFFSET {s};"
     )
-    x_axis = "time"
+    time_col = "time"
+
+plot_data = conn.query(data_query, ttl=60)
 
 c1, c2 = st.columns(2)
 
-# with c1:
-#     st.markdown(
-#         (
-#             f"<div style='text-align: left;'>"
-#             f"Displaying data from {df['time'][s]} "
-#             f"to {df['time'][s + win[resolution] - 1]}"
-#             f"</div>"
-#         ),
-#         unsafe_allow_html=True,
-#     )
+with c1:
+    start_str = datetime.fromisoformat(plot_data[time_col].iloc[0]).strftime(
+        "%b %d, %H:%M"
+    )
+    end_str = datetime.fromisoformat(plot_data[time_col].iloc[-1]).strftime(
+        "%b %d, %H:%M"
+    )
 
-# with c2:
-#     st.markdown(
-#         (
-#             f"<div style='text-align: right;'>"
-#             f"Data last updated at {solar['time'].iloc[-1]}"
-#             f"</div>"
-#         ),
-#         unsafe_allow_html=True,
-#     )
+    st.markdown(
+        f"<div style='text-align: left;'>"
+        f"Displaying data from {start_str} to {end_str}</div>",
+        unsafe_allow_html=True,
+    )
+
+with c2:
+    last_val = conn.query(
+        "SELECT time FROM solar ORDER BY time DESC LIMIT 1", ttl=60
+    ).squeeze()
+    last_ts = datetime.fromisoformat(last_val).strftime("%b %d, %H:%M")
+
+    st.markdown(
+        f"<div style='text-align: right;'>" f"Data last updated at {last_ts}" f"</div>",
+        unsafe_allow_html=True,
+    )
 
 label = {
     "Density": "Particle density (p/cm3)",
@@ -116,14 +132,28 @@ for feature in features:
         unsafe_allow_html=True,
     )
 
-    st.line_chart(
-        data=conn.query(data_query, ttl=60),
-        x=x_axis,
-        y=str(feature.lower()),
-        x_label="Time",
-        y_label=label[str(feature)],
-        color="#ff0000",
+    chart = (
+        alt.Chart(plot_data)
+        .mark_line(color="#ff0000")
+        .encode(
+            x=alt.X(
+                f"{time_col}:T",  # Dynamic time column
+                axis=alt.Axis(
+                    labelAngle=0,
+                    tickCount=6,
+                    format="%H:%M",
+                    title="Time",
+                ),
+            ),
+            y=alt.Y(
+                f"{feature.lower()}:Q",  # Dynamic Y feature
+                title=label[str(feature)],  # Using your existing label dictionary
+            ),
+        )
+        .properties(height=400)
     )
+
+    st.altair_chart(chart, use_container_width=True)
 
 with st.expander("More information on Solar Wind"):
     st.markdown(
