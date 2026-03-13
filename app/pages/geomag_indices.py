@@ -61,13 +61,13 @@ chart = (
         x=alt.X(
             "time:T",
             axis=alt.Axis(
-                labelAngle=0,  # Forces labels to stay horizontal
-                tickCount=6,  # Reduces number of labels to avoid overlap
-                format="%H:%M",  # Makes labels shorter (just HH:MM)
+                labelAngle=0,
+                tickCount=6,
+                format="%H:%M",
                 title="Time",
             ),
         ),
-        y=alt.Y("dst:Q", title="Dst (nT)"),  # Keeps your Y-axis as it was
+        y=alt.Y("dst:Q", title="Dst (nT)"),
     )
     .properties(height=400)
 )
@@ -93,20 +93,18 @@ with st.expander("More information on Dst index"):
 total_rows_kp = conn.query("SELECT COUNT(*) FROM kp", ttl=60).squeeze() - 8
 
 s_kp = st.slider(
-    "  ",  # Unique key for Kp slider
+    "  ",
     0,
     total_rows_kp,
     value=total_rows_kp,
     step=1,
     label_visibility="hidden",
-    key="kp_slider",  # Important: Slider keys must be unique if you have two on one page
+    key="kp_slider",
 )
 
-# 2. Query the 8-row window for Kp
 query_kp = f"SELECT * FROM kp LIMIT 8 OFFSET {s_kp}"
 plot_data_kp = conn.query(query_kp, ttl=60)
 
-# 3. Display time window for Kp
 start_str_kp = datetime.fromisoformat(plot_data_kp["time"].iloc[0]).strftime(
     "%b %d, %H:%M"
 )
@@ -115,12 +113,15 @@ end_str_kp = datetime.fromisoformat(plot_data_kp["time"].iloc[-1]).strftime(
 )
 
 st.markdown(
-    f"<div style='text-align: left;'><h3>Kp index</h3>"
     f"Displaying data from {start_str_kp} to {end_str_kp}</p></div>",
     unsafe_allow_html=True,
 )
 
-# 4. Altair Chart for Kp
+st.markdown(
+    "<div style='text-align: center;'><h3>Kp index</h3></div>",
+    unsafe_allow_html=True,
+)
+
 chart_kp = (
     alt.Chart(plot_data_kp)
     .mark_line(color="#ff0000")
@@ -129,14 +130,12 @@ chart_kp = (
             "time:T",
             axis=alt.Axis(
                 labelAngle=0,
-                tickCount=4,  # Kp has fewer points, so 4 ticks is plenty
+                tickCount=4,
                 format="%H:%M",
                 title="Time",
             ),
         ),
-        y=alt.Y(
-            "Kp:Q", title="Kp Index", scale=alt.Scale(domain=[0, 9])
-        ),  # Kp is always 0-9
+        y=alt.Y("Kp:Q", title="Kp Index", scale=alt.Scale(domain=[0, 9])),
     )
     .properties(height=300)
 )
