@@ -5,7 +5,7 @@ from src.load.load import load_transformed_data
 from src.utils.logging_utils import setup_logger
 import time
 
-loop = True
+loop = False
 
 
 def main():
@@ -21,17 +21,17 @@ def main():
             extracted_data = extract_data()
             logger.info("Data extraction phase completed")
 
-            # Load phase on raw data
+            # Load raw data
             logger.info("Beginning data load phase on raw data")
             load_raw_data(extracted_data)
             logger.info("Completed data load phase on raw data")
 
             # Transformation phase
             logger.info("Beginning data transformation phase")
-            transformed_data = transform_data(extracted_data)
+            transformed_data = transform_data()
             logger.info("Data transformation phase completed")
 
-            # Load phase on transformed data
+            # Load transformed data
             logger.info("Beginning data load phase on transformed data")
             load_transformed_data(transformed_data)
             logger.info("Completed data load phase on transformed data")

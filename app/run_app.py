@@ -17,6 +17,11 @@ def main():
     )
 
     pg = st.navigation([home_page, solar_wind_page, geomag_indices_page])
+
+    st.connection(
+        "noaa_db", type="sql", url="sqlite:///data/transformed/noaa_data.db?timeout=20"
+    )
+
     pg.run()
 
 

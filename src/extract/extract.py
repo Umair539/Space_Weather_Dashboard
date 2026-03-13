@@ -1,5 +1,5 @@
 import pandas as pd
-from src.extract.extract_data_from_json import extract_data_from_json
+from src.extract.fetch_json import fetch_json
 from src.utils.logging_utils import setup_logger
 
 logger = setup_logger("extract_data", "extract_data.log")
@@ -16,10 +16,10 @@ def extract_data():
     try:
         logger.info("Starting data extraction process")
 
-        mag = extract_data_from_json(mag_url)
-        plasma = extract_data_from_json(plasma_url)
-        dst = extract_data_from_json(dst_url)
-        kp = extract_data_from_json(kp_url)
+        mag = fetch_json(mag_url)
+        plasma = fetch_json(plasma_url)
+        dst = fetch_json(dst_url)
+        kp = fetch_json(kp_url)
 
         logger.info("Completed data extraction process")
 
