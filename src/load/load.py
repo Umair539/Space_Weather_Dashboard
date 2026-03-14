@@ -1,6 +1,7 @@
 from src.utils.logging_utils import setup_logger
 import json
 from sqlalchemy import create_engine
+from sqlalchemy import text
 
 logger = setup_logger("load_data", "load_data.log")
 
@@ -40,10 +41,17 @@ def load_transformed_data(transformed_data):
         logger.info(f"Saving transformed data to {db_path}...")
 
         # Saving as tables
-        solar.to_sql("solar", engine, if_exists="replace", index=True)
-        solar_agg.to_sql("solar_agg", engine, if_exists="replace", index=True)
-        dst.to_sql("dst", engine, if_exists="replace", index=True)
-        kp.to_sql("kp", engine, if_exists="replace", index=True)
+        # prevent errors reading whilst table updating
+        solar.to_sql("solar_temp", engine, if_exists="replace", index=True)
+        solar_agg.to_sql("solar_agg_temp", engine, if_exists="replace", index=True)
+        dst.to_sql("dst_temp", engine, if_exists="replace", index=True)
+        kp.to_sql("kp_temp", engine, if_exists="replace", index=True)
+
+        with engine.begin() as conn:
+            tables = ["solar", "solar_agg", "dst", "kp"]
+            for name in tables:
+                conn.execute(text(f"DROP TABLE IF EXISTS {name}"))
+                conn.execute(text(f"ALTER TABLE {name}_temp RENAME TO {name}"))
 
         logger.info("SQL database updated in data/transformed/.")
 

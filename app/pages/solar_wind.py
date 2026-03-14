@@ -2,8 +2,8 @@ import streamlit as st
 import altair as alt
 from streamlit_autorefresh import st_autorefresh
 from datetime import datetime
+from run_app import data_last_synced
 
-st_autorefresh(30000)
 conn = st.session_state.noaa_data_db
 
 st.title("Real Time Solar Wind Properties 🛰️")
@@ -15,7 +15,8 @@ with col1:
         label="Select time resolution", options=["Minutely", "Hourly"], index=0
     )
 
-columns = ["Speed", "Density", "Temperature", "Pressure", "Bz", "Bt"]
+df = conn.query("SELECT * FROM solar LIMIT 0")
+columns = [c.capitalize() for c in df.columns][1:]
 
 with col2:
     features = st.multiselect(
@@ -29,54 +30,54 @@ with col3:
         disabled=(resolution == "Minutely"),
     )
 
-if resolution == "Hourly":
-    # f string needed to avoid python misinterpreting '%d'
-    query = f"SELECT COUNT(DISTINCT strftime('%Y-%m-%d %H', time)) AS unique_hour_count FROM solar{''};"
-    total_rows = conn.query(query, ttl=60).squeeze()
-else:
-    total_rows = conn.query("SELECT COUNT(*) FROM solar", ttl=60).squeeze()
-
 win = {"Minutely": 24 * 60, "Hourly": 24}
 
-min_val = 0
-max_val = total_rows - win[resolution] - (1 if resolution == "Hourly" else 0)
-
-s = st.slider(
-    " ",
-    min_val,
-    max_val,
-    value=max_val,
-    step=1,
-    label_visibility="hidden",
-)
-
 if resolution == "Hourly":
+    data_range = conn.query(
+        """
+    SELECT substr(time, 1, 13) || ':00:00' AS hour
+    FROM solar
+    GROUP BY hour
+    HAVING count(*) == 60
+    ORDER BY hour ASC
+    """
+    )
+    s = st.select_slider("Select start date", data_range[:-24])
+
     cols_to_query = []
     for col in features:
         if aggregation == "Mean":
-            cols_to_query.append(f", avg({col}) AS {col.lower()}")
+            cols_to_query.append(f", round(avg({col}), 2) AS {col.lower()}")
 
         elif aggregation == "Standard deviation":
             cols_to_query.append(
-                f", sqrt(avg({col}*{col}) - avg({col})*avg({col})) AS {col.lower()}"
+                f", round(sqrt(avg({col}*{col}) - avg({col})*avg({col})), 2) AS {col.lower()}"
             )
     cols_to_query = "".join(cols_to_query)
 
     data_query = (
         f"SELECT "
-        f"strftime('%Y-%m-%d %H:00:00', time) AS hourly_bucket"
+        f"substr(time, 1, 13) || ':00:00' AS hourly_bucket"
         f"{cols_to_query}"
         f" FROM solar "
+        f"WHERE hourly_bucket >= '{s}' "
         f"GROUP BY hourly_bucket "
+        f"HAVING count(*) = 60 "  # full 60 minute buckets
         f"ORDER BY hourly_bucket ASC "
-        f"LIMIT {win[resolution]} "
-        f"OFFSET {s};"
+        f"LIMIT {win[resolution]}; "
     )
     time_col = "hourly_bucket"
-else:
+
+elif resolution == "Minutely":
+    data_range = conn.query("SELECT substr(time, 1, 16) from solar")
+    s = st.select_slider("Select start date", data_range[: -24 * 60 + 1])
+
     cols_to_query = ", ".join(["time"] + features)
     data_query = (
-        f"SELECT {cols_to_query} FROM solar LIMIT {win[resolution]} OFFSET {s};"
+        f"SELECT {cols_to_query} "
+        f"FROM solar "
+        f"WHERE time >= '{s}' "
+        f"LIMIT {win[resolution]};"
     )
     time_col = "time"
 
@@ -85,12 +86,8 @@ plot_data = conn.query(data_query, ttl=60)
 c1, c2 = st.columns(2)
 
 with c1:
-    start_str = datetime.fromisoformat(plot_data[time_col].iloc[0]).strftime(
-        "%b %d, %H:%M"
-    )
-    end_str = datetime.fromisoformat(plot_data[time_col].iloc[-1]).strftime(
-        "%b %d, %H:%M"
-    )
+    start_str = datetime.fromisoformat(plot_data[time_col].iloc[0])
+    end_str = datetime.fromisoformat(plot_data[time_col].iloc[-1])
 
     st.markdown(
         f"<div style='text-align: left;'>"
@@ -99,13 +96,10 @@ with c1:
     )
 
 with c2:
-    last_val = conn.query(
-        "SELECT time FROM solar ORDER BY time DESC LIMIT 1", ttl=60
-    ).squeeze()
-    last_ts = datetime.fromisoformat(last_val).strftime("%b %d, %H:%M")
-
     st.markdown(
-        f"<div style='text-align: right;'>" f"Data last updated at {last_ts}" f"</div>",
+        f"<div style='text-align: right; font-style: italic; color: gray;'>"
+        f"Data last synced at {data_last_synced()}"
+        f"</div>",
         unsafe_allow_html=True,
     )
 
@@ -168,3 +162,5 @@ with st.expander("More information on Solar Wind"):
         becomes more negative.
     """
     )
+
+st_autorefresh(60000)

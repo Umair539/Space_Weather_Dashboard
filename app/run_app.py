@@ -1,4 +1,15 @@
 import streamlit as st
+from pathlib import Path
+from datetime import datetime
+
+
+def data_last_synced():
+    db_path = Path("data/transformed/noaa_data.db").resolve()
+
+    if db_path.exists():
+        mtime = db_path.stat().st_mtime
+        return datetime.fromtimestamp(mtime).strftime("%d %b, %H:%M")
+    return "Not Found"
 
 
 def main():
@@ -8,7 +19,7 @@ def main():
             "noaa_data_db",
             type="sql",
             url="sqlite:///data/transformed/noaa_data.db?timeout=20",
-        )
+        )  # timeout to prevent concurrent read/writes
 
     st.set_page_config(
         page_title="Space Weather Dashboard",

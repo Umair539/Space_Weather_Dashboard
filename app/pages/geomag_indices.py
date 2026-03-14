@@ -2,24 +2,15 @@ import streamlit as st
 import altair as alt
 from streamlit_autorefresh import st_autorefresh
 from datetime import datetime
+from run_app import data_last_synced
 
-st_autorefresh(60000)
 conn = st.session_state.noaa_data_db
 
 st.title("Real Time Geomgagnetic Indices 📡")
 
-total_rows = conn.query("SELECT COUNT(*) FROM dst", ttl=60).squeeze() - 24
-
-s_dst = st.slider(
-    " ",
-    0,
-    total_rows,
-    value=total_rows,
-    step=1,
-    label_visibility="hidden",
-)
-
-query = f"SELECT * FROM dst LIMIT 24 OFFSET {s_dst}"
+data_range = conn.query("SELECT substr(time, 1, 16) FROM dst", ttl=60)
+s_dst = st.select_slider("Select start date", data_range[:-23])
+query = f"SELECT time, dst FROM dst WHERE time >= '{s_dst}'LIMIT 24"
 plot_data = conn.query(query, ttl=60)
 
 c1, c2 = st.columns(2)
@@ -39,13 +30,10 @@ with c1:
     )
 
 with c2:
-    last_val = conn.query(
-        "SELECT time FROM solar ORDER BY time DESC LIMIT 1", ttl=60
-    ).squeeze()
-    last_ts = datetime.fromisoformat(last_val).strftime("%b %d, %H:%M")
-
     st.markdown(
-        f"<div style='text-align: right;'>" f"Data last updated at {last_ts}" f"</div>",
+        f"<div style='text-align: right; font-style: italic; color: gray;'>"
+        f"Data last synced at {data_last_synced()}"
+        f"</div>",
         unsafe_allow_html=True,
     )
 
@@ -90,19 +78,9 @@ with st.expander("More information on Dst index"):
     """
     )
 
-total_rows_kp = conn.query("SELECT COUNT(*) FROM kp", ttl=60).squeeze() - 8
-
-s_kp = st.slider(
-    "  ",
-    0,
-    total_rows_kp,
-    value=total_rows_kp,
-    step=1,
-    label_visibility="hidden",
-    key="kp_slider",
-)
-
-query_kp = f"SELECT * FROM kp LIMIT 8 OFFSET {s_kp}"
+data_range = conn.query("SELECT substr(time, 1, 16) FROM kp", ttl=60)
+ss_kp = st.select_slider("Select start date", data_range[:-7])
+query_kp = f"SELECT time, Kp FROM kp WHERE time >= '{ss_kp}' LIMIT 24"
 plot_data_kp = conn.query(query_kp, ttl=60)
 
 start_str_kp = datetime.fromisoformat(plot_data_kp["time"].iloc[0]).strftime(
@@ -155,3 +133,5 @@ with st.expander("More information on Kp index"):
         a value of 9 indicates an extreme storm is occuring.
     """
     )
+
+st_autorefresh(60000)
