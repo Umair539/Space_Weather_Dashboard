@@ -2,6 +2,27 @@
 
 The goal of this project was to create a real-time space weather dashboard, a useful tool that provides people and organizations time to prepare for severe solar storms. This included creating a full ETL pipeline for space weather data with extraction, transformation and loading phases. The ETL pipeline was followed by an interactive web application developed using Streamlit.
 
+[Live Dashboard Link](https://spaceweatherdashboard.streamlit.app/)
+
+---
+## Core Logic
+
+This project is engineered as a decoupled system where data ingestion and visualisation operate independently to ensure high availability and UI responsiveness.
+
+### 1. Automated ETL Pipeline
+* **Extract:** Pulls near-real-time JSON data from NOAA API endpoints.
+* **Transform:** Uses Pandas to clean, align, and merge datasets.
+* **Load:** Saves data to a local SQLite database using a "drop-and-swap" method to ensure zero downtime.
+
+### 2. Background Worker (Threading)
+* The app uses Python's `threading` module to run the ETL pipeline as a background process.
+* The ETL runs every 60 seconds without freezing the user interface.
+* This keeps the dashboard responsive while data processing happens behind the scenes.
+
+### 3. Interactive Dashboard
+* **Interactive Controls:** Uses sliders and dropdowns to let users filter date ranges and toggle between different space weather metrics.
+* **Dynamic Querying:** Uses SQLAlchemy to pull only the data required for the user's current view based on what user has filtered, keeping the app lightweight.
+* **Auto-Refresh:** Automatically updates the charts to show the newest data from the background pipeline without a manual reload.
 ---
 ## Data Source and Description
 The data used in this project is retrieved from the [NOAA Space Weather Prediction Center](https://www.swpc.noaa.gov) which is the  most reliable source of space weather data available. Each successful extraction retrieves the last week's worth of data, making it a suitable source for real-time analysis.
@@ -17,15 +38,15 @@ The data used can be seen in the table below
 
 ---
 
-## Instructions To Run
+## Instructions To Run Locally
 
 1. Clone the repository
    ```Bash
-   git clone https://github.com/Umair539/Capstone.git
+   git clone https://github.com/Umair539/Space_Weather_Dashboard.git
    ```
 2. Change directory to the project folder
       ```Bash
-   cd Capstone
+   cd Space_Weather_Dashboard
    ```
 3. (Optional) Create virtual environment
    ```bash
@@ -45,34 +66,34 @@ The data used can be seen in the table below
     ```
    run_etl
    ```
-7. Run the Streamlit app
+7. Run the Streamlit app (This also starts the background ETL automatically)
     ```
     run_app
    ```
-The Streamlit app automatically updates every time a selection or the current page is changed, and also after 30-60 seconds of inactivity depending on the current page.
+The Streamlit app automatically updates every time a selection or the current page is changed, and also after 60 seconds of inactivity depending on the current page.
 
-The ETL pipeline can also be configured to loop endlessly so that it can fetch real-time data. This can be toggled on or off by changing the loop variable in run_etl.py to True/False.
+The ETL pipeline can also be configured to loop endlessly so that it can fetch real-time data. This can be toggled on or off in run_etl.py and/or in run_app.py by changing the loop variable to True/False.
 
-```Python
-loop = True
-```
-ETL pipeline continues to run every 60 seconds.
+If running ETL pipeline independently then inside run_etl.py modify:
 
 ```Python
-loop = False
+def run_etl_pipeline(loop=False):
 ```
+If running Streamlit app from run_app.py then modify the function argument:
 
-ETL pipeline will run only once.
+```Python
+thread = threading.Thread(target=run_etl_pipeline, args=(True,), daemon=True)
+```
 
 ---
 
 ## Future Work
 
  - Improve test coverage
- - Improve real-time performance by making the app and ETL pipeline run together instead of running in separate terminals
  - Incorporate real-time sunspot data
  - Using real-time solar wind and sunspot data, provide real-time predictions for the Dst Index using a machine learning model
- - Deploy app on Streamlit Community Cloud
+ - ~~Improve real-time performance by making the app and ETL pipeline run together instead of running in separate terminals~~
+ - ~~Deploy app on Streamlit Community Cloud~~
   
 ---
 
