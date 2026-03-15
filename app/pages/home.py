@@ -1,9 +1,10 @@
 import streamlit as st
 from streamlit_autorefresh import st_autorefresh
 import plotly.graph_objects as go
-from utils import safe_query, data_last_synced
+from utils import safe_query, data_last_synced, init_db
 import altair as alt
 
+init_db()
 conn = st.session_state.noaa_data_db
 
 st.title("Space Weather Dashboard 🪐")
@@ -65,7 +66,7 @@ with c1:
         .properties(height=350)
     )
 
-    st.altair_chart(dst_chart, use_container_width=True)
+    st.altair_chart(dst_chart, width="stretch")
 
 with c2:
     step_colours = [
@@ -94,7 +95,7 @@ with c2:
         )
     )
     fig.update_layout(height=400)
-    st.plotly_chart(fig, use_container_width=True)
+    st.plotly_chart(fig, width="stretch")
 
 col1, col2, col3 = st.columns(3)
 
