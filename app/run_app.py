@@ -1,25 +1,16 @@
 import streamlit as st
-from pathlib import Path
-from datetime import datetime
+import threading
+from scripts.run_etl import run_etl_pipeline
 
 
-def data_last_synced():
-    db_path = Path("data/transformed/noaa_data.db").resolve()
-
-    if db_path.exists():
-        mtime = db_path.stat().st_mtime
-        return datetime.fromtimestamp(mtime).strftime("%d %b, %H:%M")
-    return "Not Found"
+@st.cache_resource
+def start_background_worker():
+    thread = threading.Thread(target=run_etl_pipeline, daemon=True)
+    thread.start()
+    return thread
 
 
 def main():
-
-    if "noaa_data_db" not in st.session_state:
-        st.session_state.noaa_data_db = st.connection(
-            "noaa_data_db",
-            type="sql",
-            url="sqlite:///data/transformed/noaa_data.db?timeout=20",
-        )  # timeout to prevent concurrent read/writes
 
     st.set_page_config(
         page_title="Space Weather Dashboard",
@@ -35,6 +26,16 @@ def main():
     )
 
     pg = st.navigation([home_page, solar_wind_page, geomag_indices_page])
+
+    # launch etl pipeline in background using separate thread
+    start_background_worker()
+
+    if "noaa_data_db" not in st.session_state:
+        st.session_state.noaa_data_db = st.connection(
+            "noaa_data_db",
+            type="sql",
+            url="sqlite:///data/transformed/noaa_data.db?timeout=20",
+        )  # timeout to prevent concurrent read/writes
 
     pg.run()
 

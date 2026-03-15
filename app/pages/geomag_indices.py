@@ -2,16 +2,16 @@ import streamlit as st
 import altair as alt
 from streamlit_autorefresh import st_autorefresh
 from datetime import datetime
-from run_app import data_last_synced
+from utils import safe_query, data_last_synced
 
 conn = st.session_state.noaa_data_db
 
 st.title("Real Time Geomgagnetic Indices 📡")
 
-data_range = conn.query("SELECT substr(time, 1, 16) FROM dst", ttl=60)
+data_range = safe_query(conn, "SELECT substr(time, 1, 16) FROM dst")
 s_dst = st.select_slider("Select start date", data_range[:-23])
 query = f"SELECT time, dst FROM dst WHERE time >= '{s_dst}'LIMIT 24"
-plot_data = conn.query(query, ttl=60)
+plot_data = safe_query(conn, query)
 
 c1, c2 = st.columns(2)
 
@@ -78,10 +78,10 @@ with st.expander("More information on Dst index"):
     """
     )
 
-data_range = conn.query("SELECT substr(time, 1, 16) FROM kp", ttl=60)
+data_range = safe_query(conn, "SELECT substr(time, 1, 16) FROM kp")
 ss_kp = st.select_slider("Select start date", data_range[:-7])
 query_kp = f"SELECT time, Kp FROM kp WHERE time >= '{ss_kp}' LIMIT 24"
-plot_data_kp = conn.query(query_kp, ttl=60)
+plot_data_kp = safe_query(conn, query_kp)
 
 start_str_kp = datetime.fromisoformat(plot_data_kp["time"].iloc[0]).strftime(
     "%b %d, %H:%M"

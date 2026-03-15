@@ -5,14 +5,11 @@ from src.load.load import load_transformed_data
 from src.utils.logging_utils import setup_logger
 import time
 
-loop = False
 
-
-def main():
+def run_etl_pipeline():
     # Setup ETL pipeline logger
     logger = setup_logger("etl_pipeline", "etl_pipeline.log")
     while True:
-        print("Attempting ETL")
         try:
             logger.info("Starting ETL pipeline")
 
@@ -36,21 +33,10 @@ def main():
             load_transformed_data(transformed_data)
             logger.info("Completed data load phase on transformed data")
 
-            del extracted_data
-            del transformed_data
-
-            print("ETL successful")
+            logger.info("ETL pipeline successful")
 
         except Exception as e:
             logger.error(f"ETL pipeline failed: {e}")
-            print("ETL unsuccessful")
 
-        if not loop:
-            break
-
-        print("Sleeping for 60 seconds")
+        logger.info("Sleeping for 60 seconds")
         time.sleep(60)
-
-
-if __name__ == "__main__":
-    main()

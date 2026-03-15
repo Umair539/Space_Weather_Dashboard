@@ -1,7 +1,7 @@
 import streamlit as st
 from streamlit_autorefresh import st_autorefresh
 import plotly.graph_objects as go
-from run_app import data_last_synced
+from utils import safe_query, data_last_synced
 import altair as alt
 
 conn = st.session_state.noaa_data_db
@@ -24,9 +24,9 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
-solar = conn.query("SELECT * FROM solar ORDER BY time DESC LIMIT 61")
-dst = conn.query("SELECT * FROM dst ORDER BY time DESC LIMIT 24")
-kp = conn.query("SELECT * FROM kp ORDER BY time DESC LIMIT 1")
+solar = safe_query(conn, "SELECT * FROM solar ORDER BY time DESC LIMIT 61")
+dst = safe_query(conn, "SELECT * FROM dst ORDER BY time DESC LIMIT 24")
+kp = safe_query(conn, "SELECT * FROM kp ORDER BY time DESC LIMIT 1")
 
 
 #
