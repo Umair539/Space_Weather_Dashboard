@@ -9,7 +9,7 @@ def data_last_synced():
     if db_path.exists():
         mtime = db_path.stat().st_mtime
         return datetime.fromtimestamp(mtime).strftime("%d %b, %H:%M")
-    return "Not Found"
+    return "Error fetching last synced"
 
 
 def safe_query(conn, query):

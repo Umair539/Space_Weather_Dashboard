@@ -20,7 +20,7 @@ dynamic = ["dependencies"]
 Homepage = "https://github.com/Umair539/Capstone"
 
 [project.scripts]
-run_etl = "scripts.run_etl:main"
+run_etl = "scripts.run_etl:run_etl_pipeline"
 run_tests = "tests.run_tests:main"
 run_app = "app.cli:launch_app"
 

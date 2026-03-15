@@ -13,7 +13,7 @@ from scripts.run_etl import run_etl_pipeline
 
 @st.cache_resource
 def start_background_worker():
-    thread = threading.Thread(target=run_etl_pipeline, daemon=True)
+    thread = threading.Thread(target=run_etl_pipeline, args=(True,), daemon=True)
     thread.start()
     return thread
 

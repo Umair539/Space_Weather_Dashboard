@@ -6,7 +6,7 @@ from src.utils.logging_utils import setup_logger
 import time
 
 
-def run_etl_pipeline():
+def run_etl_pipeline(loop=False):
     # Setup ETL pipeline logger
     logger = setup_logger("etl_pipeline", "etl_pipeline.log")
     while True:
@@ -37,6 +37,9 @@ def run_etl_pipeline():
 
         except Exception as e:
             logger.error(f"ETL pipeline failed: {e}")
+
+        if not loop:
+            break
 
         logger.info("Sleeping for 60 seconds")
         time.sleep(60)
