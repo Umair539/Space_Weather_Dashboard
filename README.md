@@ -70,6 +70,10 @@ The data used can be seen in the table below
     ```
     run_app
    ```
+8. Run tests
+    ```
+    run_tests
+   ```
 The Streamlit app automatically updates every time a selection or the current page is changed, and also after 60 seconds of inactivity depending on the current page.
 
 The ETL pipeline can also be configured to loop endlessly so that it can fetch real-time data. This can be toggled on or off in run_etl.py and/or in run_app.py by changing the loop variable to True/False.
