@@ -32,7 +32,7 @@ def load_raw_data(extracted_data):
 
 def load_transformed_data(transformed_data):
     try:
-        solar, solar_agg, dst, kp = transformed_data
+        solar, dst, kp = transformed_data  # solar_agg,
 
         db_path = "data/transformed/noaa_data.db"
 
@@ -40,16 +40,21 @@ def load_transformed_data(transformed_data):
 
         logger.info(f"Saving transformed data to {db_path}...")
 
-        # Saving as tables
+        # Saving as temp tables then switching
         # prevent errors reading whilst table updating
+        # clear out any old temp indexes/tables first
+        with engine.begin() as conn:
+            for name in ["solar", "dst", "kp"]:
+                conn.execute(text(f"DROP INDEX IF EXISTS ix_{name}_temp_time"))
+                conn.execute(text(f"DROP TABLE IF EXISTS {name}_temp"))
+
         solar.to_sql("solar_temp", engine, if_exists="replace", index=True)
-        solar_agg.to_sql("solar_agg_temp", engine, if_exists="replace", index=True)
         dst.to_sql("dst_temp", engine, if_exists="replace", index=True)
+        # solar_agg.to_sql("solar_agg_temp", engine, if_exists="replace", index=True)
         kp.to_sql("kp_temp", engine, if_exists="replace", index=True)
 
         with engine.begin() as conn:
-            tables = ["solar", "solar_agg", "dst", "kp"]
-            for name in tables:
+            for name in ["solar", "dst", "kp"]:  # solar_agg
                 conn.execute(text(f"DROP TABLE IF EXISTS {name}"))
                 conn.execute(text(f"ALTER TABLE {name}_temp RENAME TO {name}"))
 
@@ -57,3 +62,4 @@ def load_transformed_data(transformed_data):
 
     except Exception as e:
         logger.error(f"Failed to load transformed data: {str(e)}")
+        raise

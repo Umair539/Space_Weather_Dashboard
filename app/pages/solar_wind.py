@@ -2,7 +2,7 @@ import streamlit as st
 import altair as alt
 from streamlit_autorefresh import st_autorefresh
 from datetime import datetime
-from run_app import data_last_synced
+from utils import safe_query, data_last_synced
 
 conn = st.session_state.noaa_data_db
 
@@ -15,7 +15,7 @@ with col1:
         label="Select time resolution", options=["Minutely", "Hourly"], index=0
     )
 
-df = conn.query("SELECT * FROM solar LIMIT 0")
+df = safe_query(conn, "SELECT * FROM solar LIMIT 0")
 columns = [c.capitalize() for c in df.columns][1:]
 
 with col2:
@@ -33,14 +33,15 @@ with col3:
 win = {"Minutely": 24 * 60, "Hourly": 24}
 
 if resolution == "Hourly":
-    data_range = conn.query(
+    data_range = safe_query(
+        conn,
         """
-    SELECT substr(time, 1, 13) || ':00:00' AS hour
-    FROM solar
-    GROUP BY hour
-    HAVING count(*) == 60
-    ORDER BY hour ASC
-    """
+        SELECT substr(time, 1, 13) || ':00:00' AS hour
+        FROM solar
+        GROUP BY hour
+        HAVING count(*) == 60
+        ORDER BY hour ASC
+        """,
     )
     s = st.select_slider("Select start date", data_range[:-24])
 
@@ -69,7 +70,7 @@ if resolution == "Hourly":
     time_col = "hourly_bucket"
 
 elif resolution == "Minutely":
-    data_range = conn.query("SELECT substr(time, 1, 16) from solar")
+    data_range = safe_query(conn, "SELECT substr(time, 1, 16) from solar")
     s = st.select_slider("Select start date", data_range[: -24 * 60 + 1])
 
     cols_to_query = ", ".join(["time"] + features)
@@ -81,7 +82,7 @@ elif resolution == "Minutely":
     )
     time_col = "time"
 
-plot_data = conn.query(data_query, ttl=60)
+plot_data = safe_query(conn, data_query)
 
 c1, c2 = st.columns(2)
 
