@@ -2,8 +2,9 @@ import streamlit as st
 import altair as alt
 from streamlit_autorefresh import st_autorefresh
 from datetime import datetime
-from utils import safe_query, data_last_synced
+from utils import safe_query, data_last_synced, init_db
 
+init_db()
 conn = st.session_state.noaa_data_db
 
 st.title("Real Time Geomgagnetic Indices 📡")
@@ -60,7 +61,7 @@ chart = (
     .properties(height=400)
 )
 
-st.altair_chart(chart, use_container_width=True)
+st.altair_chart(chart, width="stretch")
 
 with st.expander("More information on Dst index"):
     st.markdown(
@@ -118,7 +119,7 @@ chart_kp = (
     .properties(height=400)
 )
 
-st.altair_chart(chart_kp, use_container_width=True)
+st.altair_chart(chart_kp, width="stretch")
 
 with st.expander("More information on Kp index"):
     st.markdown(

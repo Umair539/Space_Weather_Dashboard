@@ -18,3 +18,13 @@ def safe_query(conn, query):
     except Exception:
         st.info("Error connecting to database. Please wait...")
         st.stop()
+
+
+def init_db():
+    if "noaa_data_db" not in st.session_state:
+        st.session_state.noaa_data_db = st.connection(
+            "noaa_data_db",
+            type="sql",
+            url="sqlite:///data/transformed/noaa_data.db?timeout=20",
+        )  # timeout to prevent concurrent read/writes
+    return st.session_state.noaa_data_db
