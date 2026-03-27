@@ -3,6 +3,7 @@ from src.transform.process_solar_wind import handle_missing_data
 from src.transform.process_solar_wind import set_index_name
 from src.transform.process_solar_wind import set_time_index
 from src.transform.process_solar_wind import filter_columns
+from src.transform.process_solar_wind import filter_invalid_data
 from src.transform.process_solar_wind import format_column_name
 from src.transform.process_solar_wind import add_pressure_column
 from src.transform.process_solar_wind import match_time_index
@@ -10,6 +11,7 @@ from src.transform.process_solar_wind import join_mag_plasma
 from src.transform.process_solar_wind import round_values
 
 import pandas as pd
+import numpy as np
 
 
 class TestCastToFloat:
@@ -153,3 +155,35 @@ class TestJoinMagPlasma:
         df2 = set_time_index(df2)
         result = join_mag_plasma(df1, df2)
         assert list(result.columns) == ["values2", "values1"]
+
+
+class TestFilterInvalidData:
+    def test_filter_invalid_data_replaces_negative_number_with_nan(self):
+        df = pd.DataFrame(
+            {
+                "density": [10, 2.7, -3.4],
+                "speed": [400.7, -50.2, 250.8],
+                "temperature": [-100, 200000, 75000],
+            }
+        )
+
+        result = filter_invalid_data(df)
+
+        assert np.isnan(result.loc[2, "density"])
+        assert np.isnan(result.loc[1, "speed"])
+        assert np.isnan(result.loc[0, "temperature"])
+
+    def test_filter_invalid_data_replaces_zero_with_nan(self):
+        df = pd.DataFrame(
+            {
+                "density": [10, 2.7, 0],
+                "speed": [400.7, -0, 250.8],
+                "temperature": [0, 200000, 75000],
+            }
+        )
+
+        result = filter_invalid_data(df)
+
+        assert np.isnan(result.loc[2, "density"])
+        assert np.isnan(result.loc[1, "speed"])
+        assert np.isnan(result.loc[0, "temperature"])

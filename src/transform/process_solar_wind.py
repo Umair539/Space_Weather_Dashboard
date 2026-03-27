@@ -14,6 +14,7 @@ def process_solar_wind(mag, plasma):
     solar = join_mag_plasma(mag, plasma)
 
     solar = cast_to_float(solar)
+    solar = filter_invalid_data(solar)
     solar = handle_missing_data(solar)
 
     solar = add_pressure_column(solar)
@@ -65,6 +66,13 @@ def join_mag_plasma(mag, plasma):
 def cast_to_float(df):
     df = df.astype("float64")
     return df
+
+
+def filter_invalid_data(solar):
+    cols = ["density", "speed", "temperature"]
+    # replace invalid data with nan
+    solar[cols] = solar[cols].mask(solar[cols] <= 0)
+    return solar
 
 
 def handle_missing_data(df):
