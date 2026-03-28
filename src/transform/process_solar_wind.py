@@ -6,6 +6,9 @@ def process_solar_wind(mag, plasma):
     mag = filter_columns(mag)
     mag = format_column_name(mag)
 
+    mag = drop_duplicates(mag)
+    plasma = drop_duplicates(plasma)
+
     mag = set_time_index(mag)
     plasma = set_time_index(plasma)
 
@@ -36,6 +39,10 @@ def format_column_name(mag):
         }
     )
     return mag
+
+
+def drop_duplicates(df):
+    return df.drop_duplicates()
 
 
 def set_time_index(df):

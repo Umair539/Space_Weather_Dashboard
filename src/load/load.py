@@ -1,30 +1,46 @@
 from src.utils.logging_utils import setup_logger
 import json
+import os
 from sqlalchemy import create_engine
 from sqlalchemy import text
 
 logger = setup_logger("load_data", "load_data.log")
 
 
+def append_json_file(filepath, new_data):
+    """Append only new records to existing JSON file based on time_tag."""
+    os.makedirs(os.path.dirname(filepath), exist_ok=True)
+
+    headers = new_data[0]
+    new_rows = new_data[1:]
+
+    if os.path.exists(filepath):
+        with open(filepath, "r") as f:
+            existing = json.load(f)
+
+        existing_timestamps = {row[0] for row in existing[1:]}
+        new_rows = [row for row in new_rows if row[0] not in existing_timestamps]
+
+        data_to_save = existing + new_rows
+    else:
+        data_to_save = [headers] + new_rows
+
+    with open(filepath, "w") as f:
+        json.dump(data_to_save, f, indent=2)
+
+
 def load_raw_data(extracted_data):
     try:
         mag, plasma, dst, kp = extracted_data
 
-        logger.info("Saving raw data...")
+        logger.info("Appending raw data...")
 
-        with open("data/raw/mag.json", "w") as f:
-            json.dump(mag, f, indent=2)
+        append_json_file("data/raw/mag.json", mag)
+        append_json_file("data/raw/plasma.json", plasma)
+        append_json_file("data/raw/dst.json", dst)
+        append_json_file("data/raw/kp.json", kp)
 
-        with open("data/raw/plasma.json", "w") as f:
-            json.dump(plasma, f, indent=2)
-
-        with open("data/raw/dst.json", "w") as f:
-            json.dump(dst, f, indent=2)
-
-        with open("data/raw/kp.json", "w") as f:
-            json.dump(kp, f, indent=2)
-
-        logger.info("Raw data saved.")
+        logger.info("Raw data appended.")
 
     except Exception as e:
         logger.error(f"Failed to load raw data: {str(e)}")

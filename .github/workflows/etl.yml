@@ -1,0 +1,33 @@
+name: ETL Update
+
+on:
+  schedule:
+    - cron: '0 0 */3 * *'  # midnight UTC every 3 days
+  workflow_dispatch:        # allows manual trigger from GitHub UI
+
+jobs:
+  run-etl:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: pip install -e .
+
+      - name: Run ETL
+        run: run_etl
+
+      - name: Commit updated raw data
+        run: |
+          git config user.name "github-actions"
+          git config user.email "actions@github.com"
+          git add data/raw/*.json
+          git commit -m "ETL update $(date +'%Y-%m-%d')" || echo "No changes to commit"
+          git push
