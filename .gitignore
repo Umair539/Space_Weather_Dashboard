@@ -19,3 +19,6 @@ notebooks/test.ipynb
 
 # local db
 data/transformed/noaa_data.db
+
+# cloud db url
+.env

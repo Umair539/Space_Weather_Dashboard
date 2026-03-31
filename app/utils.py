@@ -1,13 +1,18 @@
 from pathlib import Path
 from datetime import datetime
 import streamlit as st
+from dotenv import load_dotenv
+import os
+
+load_dotenv()
+neon_db_url = os.environ.get("DATABASE_URL")
 
 
 def data_last_synced():
-    db_path = Path("data/raw/dst.json").resolve()
+    raw_data_path = Path("data/raw/dst.json").resolve()
 
-    if db_path.exists():
-        mtime = db_path.stat().st_mtime
+    if raw_data_path.exists():
+        mtime = raw_data_path.stat().st_mtime
         return datetime.fromtimestamp(mtime).strftime("%d %b, %H:%M")
     return "Error fetching last synced"
 
@@ -21,10 +26,10 @@ def safe_query(conn, query):
 
 
 def init_db():
-    if "noaa_data_db" not in st.session_state:
-        st.session_state.noaa_data_db = st.connection(
-            "noaa_data_db",
+    if "neon_db" not in st.session_state:
+        st.session_state.neon_db = st.connection(
+            "neon_db",
             type="sql",
-            url="sqlite:///data/transformed/noaa_data.db?timeout=20",
+            url=neon_db_url,
         )  # timeout to prevent concurrent read/writes
-    return st.session_state.noaa_data_db
+    return st.session_state.neon_db
