@@ -1,9 +1,10 @@
 from src.utils.logging_utils import setup_logger
-import json
-import os
+from src.load.load_raw_indices import load_raw_indices
+from src.load.load_raw_solar import load_raw_solar
 from sqlalchemy import create_engine
 from sqlalchemy import text
 from dotenv import load_dotenv
+import os
 
 logger = setup_logger("load_data", "load_data.log")
 
@@ -11,62 +12,18 @@ load_dotenv()
 neon_db_url = os.environ.get("DATABASE_URL")
 
 
-def append_json_file(filepath, new_data):
-    # Append only new records to existing JSON file based on time_tag
-    os.makedirs(os.path.dirname(filepath), exist_ok=True)
-
-    # Dst and Kp json data suddenly in new dictionary format
-    # convert back to lists of lists as existing
-    if isinstance(new_data[0], dict):
-        headers = list(new_data[0].keys())
-
-        new_rows = []
-        for item in new_data:
-            vals = list(item.values())
-            vals[0] = vals[0].replace("T", " ")
-            new_rows.append(vals)
-    else:
-        headers = new_data[0]
-        new_rows = new_data[1:]
-
-    try:
-        if os.path.exists(filepath):
-            with open(filepath, "r") as f:
-                existing = json.load(f)
-
-            existing_timestamps = {row[0] for row in existing[1:]}
-            new_rows = [row for row in new_rows if row[0] not in existing_timestamps]
-
-            data_to_save = existing + new_rows
-        else:
-            data_to_save = [headers] + new_rows
-
-        with open(filepath, "w") as f:
-            json.dump(data_to_save, f, indent=2)
-
-    except Exception as e:
-        logger.error(f"Failed to append raw {filepath[9:-5]} data: {str(e)}")
-
-
 def load_raw_data(extracted_data):
     try:
         mag, plasma, dst, kp = extracted_data
 
-        logger.info("Appending raw data...")
+        logger.info("Loading raw data...")
 
-        append_json_file("data/raw/mag.json", mag)
-        logger.info("Appended raw mag data...")
+        load_raw_solar("data/raw/mag.json", mag)
+        load_raw_solar("data/raw/plasma.json", plasma)
+        load_raw_indices("data/raw/dst.json", dst)
+        load_raw_indices("data/raw/kp.json", kp)
 
-        append_json_file("data/raw/plasma.json", plasma)
-        logger.info("Appended raw plasma data...")
-
-        append_json_file("data/raw/dst.json", dst)
-        logger.info("Appended raw dst data...")
-
-        append_json_file("data/raw/kp.json", kp)
-        logger.info("Appended raw kp data...")
-
-        logger.info("Raw data appended.")
+        logger.info("Loaded raw data.")
 
     except Exception as e:
         logger.error(f"Failed to load raw data: {str(e)}")
@@ -80,7 +37,7 @@ def load_transformed_data(transformed_data):
 
         logger.info("Saving transformed data to Neon SQL database...")
 
-        # Saving as temp tables then switching
+        # Saving as temp tables then switching to
         # prevent errors reading whilst table updating
         # clear out any old temp indexes/tables first
         with engine.begin() as conn:

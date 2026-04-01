@@ -22,3 +22,5 @@ data/transformed/noaa_data.db
 
 # cloud db url
 .env
+# backup raw data
+data/raw_backup
