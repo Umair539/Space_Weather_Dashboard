@@ -1,7 +1,6 @@
 import streamlit as st
 import altair as alt
 from streamlit_autorefresh import st_autorefresh
-from datetime import datetime
 from utils import safe_query, data_last_synced, init_db
 
 init_db()
@@ -37,10 +36,10 @@ if resolution == "Hourly":
     data_range = safe_query(
         conn,
         """
-        SELECT substr(time, 1, 13) || ':00:00' AS hour
+        SELECT date_trunc('hour', time) AS hour
         FROM solar
         GROUP BY hour
-        HAVING count(*) == 60
+        HAVING count(*) = 60
         ORDER BY hour ASC
         """,
     )
@@ -49,29 +48,31 @@ if resolution == "Hourly":
     cols_to_query = []
     for col in features:
         if aggregation == "Mean":
-            cols_to_query.append(f", round(avg({col}), 2) AS {col.lower()}")
+            cols_to_query.append(f", round(avg({col})::numeric, 2) AS {col.lower()}")
 
         elif aggregation == "Standard deviation":
             cols_to_query.append(
-                f", round(sqrt(avg({col}*{col}) - avg({col})*avg({col})), 2) AS {col.lower()}"
+                f", round(sqrt(avg({col}*{col}) - avg({col})*avg({col}))::numeric, 2) AS {col.lower()}"
             )
     cols_to_query = "".join(cols_to_query)
 
     data_query = (
         f"SELECT "
-        f"substr(time, 1, 13) || ':00:00' AS hourly_bucket"
+        f"date_trunc('hour', time) AS hourly_bucket"
         f"{cols_to_query}"
         f" FROM solar "
-        f"WHERE hourly_bucket >= '{s}' "
+        f"WHERE date_trunc('hour', time) >= '{s}' "
         f"GROUP BY hourly_bucket "
-        f"HAVING count(*) = 60 "  # full 60 minute buckets
+        f"HAVING COUNT(*) = 60 "
         f"ORDER BY hourly_bucket ASC "
-        f"LIMIT {win[resolution]}; "
+        f"LIMIT {win[resolution]};"
     )
     time_col = "hourly_bucket"
 
 elif resolution == "Minutely":
-    data_range = safe_query(conn, "SELECT substr(time, 1, 16) from solar")
+    data_range = safe_query(
+        conn, "SELECT TO_CHAR(time, 'YYYY-MM-DD HH24:MI') from solar"
+    )
     s = st.select_slider("Select start date", data_range[: -24 * 60 + 1])
 
     cols_to_query = ", ".join(["time"] + features)
@@ -88,8 +89,8 @@ plot_data = safe_query(conn, data_query)
 c1, c2 = st.columns(2)
 
 with c1:
-    start_str = datetime.fromisoformat(plot_data[time_col].iloc[0])
-    end_str = datetime.fromisoformat(plot_data[time_col].iloc[-1])
+    start_str = plot_data[time_col].iloc[0].strftime("%b %d, %H:%M")
+    end_str = plot_data[time_col].iloc[-1].strftime("%b %d, %H:%M")
 
     st.markdown(
         f"<div style='text-align: left;'>"
@@ -130,7 +131,7 @@ for feature in features:
         .mark_line(color="#ff0000")
         .encode(
             x=alt.X(
-                f"{time_col}:T",  # Dynamic time column
+                f"{time_col}:T",
                 axis=alt.Axis(
                     labelAngle=0,
                     tickCount=6,
@@ -139,8 +140,8 @@ for feature in features:
                 ),
             ),
             y=alt.Y(
-                f"{feature.lower()}:Q",  # Dynamic Y feature
-                title=label[str(feature)],  # Using your existing label dictionary
+                f"{feature.lower()}:Q",
+                title=label[str(feature)],
             ),
         )
         .properties(height=400)
