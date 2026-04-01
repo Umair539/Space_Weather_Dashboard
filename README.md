@@ -11,8 +11,8 @@ This project is engineered as a decoupled system where data ingestion and visual
 
 ### 1. Automated ETL Pipeline
 * **Extract:** Pulls near-real-time JSON data from NOAA API endpoints.
-* **Transform:** Uses Pandas to clean, align, and merge datasets.
-* **Load:** Saves data to a local SQLite database using a "drop-and-swap" method to ensure zero downtime.
+* **Transform:** Uses Pandas to clean, align, and transform datasets.
+* **Load:** Saves data to a serverless PostgreSQL database hosted on Neon  using a "drop-and-swap" method to ensure zero downtime.
 
 ### 2. Background Worker (Threading)
 * The app uses Python's `threading` module to run the ETL pipeline as a background process.
@@ -23,6 +23,10 @@ This project is engineered as a decoupled system where data ingestion and visual
 * **Interactive Controls:** Uses sliders and dropdowns to let users filter date ranges and toggle between different space weather metrics.
 * **Dynamic Querying:** Uses SQLAlchemy to pull only the data required for the user's current view based on what user has filtered, keeping the app lightweight.
 * **Auto-Refresh:** Automatically updates the charts to show the newest data from the background pipeline without a manual reload.
+
+### 4. Scheduled Orchestration
+* **Github Actions** is used to trigger the ETL pipeline every 3 days to update the Neon database in the event the Streamlit app isn't in use.
+* As the NOAA API endpoints only provide a weeks worth of data, this ensures that there wont be any period of missing data in the database.
 ---
 ## Data Source and Description
 The data used in this project is retrieved from the [NOAA Space Weather Prediction Center](https://www.swpc.noaa.gov) which is the  most reliable source of space weather data available. Each successful extraction retrieves the last week's worth of data, making it a suitable source for real-time analysis.
