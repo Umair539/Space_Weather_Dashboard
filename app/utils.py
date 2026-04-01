@@ -5,7 +5,7 @@ from dotenv import load_dotenv
 import os
 
 load_dotenv()
-neon_db_url = os.environ.get("DATABASE_URL")
+neon_db_url = os.environ.get("DATABASE_URL") or st.secrets.get("DATABASE_URL")
 
 
 def data_last_synced():
