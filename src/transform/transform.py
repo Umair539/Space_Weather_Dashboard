@@ -26,8 +26,8 @@ def transform_data():
 
         mag = pd.DataFrame(mag_raw[1:], columns=mag_raw[0])
         plasma = pd.DataFrame(plasma_raw[1:], columns=plasma_raw[0])
-        dst = pd.DataFrame(dst_raw[1:], columns=dst_raw[0])
-        kp = pd.DataFrame(kp_raw[1:], columns=kp_raw[0])
+        dst = pd.DataFrame(dst_raw)
+        kp = pd.DataFrame(kp_raw)
 
         logger.info("Starting data transformation process...")
 
