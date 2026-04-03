@@ -1,6 +1,8 @@
 from src.transform.process_solar_wind import process_solar_wind
 from src.transform.process_dst import process_dst
 from src.transform.process_kp import process_kp
+from src.transform.process_ssn import process_ssn
+from src.transform.process_smoothed_ssn import process_smoothed_ssn
 from src.utils.logging_utils import setup_logger
 import pandas as pd
 import json
@@ -21,6 +23,10 @@ def transform_data():
             dst_raw = json.load(f)
         with open("data/raw/kp.json") as f:
             kp_raw = json.load(f)
+        with open("data/raw/ssn.json") as f:
+            ssn_raw = json.load(f)
+        with open("data/raw/smoothed_ssn.json") as f:
+            smoothed_ssn_raw = json.load(f)
 
         logger.info("Raw data loaded. Converting to DataFrames...")
 
@@ -28,6 +34,8 @@ def transform_data():
         plasma = pd.DataFrame(plasma_raw[1:], columns=plasma_raw[0])
         dst = pd.DataFrame(dst_raw)
         kp = pd.DataFrame(kp_raw)
+        ssn = pd.DataFrame(ssn_raw)
+        smoothed_ssn = pd.DataFrame(smoothed_ssn_raw)
 
         logger.info("Starting data transformation process...")
 
@@ -47,9 +55,17 @@ def transform_data():
         kp = process_kp(kp)
         logger.info("Kp data transformation complete.")
 
+        logger.info("Transforming sunspot data...")
+        ssn = process_ssn(ssn)
+        logger.info("Sunspot data transformation complete.")
+
+        logger.info("Transforming smoothed sunspot data...")
+        smoothed_ssn = process_smoothed_ssn(smoothed_ssn)
+        logger.info("Smoothed sunspot data transformation complete.")
+
         logger.info("Data transformations completed.")
 
-        return (solar, dst, kp)  # solar_agg
+        return (solar, dst, kp, ssn, smoothed_ssn)
     except Exception as e:
         logger.error(f"Data transformation failed: {str(e)}")
         raise

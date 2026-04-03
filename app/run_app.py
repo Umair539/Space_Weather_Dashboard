@@ -32,8 +32,9 @@ def main():
     geomag_indices_page = st.Page(
         "pages/geomag_indices.py", title="Geomagnetic Indices"
     )
+    sun_page = st.Page("pages/sun.py", title="Solar Activity")
 
-    pg = st.navigation([home_page, solar_wind_page, geomag_indices_page])
+    pg = st.navigation([home_page, solar_wind_page, geomag_indices_page, sun_page])
 
     # launch etl pipeline in background using separate thread
     start_background_worker()

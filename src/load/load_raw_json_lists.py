@@ -2,7 +2,7 @@ import os
 import json
 
 
-def load_raw_solar(filepath, new_data):
+def load_raw_json_lists(filepath, new_data):
     """Append only new records to existing JSON file based on time_tag."""
     os.makedirs(os.path.dirname(filepath), exist_ok=True)
 

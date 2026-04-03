@@ -2,7 +2,7 @@ import os
 import json
 
 
-def load_raw_indices(filepath, new_data):
+def load_raw_json_dicts(filepath, new_data):
     # Append only new records to existing JSON file (list of dicts) based on time_tag.
     os.makedirs(os.path.dirname(filepath), exist_ok=True)
 
