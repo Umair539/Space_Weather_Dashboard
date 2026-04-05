@@ -24,4 +24,5 @@ notebooks/test.ipynb
 data/raw_backup
 
 # ml model
-model
+model/data
+model/*.ipynb

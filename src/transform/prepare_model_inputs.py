@@ -35,8 +35,8 @@ def filter_and_reorder_inputs(model_inputs):
 
 def normalise_data(model_inputs):
     stats = {
-        "median": [410.43, 76430.0, 3.19466, -0.01, -0.6, -0.02, 573059.4476, 57.9],
-        "iqr": [128.55, 107250.0, 3.8, 3.72, 5.39, 4.98, 695837.1271, 86.3],
+        "median": (410.43, 76430.0, 3.19466, -0.01, -0.6, -0.02, 573059.4476, 57.9),
+        "iqr": (128.55, 107250.0, 3.8, 3.72, 5.39, 4.98, 695837.1271, 86.3),
     }
 
     model_inputs = (model_inputs - stats["median"]) / stats["iqr"]

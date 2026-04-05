@@ -3,7 +3,8 @@ from src.transform.process_dst import process_dst
 from src.transform.process_kp import process_kp
 from src.transform.process_ssn import process_ssn
 from src.transform.process_smoothed_ssn import process_smoothed_ssn
-from src.transform.prepare_model_input import prepare_model_input
+from src.transform.prepare_model_inputs import prepare_model_inputs
+from src.transform.model_inference import model_inference
 from src.utils.logging_utils import setup_logger
 import pandas as pd
 import json
@@ -61,9 +62,13 @@ def transform_data():
         logger.info("Smoothed sunspot data transformation complete.")
 
         # model inference
-        model_input = prepare_model_input(solar, smoothed_ssn)
+        logger.info("Preparing data for model inference...")
+        model_inputs = prepare_model_inputs(solar, smoothed_ssn)
+        logger.info("Completed preparing data for model inference.")
 
-        #
+        logger.info("Performing model inference...")
+        dst = model_inference(model_inputs, dst)
+        logger.info("Model inference complete.")
 
         logger.info("Data transformations completed.")
 
