@@ -3,6 +3,7 @@ from src.transform.process_dst import process_dst
 from src.transform.process_kp import process_kp
 from src.transform.process_ssn import process_ssn
 from src.transform.process_smoothed_ssn import process_smoothed_ssn
+from src.transform.prepare_model_input import prepare_model_input
 from src.utils.logging_utils import setup_logger
 import pandas as pd
 import json
@@ -43,10 +44,6 @@ def transform_data():
         solar = process_solar_wind(mag, plasma)
         logger.info("Solar wind data transformation complete.")
 
-        # logger.info("Aggregating solar wind data...")
-        # solar_agg = aggregate_solar_wind(solar)
-        # logger.info("Solar wind data aggregation complete.")
-
         logger.info("Transforming dst data...")
         dst = process_dst(dst)
         logger.info("Dst data transformation complete.")
@@ -62,6 +59,11 @@ def transform_data():
         logger.info("Transforming smoothed sunspot data...")
         smoothed_ssn = process_smoothed_ssn(smoothed_ssn)
         logger.info("Smoothed sunspot data transformation complete.")
+
+        # model inference
+        model_input = prepare_model_input(solar, smoothed_ssn)
+
+        #
 
         logger.info("Data transformations completed.")
 

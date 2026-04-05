@@ -22,3 +22,6 @@ notebooks/test.ipynb
 
 # backup raw data
 data/raw_backup
+
+# ml model
+model

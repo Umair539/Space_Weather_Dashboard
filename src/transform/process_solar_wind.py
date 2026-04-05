@@ -28,7 +28,7 @@ def process_solar_wind(mag, plasma):
 
 
 def filter_columns(mag):
-    mag = mag[["time_tag", "bz_gsm", "bt"]]
+    mag = mag[["time_tag", "bz_gsm", "bx_gsm", "by_gsm", "bt"]]
     return mag
 
 
@@ -36,6 +36,8 @@ def format_column_name(mag):
     mag = mag.rename(
         columns={
             "bz_gsm": "bz",
+            "bx_gsm": "bx",
+            "by_gsm": "by",
         }
     )
     return mag
