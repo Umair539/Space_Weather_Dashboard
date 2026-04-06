@@ -33,7 +33,7 @@ def load_raw_data(extracted_data):
 
 def load_transformed_data(transformed_data):
     try:
-        solar, dst, kp, ssn, smooothed_ssn = transformed_data
+        solar, dst, kp, ssn = transformed_data
 
         engine = create_engine(neon_db_url)
 

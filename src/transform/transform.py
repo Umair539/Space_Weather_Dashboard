@@ -9,7 +9,6 @@ from src.utils.logging_utils import setup_logger
 import pandas as pd
 import json
 
-# from src.transform.aggregate_solar_wind import aggregate_solar_wind
 logger = setup_logger("transform_data", "transform_data.log")
 
 
@@ -72,7 +71,7 @@ def transform_data():
 
         logger.info("Data transformations completed.")
 
-        return (solar, dst, kp, ssn, smoothed_ssn)
+        return (solar, dst, kp, ssn)
     except Exception as e:
         logger.error(f"Data transformation failed: {str(e)}")
         raise
