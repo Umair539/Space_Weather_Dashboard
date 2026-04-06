@@ -9,8 +9,10 @@ conn = st.session_state.neon_db
 st.title("Real Time Geomgagnetic Indices 📡")
 
 data_range = safe_query(conn, "SELECT TO_CHAR(time, 'YYYY-MM-DD HH24:MI') FROM dst;")
-s_dst = st.select_slider("Select start date", data_range[:-23])
-query = f"SELECT time, dst FROM dst WHERE time >= '{s_dst}'LIMIT 24"
+options = data_range.iloc[:, 0].tolist()
+options = options[:-23]
+s_dst = st.select_slider("Select start date", options=options, value=options[-1])
+query = f"SELECT time, dst, predictions FROM dst WHERE time >= '{s_dst}'LIMIT 24"
 plot_data = safe_query(conn, query)
 
 c1, c2 = st.columns(2)
@@ -40,7 +42,11 @@ st.markdown(
 
 chart = (
     alt.Chart(plot_data)
-    .mark_line(color="#ff0000")
+    .transform_fold(
+        ["dst", "predictions"],  # The columns you want to plot
+        as_=["Series", "Value"],  # Internal names for the legend and Y-axis
+    )
+    .mark_line()
     .encode(
         x=alt.X(
             "time:T",
@@ -51,7 +57,16 @@ chart = (
                 title="Time",
             ),
         ),
-        y=alt.Y("dst:Q", title="Dst (nT)"),
+        y=alt.Y("Value:Q", title="Dst (nT)"),
+        color=alt.Color(
+            "Series:N",
+            scale=alt.Scale(range=["#ff0000", "#a9a9a9"]),
+            legend=alt.Legend(
+                orient="bottom",  # Moves it below the X-axis
+                direction="horizontal",
+                title=None,
+            ),
+        ),
     )
     .properties(height=400)
 )

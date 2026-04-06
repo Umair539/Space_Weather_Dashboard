@@ -59,6 +59,13 @@ def load_transformed_data(transformed_data):
                 conn.execute(text(f"DROP TABLE IF EXISTS {name} CASCADE"))
                 conn.execute(text(f"ALTER TABLE {name}_temp RENAME TO {name}"))
 
+            # 4. Metadata table for time last updated
+            conn.execute(
+                text("CREATE TABLE IF NOT EXISTS metadata (last_updated TIMESTAMP);")
+            )
+            conn.execute(text("TRUNCATE TABLE metadata;"))
+            conn.execute(text("INSERT INTO metadata (last_updated) VALUES (NOW());"))
+
         logger.info("Neon SQL database updated Sucessfully.")
 
     except Exception as e:
