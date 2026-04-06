@@ -6,6 +6,7 @@ def prepare_model_inputs(solar, smoothed_ssn):
     model_inputs = join_inputs(solar, smoothed_ssn)
     model_inputs = filter_and_reorder_inputs(model_inputs)
     model_inputs = normalise_data(model_inputs)
+    model_inputs = filter_complete_hours(model_inputs)
     model_inputs = downsample_data(model_inputs)
 
     return model_inputs.values
@@ -41,6 +42,15 @@ def normalise_data(model_inputs):
 
     model_inputs = (model_inputs - stats["median"]) / stats["iqr"]
     return model_inputs
+
+
+def filter_complete_hours(model_inputs):
+    counts = (
+        model_inputs.groupby(model_inputs.index.floor("h"))
+        .transform("count")
+        .iloc[:, 0]
+    )
+    return model_inputs[counts == 60]
 
 
 def downsample_data(model_inputs):
