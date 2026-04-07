@@ -1,5 +1,3 @@
-from pathlib import Path
-from datetime import datetime
 import streamlit as st
 from dotenv import load_dotenv
 import os
@@ -8,13 +6,15 @@ load_dotenv()
 neon_db_url = os.environ.get("DATABASE_URL") or st.secrets.get("DATABASE_URL")
 
 
-def data_last_synced():
-    raw_data_path = Path("data/raw/dst.json").resolve()
+def data_last_synced(conn):
+    try:
+        query = "SELECT last_synced FROM metadata"
+        result = safe_query(conn, query)
+        last_synced = result.iloc[0].iloc[0].strftime("%d %b, %H:%M")
+        return f"Data last synced at {last_synced}"
 
-    if raw_data_path.exists():
-        mtime = raw_data_path.stat().st_mtime
-        return datetime.fromtimestamp(mtime).strftime("%d %b, %H:%M")
-    return "Error fetching last synced"
+    except Exception:
+        return "Error fetching last synced"
 
 
 def safe_query(conn, query):

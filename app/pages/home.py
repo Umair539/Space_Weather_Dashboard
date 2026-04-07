@@ -20,7 +20,7 @@ st.markdown(
 
 st.markdown(
     f"<div style='text-align: right; font-style: italic; color: gray;'>"
-    f"Data last synced at {data_last_synced()}"
+    f"{data_last_synced(conn)}"
     f"</div>",
     unsafe_allow_html=True,
 )
