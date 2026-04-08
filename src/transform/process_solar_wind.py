@@ -47,12 +47,12 @@ def drop_duplicates(df):
     return df.drop_duplicates()
 
 
-def set_time_index(df):
+def set_time_index(df, time_col="time_tag"):
     # new column was made and then assigned as index since assigning directly
     # caused future warnings to appear
-    time_index_series = pd.to_datetime(df["time_tag"])
+    time_index_series = pd.to_datetime(df[time_col])
     df = df.set_index(time_index_series)
-    df = df.drop(columns=["time_tag"])
+    df = df.drop(columns=[time_col])
     return df
 
 
