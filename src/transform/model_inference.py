@@ -1,39 +1,31 @@
-from keras import utils, models
+import onnxruntime as rt
+import numpy as np
 import pandas as pd
 
-dst_model = models.load_model("model/model.keras")
+sess = rt.InferenceSession("model/model.onnx")
 
 
-def model_inference(model_inputs, dst, model=dst_model):
-    model_inputs = prepare_dataset(model_inputs)
-    predictions = run_inference(model_inputs, model)
+def model_inference(model_inputs, dst):
+    X = prepare_dataset(model_inputs)
+    predictions = sess.run(None, {"input_layer:0": X})[0].flatten()
     predictions = denormalise_predictions(predictions)
     dst = align_predictions(predictions, dst)
-
     return dst
 
 
-def prepare_dataset(model_inputs):
-    model_inputs = utils.timeseries_dataset_from_array(
-        data=model_inputs,
-        targets=None,
-        sequence_length=168,
-        sampling_rate=1,
-        sequence_stride=1,
-        shuffle=False,
+def prepare_dataset(model_inputs, sequence_length=168):
+    X = np.array(
+        [
+            model_inputs[i : i + sequence_length]
+            for i in range(len(model_inputs) - sequence_length + 1)
+        ]
     )
-    return model_inputs
-
-
-def run_inference(model_inputs, model):
-    predictions = model.predict(model_inputs).flatten()
-    return predictions
+    return X.astype(np.float32)
 
 
 def denormalise_predictions(predictions):
     stats = (-8, 19)
-    predictions = (predictions * stats[1]) + stats[0]
-    return predictions
+    return (predictions * stats[1]) + stats[0]
 
 
 def align_predictions(predictions, dst):

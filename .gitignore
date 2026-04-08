@@ -26,3 +26,4 @@ data/raw_backup
 # ml model
 model/data
 model/*.ipynb
+model/*.keras
