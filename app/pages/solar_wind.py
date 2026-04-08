@@ -103,6 +103,8 @@ label = {
     "Temperature": "Solar wind temperature (K)",
     "Pressure": "Solar wind dynamic pressure (nPa)",
     "Bz": "IMF Z-component (nT)",
+    "By": "IMF Y-component (nT)",
+    "Bx": "IMF X-component (nT)",
     "Bt": "IMF magnitude (nT)",
 }
 
