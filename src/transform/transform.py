@@ -13,7 +13,7 @@ logger = setup_logger("transform_data", "transform_data.log")
 
 def transform_data():
     try:
-        logger.info("Loading raw data...")
+        logger.info("Fetching saved data...")
 
         mag = fetch_saved_data("data/raw/mag/")
         plasma = fetch_saved_data("data/raw/plasma/")
