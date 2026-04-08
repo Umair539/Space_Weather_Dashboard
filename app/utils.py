@@ -12,7 +12,7 @@ def data_last_synced(conn):
         query = "SELECT last_synced FROM metadata"
         result = safe_query(conn, query)
         last_synced = result.iloc[0].iloc[0].strftime("%d %b, %H:%M")
-        return f"Data last synced at {last_synced}"
+        return f"Data last synced at {last_synced} UTC"
 
     except Exception:
         return "Error fetching last synced"
@@ -27,13 +27,11 @@ def safe_query(conn, query):
 
 
 def init_db():
-    if "neon_db" not in st.session_state:
-        st.session_state.neon_db = st.connection(
-            "neon_db",
-            type="sql",
-            url=neon_db_url,
-        )
-    return st.session_state.neon_db
+    return st.connection(
+        "neon_db",
+        type="sql",
+        url=neon_db_url,
+    )
 
 
 def get_noaa_advisory():

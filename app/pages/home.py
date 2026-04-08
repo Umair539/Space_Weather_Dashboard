@@ -5,8 +5,7 @@ from utils import safe_query, data_last_synced, init_db
 import altair as alt
 from utils import get_noaa_advisory
 
-init_db()
-conn = st.session_state.neon_db
+conn = init_db()
 
 st.title("Space Weather Dashboard 🪐")
 

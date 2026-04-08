@@ -3,16 +3,17 @@ import altair as alt
 from streamlit_autorefresh import st_autorefresh
 from utils import safe_query, data_last_synced, init_db
 
-init_db()
-conn = st.session_state.neon_db
+conn = init_db()
 
 st.title("Real Time Solar Activity ☀️")
 
-c1, c2 = st.columns(2)
+c1, c2 = st.columns([3, 1], vertical_alignment="bottom")
+
 with c1:
     st.subheader("Live Solar View")
 
 with c2:
+    # Use a div to keep the text right-aligned within its column
     st.markdown(
         f"<div style='text-align: right; font-style: italic; color: gray;'>"
         f"{data_last_synced(conn)}"
