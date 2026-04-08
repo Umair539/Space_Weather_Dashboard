@@ -37,7 +37,7 @@ with c1:
     st.markdown("")
     st.markdown(
         f'<div style="font-size: 24px; text-align: center; margin-top: 20px;">'
-        f"Dst Index Forecast for {dst['time'].iloc[0].strftime("%d %b, %H:%M")}: {dst['predictions'].iloc[0].round(2)} nT</div>",
+        f"Dst Index Forecast for {dst['time'].iloc[0].strftime('%d %b, %H:%M')}: {dst['predictions'].iloc[0].round(2)} nT</div>",
         unsafe_allow_html=True,
     )
 
