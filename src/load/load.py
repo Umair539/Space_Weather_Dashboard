@@ -1,6 +1,5 @@
 from src.utils.logging_utils import setup_logger
-from src.load.load_raw_json_dicts import load_raw_json_dicts
-from src.load.load_raw_json_lists import load_raw_json_lists
+from src.load.load_raw_json import load_raw_json
 from sqlalchemy import create_engine
 from sqlalchemy import text
 from dotenv import load_dotenv
@@ -18,12 +17,12 @@ def load_raw_data(extracted_data):
 
         logger.info("Loading raw data...")
 
-        load_raw_json_lists("data/raw/mag.json", mag)
-        load_raw_json_lists("data/raw/plasma.json", plasma)
-        load_raw_json_dicts("data/raw/dst.json", dst)
-        load_raw_json_dicts("data/raw/kp.json", kp)
-        load_raw_json_dicts("data/raw/ssn.json", ssn)
-        load_raw_json_dicts("data/raw/smoothed_ssn.json", smoothed_ssn)
+        load_raw_json("data/raw/mag/", mag)
+        load_raw_json("data/raw/plasma/", plasma)
+        load_raw_json("data/raw/dst/", dst)
+        load_raw_json("data/raw/kp/", kp)
+        load_raw_json("data/raw/ssn/", ssn)
+        load_raw_json("data/raw/smoothed_ssn/", smoothed_ssn)
 
         logger.info("Loaded raw data.")
 

@@ -1,3 +1,4 @@
+from src.transform.fetch_saved_data import fetch_saved_data
 from src.transform.process_solar_wind import process_solar_wind
 from src.transform.process_dst import process_dst
 from src.transform.process_kp import process_kp
@@ -6,8 +7,6 @@ from src.transform.process_smoothed_ssn import process_smoothed_ssn
 from src.transform.prepare_model_inputs import prepare_model_inputs
 from src.transform.model_inference import model_inference
 from src.utils.logging_utils import setup_logger
-import pandas as pd
-import json
 
 logger = setup_logger("transform_data", "transform_data.log")
 
@@ -16,27 +15,12 @@ def transform_data():
     try:
         logger.info("Loading raw data...")
 
-        with open("data/raw/mag.json") as f:
-            mag_raw = json.load(f)
-        with open("data/raw/plasma.json") as f:
-            plasma_raw = json.load(f)
-        with open("data/raw/dst.json") as f:
-            dst_raw = json.load(f)
-        with open("data/raw/kp.json") as f:
-            kp_raw = json.load(f)
-        with open("data/raw/ssn.json") as f:
-            ssn_raw = json.load(f)
-        with open("data/raw/smoothed_ssn.json") as f:
-            smoothed_ssn_raw = json.load(f)
-
-        logger.info("Raw data loaded. Converting to DataFrames...")
-
-        mag = pd.DataFrame(mag_raw[1:], columns=mag_raw[0])
-        plasma = pd.DataFrame(plasma_raw[1:], columns=plasma_raw[0])
-        dst = pd.DataFrame(dst_raw)
-        kp = pd.DataFrame(kp_raw)
-        ssn = pd.DataFrame(ssn_raw)
-        smoothed_ssn = pd.DataFrame(smoothed_ssn_raw)
+        mag = fetch_saved_data("data/raw/mag/")
+        plasma = fetch_saved_data("data/raw/plasma/")
+        dst = fetch_saved_data("data/raw/dst/")
+        kp = fetch_saved_data("data/raw/kp/")
+        ssn = fetch_saved_data("data/raw/ssn/")
+        smoothed_ssn = fetch_saved_data("data/raw/smoothed_ssn/")
 
         logger.info("Starting data transformation process...")
 
