@@ -1,6 +1,7 @@
 import streamlit as st
 from dotenv import load_dotenv
 import os
+import requests
 
 load_dotenv()
 neon_db_url = os.environ.get("DATABASE_URL") or st.secrets.get("DATABASE_URL")
@@ -31,5 +32,20 @@ def init_db():
             "neon_db",
             type="sql",
             url=neon_db_url,
-        )  # timeout to prevent concurrent read/writes
+        )
     return st.session_state.neon_db
+
+
+def get_noaa_advisory():
+    url = "https://services.swpc.noaa.gov/text/advisory-outlook.txt"
+    try:
+        response = requests.get(url)
+        response.raise_for_status()
+        full_text = response.text
+
+        if "**** SPACE WEATHER OUTLOOK ****" in full_text:
+            content = full_text.split("**** SPACE WEATHER OUTLOOK ****")[-1]
+            return content.strip()
+        return full_text
+    except Exception as e:
+        return f"Error fetching advisory: {e}"

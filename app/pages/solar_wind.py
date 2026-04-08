@@ -8,7 +8,7 @@ conn = st.session_state.neon_db
 
 st.title("Real Time Solar Wind Properties 🛰️")
 
-col1, col2, col3 = st.columns(3)
+col1, col2 = st.columns(2)
 
 with col1:
     resolution = st.selectbox(
@@ -21,13 +21,6 @@ columns = [c.capitalize() for c in df.columns][1:]
 with col2:
     features = st.multiselect(
         label="Select features", options=columns, default=columns[:2]
-    )
-
-with col3:
-    aggregation = st.selectbox(
-        label="Select aggregation method",
-        options=["Mean", "Standard deviation"],
-        disabled=(resolution == "Minutely"),
     )
 
 win = {"Minutely": 24 * 60, "Hourly": 24}
@@ -43,17 +36,14 @@ if resolution == "Hourly":
         ORDER BY hour ASC
         """,
     )
-    s = st.select_slider("Select start date", data_range[:-24])
+    options = data_range.iloc[:, 0].tolist()
+    options = options[:-24]
+    s = st.select_slider("Select start date", options=options, value=options[-1])
 
     cols_to_query = []
     for col in features:
-        if aggregation == "Mean":
-            cols_to_query.append(f", round(avg({col})::numeric, 2) AS {col.lower()}")
+        cols_to_query.append(f", round(avg({col})::numeric, 2) AS {col.lower()}")
 
-        elif aggregation == "Standard deviation":
-            cols_to_query.append(
-                f", round(sqrt(avg({col}*{col}) - avg({col})*avg({col}))::numeric, 2) AS {col.lower()}"
-            )
     cols_to_query = "".join(cols_to_query)
 
     data_query = (
@@ -73,7 +63,9 @@ elif resolution == "Minutely":
     data_range = safe_query(
         conn, "SELECT TO_CHAR(time, 'YYYY-MM-DD HH24:MI') from solar"
     )
-    s = st.select_slider("Select start date", data_range[: -24 * 60 + 1])
+    options = data_range.iloc[:, 0].tolist()
+    options = options[: -24 * 60 + 1]
+    s = st.select_slider("Select start date", options=options, value=options[-1])
 
     cols_to_query = ", ".join(["time"] + features)
     data_query = (
@@ -135,7 +127,7 @@ for feature in features:
                 axis=alt.Axis(
                     labelAngle=0,
                     tickCount=6,
-                    format="%H:%M",
+                    format="%b %d, %H:%M",
                     title="Time",
                 ),
             ),
@@ -149,7 +141,7 @@ for feature in features:
 
     st.altair_chart(chart, width="stretch")
 
-with st.expander("More information on Solar Wind"):
+with st.expander("More information on Solar Wind", expanded=True):
     st.markdown(
         """
         The solar wind is a continuous stream of charged particles

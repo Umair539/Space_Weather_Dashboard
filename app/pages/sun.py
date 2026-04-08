@@ -8,22 +8,9 @@ conn = st.session_state.neon_db
 
 st.title("Real Time Solar Activity ☀️")
 
-data_range = safe_query(conn, "SELECT TO_CHAR(time, 'YYYY-MM-DD') FROM ssn;")
-s_ssn = st.select_slider("Select start date", data_range[:-3])
-query = f"SELECT time, swpc_ssn FROM ssn WHERE time >= '{s_ssn}'LIMIT 31"
-plot_data = safe_query(conn, query)
-
 c1, c2 = st.columns(2)
-
 with c1:
-    start_str = plot_data["time"].iloc[0].strftime("%b %d")
-    end_str = plot_data["time"].iloc[-1].strftime("%b %d")
-
-    st.markdown(
-        f"<div style='text-align: left;'>"
-        f"Displaying data from {start_str} to {end_str}</div>",
-        unsafe_allow_html=True,
-    )
+    st.subheader("Live Solar View")
 
 with c2:
     st.markdown(
@@ -32,6 +19,41 @@ with c2:
         f"</div>",
         unsafe_allow_html=True,
     )
+
+solar_flavors = {
+    "Sunspots (Visible/HMI)": "https://services.swpc.noaa.gov/images/animations/sdo-hmii/latest.jpg",
+    "Solar Eruptions (Red/304Å)": "https://services.swpc.noaa.gov/images/animations/suvi/primary/304/latest.png",
+    "Solar Flares (Teal/131Å)": "https://services.swpc.noaa.gov/images/animations/suvi/primary/131/latest.png",
+}
+
+col1, col2, col3 = st.columns(3)
+
+with col1:
+    st.image(solar_flavors["Sunspots (Visible/HMI)"], caption="Sunspots (HMI)")
+with col2:
+    st.image(solar_flavors["Solar Eruptions (Red/304Å)"], caption="Eruptions (304Å)")
+with col3:
+    st.image(solar_flavors["Solar Flares (Teal/131Å)"], caption="Flares (131Å)")
+
+
+data_range = safe_query(conn, "SELECT TO_CHAR(time, 'YYYY-MM-DD') FROM ssn;")
+options = data_range.iloc[:, 0].tolist()
+options = options[:-30]
+s_ssn = st.select_slider("Select start date", options=options, value=options[-1])
+query = f"SELECT time, swpc_ssn FROM ssn WHERE time >= '{s_ssn}'LIMIT 31"
+plot_data = safe_query(conn, query)
+
+c1, c2 = st.columns(2)
+
+
+start_str = plot_data["time"].iloc[0].strftime("%b %d")
+end_str = plot_data["time"].iloc[-1].strftime("%b %d")
+
+st.markdown(
+    f"<div style='text-align: left;'>"
+    f"Displaying data from {start_str} to {end_str}</div>",
+    unsafe_allow_html=True,
+)
 
 st.markdown(
     "<div style='text-align: center;'><h3>Sunspots</h3></div>",
@@ -58,20 +80,22 @@ chart = (
 
 st.altair_chart(chart, width="stretch")
 
-with st.expander("More information on Solar Activity"):
+with st.expander("More information on Solar Activity", expanded=True):
     st.markdown(
         """
-        The Disturbance Storm Time (Dst) index is a measure of geomagnetic
-        activity used to assess the severity of geomagnetic storms. It is
-        expressed in nanoTeslas and is based on the average value of the
-        horizontal component of the Earth's magnetic field measured at four
-        near-equatorial geomagnetic observatories at hourly intervals. It
-        measures the growth and recovery of the ring current in the Earth's
-        magnetosphere. The lower these values get, the more energy is stored
-        in Earth's magnetosphere.If the Dst index drops below -50 nT, this
-        indicates a moderate storm is taking place, and below -100 nT
-        indicates a severe storm taking place.
+        The Sun follows a periodic 11-year cycle of activity driven by its
+        internal magnetic field, which completely flips its orientation once
+        per decade. This progression is most visibly tracked by the number
+        of sunspots, which are dark, cooler regions of intense magnetic activity
+        on the surface of the sun that indicate how active the Sun is. During solar
+        minimum, very few sunspots are observed, whereas solar maximum brings
+        a high concentration of spots, often leading to more frequent solar
+        flares. These cycles are closely linked to the solar wind, as a more
+        active Sun releases a more turbulent stream of particles that can
+        impact Earth's magnetic field. The chart displays these counts to show
+        where the current solar activity falls within the broader 11-year cycle.
     """
     )
+
 
 st_autorefresh(60000)

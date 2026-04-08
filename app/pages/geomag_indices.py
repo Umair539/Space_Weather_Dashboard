@@ -10,9 +10,9 @@ st.title("Real Time Geomgagnetic Indices 📡")
 
 data_range = safe_query(conn, "SELECT TO_CHAR(time, 'YYYY-MM-DD HH24:MI') FROM dst;")
 options = data_range.iloc[:, 0].tolist()
-options = options[:-23]
+options = options[:-24]
 s_dst = st.select_slider("Select start date", options=options, value=options[-1])
-query = f"SELECT time, dst, predictions FROM dst WHERE time >= '{s_dst}'LIMIT 24"
+query = f"SELECT time, dst, predictions FROM dst WHERE time >= '{s_dst}'LIMIT 25"
 plot_data = safe_query(conn, query)
 
 c1, c2 = st.columns(2)
@@ -43,8 +43,8 @@ st.markdown(
 chart = (
     alt.Chart(plot_data)
     .transform_fold(
-        ["dst", "predictions"],  # The columns you want to plot
-        as_=["Series", "Value"],  # Internal names for the legend and Y-axis
+        ["dst", "predictions"],
+        as_=["Series", "Value"],
     )
     .mark_line()
     .encode(
@@ -53,7 +53,7 @@ chart = (
             axis=alt.Axis(
                 labelAngle=0,
                 tickCount=6,
-                format="%H:%M",
+                format="%b %d, %H:%M",
                 title="Time",
             ),
         ),
@@ -62,9 +62,13 @@ chart = (
             "Series:N",
             scale=alt.Scale(range=["#ff0000", "#a9a9a9"]),
             legend=alt.Legend(
-                orient="bottom",  # Moves it below the X-axis
-                direction="horizontal",
+                orient="none",
+                legendX=5,  # pixels from the left
+                legendY=5,  # pixels from the top
+                direction="vertical",  # vertical stack
                 title=None,
+                padding=5,
+                labelExpr="datum.label == 'dst' ? 'Observed Dst' : datum.label == 'predictions' ? 'Model Prediction' : datum.label",
             ),
         ),
     )
@@ -73,7 +77,7 @@ chart = (
 
 st.altair_chart(chart, width="stretch")
 
-with st.expander("More information on Dst index"):
+with st.expander("More information on Dst index", expanded=True):
     st.markdown(
         """
         The Disturbance Storm Time (Dst) index is a measure of geomagnetic
@@ -83,15 +87,18 @@ with st.expander("More information on Dst index"):
         near-equatorial geomagnetic observatories at hourly intervals. It
         measures the growth and recovery of the ring current in the Earth's
         magnetosphere. The lower these values get, the more energy is stored
-        in Earth's magnetosphere.If the Dst index drops below -50 nT, this
+        in Earth's magnetosphere. If the Dst index drops below -50 nT, this
         indicates a moderate storm is taking place, and below -100 nT
-        indicates a severe storm taking place.
+        indicates a severe storm taking place. The chart compares these
+        observed measurements with the corresponding predicted values.
     """
     )
 
 data_range = safe_query(conn, "SELECT TO_CHAR(time, 'YYYY-MM-DD HH24:MI') FROM kp;")
-ss_kp = st.select_slider("Select start date", data_range[:-7])
-query_kp = f"""SELECT time, kp."Kp" FROM kp WHERE time >= '{ss_kp}' LIMIT 24"""
+options = data_range.iloc[:, 0].tolist()
+options = options[:-24]
+ss_kp = st.select_slider("Select start date", options=options, value=options[-1])
+query_kp = f"""SELECT time, kp."Kp" FROM kp WHERE time >= '{ss_kp}' LIMIT 25"""
 plot_data_kp = safe_query(conn, query_kp)
 
 start_str_kp = plot_data_kp["time"].iloc[0].strftime("%b %d, %H:%M")
@@ -103,7 +110,7 @@ st.markdown(
 )
 
 st.markdown(
-    "<div style='text-align: center;'><h3>Kp index</h3></div>",
+    "<div style='text-align: center;'><h3>Kp Index</h3></div>",
     unsafe_allow_html=True,
 )
 
@@ -115,8 +122,8 @@ chart_kp = (
             "time:T",
             axis=alt.Axis(
                 labelAngle=0,
-                tickCount=4,
-                format="%H:%M",
+                tickCount=6,
+                format="%b %d, %H:%M",
                 title="Time",
             ),
         ),
@@ -127,7 +134,7 @@ chart_kp = (
 
 st.altair_chart(chart_kp, width="stretch")
 
-with st.expander("More information on Kp index"):
+with st.expander("More information on Kp index", expanded=True):
     st.markdown(
         """
         The Kp-index is a geomagnetic activity index based on data from
