@@ -1,9 +1,14 @@
 import streamlit as st
 from streamlit_autorefresh import st_autorefresh
 import plotly.graph_objects as go
-from utils import safe_query, data_last_synced, init_db, is_data_fresh
+from app.app_utils import (
+    safe_query,
+    data_last_synced,
+    init_db,
+    is_data_fresh,
+    get_noaa_advisory,
+)
 import altair as alt
-from utils import get_noaa_advisory
 from datetime import timedelta
 
 conn = init_db()

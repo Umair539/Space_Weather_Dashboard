@@ -3,9 +3,6 @@ from dotenv import load_dotenv
 import os
 import requests
 from datetime import datetime, timezone
-from src.utils.logging_utils import setup_logger
-
-logger = setup_logger("db_query", "app.log")
 
 load_dotenv()
 neon_db_url = os.environ.get("DATABASE_URL") or st.secrets.get("DATABASE_URL")
@@ -14,7 +11,7 @@ neon_db_url = os.environ.get("DATABASE_URL") or st.secrets.get("DATABASE_URL")
 def data_last_synced(conn):
     try:
         query = "SELECT last_synced FROM metadata"
-        result = safe_query(conn, query, 0)
+        result = safe_query(conn, query, 5)
         last_synced = result.iloc[0].iloc[0].strftime("%d %b, %H:%M")
         return f"Data last synced at {last_synced} UTC"
 
@@ -25,9 +22,8 @@ def data_last_synced(conn):
 def safe_query(conn, query, ttl=60):
     try:
         return conn.query(query, ttl=ttl)
-    except Exception as e:
+    except Exception:
         st.info("Connecting to database. Please wait...")
-        logger.error(f"Query failed: {query} | Error: {e}")
         st.stop()
 
 

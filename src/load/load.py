@@ -62,10 +62,8 @@ def load_transformed_data(transformed_data):
             conn.execute(
                 text(
                     """
-                    INSERT INTO metadata (id, last_synced)
-                    VALUES (1, NOW())
-                    ON CONFLICT (id)
-                    DO UPDATE SET last_synced = NOW();
+                    DELETE FROM metadata;
+                    INSERT INTO metadata (last_synced) VALUES (NOW());
                     """
                 )
             )
