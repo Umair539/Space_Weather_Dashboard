@@ -1036,5 +1036,17 @@
     "Kp": 4.33,
     "a_running": 32,
     "station_count": 8
+  },
+  {
+    "time_tag": "2026-04-10T15:00:00",
+    "Kp": 4.0,
+    "a_running": 27,
+    "station_count": 8
+  },
+  {
+    "time_tag": "2026-04-10T18:00:00",
+    "Kp": 3.33,
+    "a_running": 18,
+    "station_count": 8
   }
 ]

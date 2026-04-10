@@ -11,10 +11,15 @@ st.title("Real Time Geomgagnetic Indices 📡")
 if not is_data_fresh(conn):
     st.info("⏳ Syncing latest space weather data...")
 
-data_range = safe_query(conn, "SELECT TO_CHAR(time, 'YYYY-MM-DD HH24:MI') FROM dst;")
+data_range = safe_query(conn, "SELECT time FROM dst;")
 options = data_range.iloc[:, 0].tolist()
 options = options[:-24]
-s_dst = st.select_slider("Select start date", options=options, value=options[-1])
+s_dst = st.select_slider(
+    "Select start date",
+    options=options,
+    value=options[-1],
+    format_func=lambda x: x.strftime("%b %d, %H:%M"),
+)
 query = f"SELECT time, dst, predictions FROM dst WHERE time >= '{s_dst}'LIMIT 25"
 plot_data = safe_query(conn, query)
 
@@ -97,10 +102,15 @@ with st.expander("More information on Dst index", expanded=True):
     """
     )
 
-data_range = safe_query(conn, "SELECT TO_CHAR(time, 'YYYY-MM-DD HH24:MI') FROM kp;")
+data_range = safe_query(conn, "SELECT time FROM kp;")
 options = data_range.iloc[:, 0].tolist()
 options = options[:-24]
-ss_kp = st.select_slider("Select start date", options=options, value=options[-1])
+ss_kp = st.select_slider(
+    "Select start date",
+    options=options,
+    value=options[-1],
+    format_func=lambda x: x.strftime("%b %d, %H:%M"),
+)
 query_kp = f"""SELECT time, kp."Kp" FROM kp WHERE time >= '{ss_kp}' LIMIT 25"""
 plot_data_kp = safe_query(conn, query_kp)
 

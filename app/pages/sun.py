@@ -38,10 +38,15 @@ with col3:
     st.image(solar_flavors["Solar Flares (Teal/131Å)"], caption="Flares (131Å)")
 
 
-data_range = safe_query(conn, "SELECT TO_CHAR(time, 'YYYY-MM-DD') FROM ssn;")
+data_range = safe_query(conn, "SELECT time FROM ssn;")
 options = data_range.iloc[:, 0].tolist()
 options = options[:-30]
-s_ssn = st.select_slider("Select start date", options=options, value=options[-1])
+s_ssn = st.select_slider(
+    "Select start date",
+    options=options,
+    value=options[-1],
+    format_func=lambda x: x.strftime("%b %d %Y"),
+)
 query = f"SELECT time, swpc_ssn FROM ssn WHERE time >= '{s_ssn}'LIMIT 31"
 plot_data = safe_query(conn, query)
 
@@ -49,7 +54,7 @@ c1, c2 = st.columns(2)
 
 
 start_str = plot_data["time"].iloc[0].strftime("%b %d")
-end_str = plot_data["time"].iloc[-1].strftime("%b %d")
+end_str = plot_data["time"].iloc[-1].strftime("%b %d %Y")
 
 st.markdown(
     f"<div style='text-align: left;'>"

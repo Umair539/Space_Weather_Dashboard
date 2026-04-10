@@ -4,6 +4,7 @@ import plotly.graph_objects as go
 from utils import safe_query, data_last_synced, init_db, is_data_fresh
 import altair as alt
 from utils import get_noaa_advisory
+from datetime import timedelta
 
 conn = init_db()
 synced = is_data_fresh(conn)
@@ -34,10 +35,13 @@ kp = safe_query(conn, "SELECT * FROM kp ORDER BY time DESC LIMIT 1")
 c1, c2 = st.columns((0.5, 0.5))
 
 with c1:
+    start_time = dst["time"].iloc[0]
+    end_time = start_time + timedelta(hours=1)
     st.markdown("")
     st.markdown(
         f'<div style="font-size: 24px; text-align: center; margin-top: 20px;">'
-        f"Dst Index Forecast for {dst['time'].iloc[0].strftime('%d %b, %H:%M')}: {dst['predictions'].iloc[0].round(2)} nT</div>",
+        f"Predicted Dst for {start_time.strftime('%d %b, %H:%M')}–{end_time.strftime('%H:%M')} UTC: "
+        f"{dst['predictions'].iloc[0].round(2)} nT</div>",
         unsafe_allow_html=True,
     )
 

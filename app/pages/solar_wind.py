@@ -38,7 +38,12 @@ if resolution == "Hourly":
     )
     options = data_range.iloc[:, 0].tolist()
     options = options[:-24]
-    s = st.select_slider("Select start date", options=options, value=options[-1])
+    s = st.select_slider(
+        "Select start date",
+        options=options,
+        value=options[-1],
+        format_func=lambda x: x.strftime("%b %d, %H:%M"),
+    )
 
     cols_to_query = []
     for col in features:
@@ -60,12 +65,15 @@ if resolution == "Hourly":
     time_col = "hourly_bucket"
 
 elif resolution == "Minutely":
-    data_range = safe_query(
-        conn, "SELECT TO_CHAR(time, 'YYYY-MM-DD HH24:MI') from solar"
-    )
+    data_range = safe_query(conn, "SELECT time FROM solar ORDER BY time")
     options = data_range.iloc[:, 0].tolist()
     options = options[: -24 * 60 + 1]
-    s = st.select_slider("Select start date", options=options, value=options[-1])
+    s = st.select_slider(
+        "Select start date",
+        options=options,
+        value=options[-1],
+        format_func=lambda x: x.strftime("%b %d, %H:%M"),
+    )
 
     cols_to_query = ", ".join(["time"] + features)
     data_query = (
