@@ -1,7 +1,7 @@
 import streamlit as st
 import altair as alt
 from streamlit_autorefresh import st_autorefresh
-from app.app_utils import safe_query, data_last_synced, init_db, is_data_fresh
+from app_utils import safe_query, data_last_synced, init_db, is_data_fresh
 
 conn = init_db()
 synced = is_data_fresh(conn)
@@ -9,7 +9,7 @@ synced = is_data_fresh(conn)
 st.title("Real Time Geomgagnetic Indices 📡")
 
 if not is_data_fresh(conn):
-    st.info("⏳ Syncing latest space weather data...")
+    st.info("Syncing latest space weather data...")
 
 data_range = safe_query(conn, "SELECT time FROM dst;")
 options = data_range.iloc[:, 0].tolist()
