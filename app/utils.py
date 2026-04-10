@@ -2,6 +2,10 @@ import streamlit as st
 from dotenv import load_dotenv
 import os
 import requests
+from datetime import datetime, timezone
+from src.utils.logging_utils import setup_logger
+
+logger = setup_logger("db_query", "app.log")
 
 load_dotenv()
 neon_db_url = os.environ.get("DATABASE_URL") or st.secrets.get("DATABASE_URL")
@@ -10,7 +14,7 @@ neon_db_url = os.environ.get("DATABASE_URL") or st.secrets.get("DATABASE_URL")
 def data_last_synced(conn):
     try:
         query = "SELECT last_synced FROM metadata"
-        result = safe_query(conn, query)
+        result = safe_query(conn, query, 0)
         last_synced = result.iloc[0].iloc[0].strftime("%d %b, %H:%M")
         return f"Data last synced at {last_synced} UTC"
 
@@ -18,11 +22,12 @@ def data_last_synced(conn):
         return "Error fetching last synced"
 
 
-def safe_query(conn, query):
+def safe_query(conn, query, ttl=60):
     try:
-        return conn.query(query, ttl=60)
-    except Exception:
-        st.info("Error connecting to database. Please wait...")
+        return conn.query(query, ttl=ttl)
+    except Exception as e:
+        st.info("Connecting to database. Please wait...")
+        logger.error(f"Query failed: {query} | Error: {e}")
         st.stop()
 
 
@@ -47,3 +52,15 @@ def get_noaa_advisory():
         return full_text
     except Exception as e:
         return f"Error fetching advisory: {e}"
+
+
+def is_data_fresh(conn):
+    try:
+        result = conn.query("SELECT last_synced FROM metadata", ttl=5)
+        last_synced = result.iloc[0].iloc[0]
+        age = (
+            datetime.now(timezone.utc).replace(tzinfo=None) - last_synced
+        ).total_seconds()
+        return age < 180
+    except Exception:
+        return False

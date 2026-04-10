@@ -1,9 +1,10 @@
 import streamlit as st
 import altair as alt
 from streamlit_autorefresh import st_autorefresh
-from utils import safe_query, data_last_synced, init_db
+from utils import safe_query, data_last_synced, init_db, is_data_fresh
 
 conn = init_db()
+synced = is_data_fresh(conn)
 
 st.title("Real Time Solar Activity ☀️")
 
@@ -99,4 +100,7 @@ with st.expander("More information on Solar Activity", expanded=True):
     )
 
 
-st_autorefresh(60000)
+if synced:
+    st_autorefresh(60000)
+else:
+    st_autorefresh(5000)

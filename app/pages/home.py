@@ -1,11 +1,12 @@
 import streamlit as st
 from streamlit_autorefresh import st_autorefresh
 import plotly.graph_objects as go
-from utils import safe_query, data_last_synced, init_db
+from utils import safe_query, data_last_synced, init_db, is_data_fresh
 import altair as alt
 from utils import get_noaa_advisory
 
 conn = init_db()
+synced = is_data_fresh(conn)
 
 st.title("Space Weather Dashboard 🪐")
 
@@ -115,4 +116,7 @@ with st.container(border=True):
 
 st.caption("Source: NOAA/SWPC Advisory Outlook")
 
-st_autorefresh(60000)
+if synced:
+    st_autorefresh(60000)
+else:
+    st_autorefresh(5000)

@@ -60,10 +60,15 @@ def load_transformed_data(transformed_data):
 
             # 4. Metadata table for time last updated
             conn.execute(
-                text("CREATE TABLE IF NOT EXISTS metadata (last_synced TIMESTAMP);")
+                text(
+                    """
+                    INSERT INTO metadata (id, last_synced)
+                    VALUES (1, NOW())
+                    ON CONFLICT (id)
+                    DO UPDATE SET last_synced = NOW();
+                    """
+                )
             )
-            conn.execute(text("TRUNCATE TABLE metadata;"))
-            conn.execute(text("INSERT INTO metadata (last_synced) VALUES (NOW());"))
 
         logger.info("Neon SQL database updated Sucessfully.")
 
