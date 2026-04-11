@@ -5,7 +5,7 @@ import requests
 from datetime import datetime, timezone
 
 load_dotenv()
-neon_db_url = os.environ.get("DATABASE_URL") or st.secrets.get("DATABASE_URL")
+neon_db_url = os.environ.get("DATABASE_READ_URL") or st.secrets.get("DATABASE_READ_URL")
 
 
 def data_last_synced(conn):
