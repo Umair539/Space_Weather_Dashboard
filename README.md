@@ -34,7 +34,7 @@ This project is engineered as a decoupled system where data ingestion and visual
 * **Auto-Refresh:** Automatically updates the charts to show the newest data from the background pipeline without a manual reload.
 
 ### 5. Scheduled Orchestration
-* **GitHub Actions** is used to trigger the ETL pipeline every 3 days to update the Neon database in the event the Streamlit app isn't in use.
+* **GitHub Actions** is used to trigger the ETL pipeline every 3 days to update the raw data and Neon database in the event the Streamlit app isn't in use. As the deployed app operates on a cloned repository, GitHub Actions is the only mechanism capable of updating the raw data.
 * As NOAA API endpoints only provide the last week of data, this ensures the database is kept up to date during periods of inactivity.
 ---
 ## Data Source and Description
