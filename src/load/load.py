@@ -4,6 +4,7 @@ from sqlalchemy import create_engine
 from sqlalchemy import text
 from dotenv import load_dotenv
 import os
+from datetime import timedelta
 
 logger = setup_logger("load_data", "load_data.log")
 
@@ -38,37 +39,65 @@ def load_transformed_data(transformed_data):
 
         logger.info("Saving transformed data to Neon SQL database...")
 
-        # Saving as temp tables then switching to
-        # prevent errors reading whilst table updating
-        # clear out any old temp indexes/tables first
         with engine.begin() as conn:
-            # 1. Clean up old temp tables
-            for name in ["solar", "dst", "kp", "ssn"]:
-                conn.execute(text(f"DROP INDEX IF EXISTS ix_{name}_temp_time"))
-                conn.execute(text(f"DROP TABLE IF EXISTS {name}_temp CASCADE"))
 
-            # 2. Upload new data to temp tables
-            solar.to_sql("solar_temp", conn, if_exists="replace", index=True)
-            dst.to_sql("dst_temp", conn, if_exists="replace", index=True)
-            kp.to_sql("kp_temp", conn, if_exists="replace", index=True)
-            ssn.to_sql("ssn_temp", conn, if_exists="replace", index=True)
+            # Trim old data
+            conn.execute(
+                text("DELETE FROM solar WHERE time < NOW() - INTERVAL '30 days'")
+            )
+            conn.execute(
+                text("DELETE FROM dst WHERE time < NOW() - INTERVAL '30 days'")
+            )
+            conn.execute(text("DELETE FROM kp WHERE time < NOW() - INTERVAL '30 days'"))
+            conn.execute(
+                text("DELETE FROM ssn WHERE time < NOW() - INTERVAL '13 months'")
+            )
 
-            # 3. Swap tables
-            for name in ["solar", "dst", "kp", "ssn"]:
-                conn.execute(text(f"DROP TABLE IF EXISTS {name} CASCADE"))
-                conn.execute(text(f"ALTER TABLE {name}_temp RENAME TO {name}"))
+            # For solar table, insert new rows and replace previous 24 hours
+            lookback = solar.index[-1] - timedelta(hours=24)
+            solar_upsert = solar[solar.index >= lookback]
 
-            # 4. Metadata table for time last updated
+            conn.execute(
+                text(
+                    """
+                    INSERT INTO solar (time, density, speed, temperature, bz, bx, by, bt, pressure)
+                    VALUES (:time, :density, :speed, :temperature, :bz, :bx, :by, :bt, :pressure)
+                    ON CONFLICT (time) DO UPDATE SET
+                        density = EXCLUDED.density,
+                        speed = EXCLUDED.speed,
+                        temperature = EXCLUDED.temperature,
+                        bz = EXCLUDED.bz,
+                        bx = EXCLUDED.bx,
+                        by = EXCLUDED.by,
+                        bt = EXCLUDED.bt,
+                        pressure = EXCLUDED.pressure
+                """
+                ),
+                solar_upsert.reset_index().to_dict(orient="records"),
+            )
+
+            # For dst, kp and ssn tables, only insert new rows
+            for df, table in [(dst, "dst"), (kp, "kp"), (ssn, "ssn")]:
+                latest_db = conn.execute(
+                    text(f"SELECT MAX(time) FROM {table}")
+                ).scalar()
+                if latest_db is None or df.index[-1] > latest_db:
+                    new_rows = df if latest_db is None else df[df.index > latest_db]
+                    new_rows.reset_index().to_sql(
+                        table, conn, if_exists="append", index=False
+                    )
+
+            # Metadata
             conn.execute(
                 text(
                     """
                     DELETE FROM metadata;
                     INSERT INTO metadata (last_synced) VALUES (NOW());
-                    """
+                """
                 )
             )
 
-        logger.info("Neon SQL database updated Sucessfully.")
+        logger.info("Neon SQL database updated successfully.")
 
     except Exception as e:
         logger.error(f"Failed to load transformed data: {str(e)}")

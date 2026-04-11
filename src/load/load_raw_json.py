@@ -20,8 +20,12 @@ def load_raw_json(folder_path, data):
         raise ValueError(f"Unsupported format: {fmt}")
 
 
+# Instead of appending new data,
+# replace saved data with newly fetched for any overlapping data
+# this is to replace any data that has been updated by NOAA
+
+
 def load_raw_json_lists(filepath, new_data):
-    # Append only new records to existing JSON file based on time_tag
     os.makedirs(os.path.dirname(filepath), exist_ok=True)
 
     headers = new_data[0]
@@ -30,34 +34,33 @@ def load_raw_json_lists(filepath, new_data):
     if os.path.exists(filepath):
         with open(filepath, "r") as f:
             existing = json.load(f)
-
-        existing_timestamps = {row[0] for row in existing[1:]}
-        new_rows = [row for row in new_rows if row[0] not in existing_timestamps]
-
-        data_to_save = existing + new_rows
+        existing_dict = {row[0]: row for row in existing[1:]}
     else:
-        data_to_save = [headers] + new_rows
+        existing_dict = {}
+
+    existing_dict.update({row[0]: row for row in new_rows})
+
+    data_to_save = [headers] + list(existing_dict.values())
 
     with open(filepath, "w") as f:
         json.dump(data_to_save, f, indent=2)
 
 
 def load_raw_json_dicts(filepath, new_data):
-    # Append only new records to existing JSON file based on time_tag
     os.makedirs(os.path.dirname(filepath), exist_ok=True)
+
+    id_key = next(iter(new_data[0]))
 
     if os.path.exists(filepath):
         with open(filepath, "r") as f:
             existing_data = json.load(f)
+        existing_dict = {row[id_key]: row for row in existing_data}
     else:
-        existing_data = []
+        existing_dict = {}
 
-    id_key = next(iter(new_data[0]))
+    existing_dict.update({row[id_key]: row for row in new_data})
 
-    existing_timestamps = {row[id_key] for row in existing_data}
-    new_records = [row for row in new_data if row[id_key] not in existing_timestamps]
-
-    updated_data = existing_data + new_records
+    data_to_save = list(existing_dict.values())
 
     with open(filepath, "w") as f:
-        json.dump(updated_data, f, indent=2)
+        json.dump(data_to_save, f, indent=2)
