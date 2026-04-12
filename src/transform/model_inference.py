@@ -1,16 +1,19 @@
 import onnxruntime as rt
 import numpy as np
 import pandas as pd
+from src.transform.process_solar_wind import round_values
 
 sess = rt.InferenceSession("model/model.onnx")
 
 
-def model_inference(model_inputs, dst):
-    X = prepare_dataset(model_inputs)
-    predictions = sess.run(None, {"input_layer:0": X})[0].flatten()
+def model_inference(model_inputs):
+    X = model_inputs
+    X = prepare_dataset(model_inputs.values)
+    predictions = perform_inference(X, sess)
     predictions = denormalise_predictions(predictions)
-    dst = align_predictions(predictions, dst)
-    return dst
+    predictions = prediction_dataframe(predictions, model_inputs)
+    predictions = round_values(predictions)
+    return predictions
 
 
 def prepare_dataset(model_inputs, sequence_length=168):
@@ -23,15 +26,16 @@ def prepare_dataset(model_inputs, sequence_length=168):
     return X.astype(np.float32)
 
 
+def perform_inference(X, sess):
+    predictions = sess.run(None, {"input_layer:0": X})[0].flatten()
+    return predictions
+
+
 def denormalise_predictions(predictions):
     stats = (-8, 19)
     return (predictions * stats[1]) + stats[0]
 
 
-def align_predictions(predictions, dst):
-    dst = dst[-len(predictions) :].copy()
-    dst["predictions"] = predictions
-    next_hour = dst.index[-1] + pd.Timedelta(hours=1)
-    dst.loc[next_hour, :] = None
-    dst["predictions"] = dst["predictions"].shift(1)
-    return dst
+def prediction_dataframe(predictions, model_inputs, sequence_length=168):
+    prediction_times = model_inputs.index[sequence_length - 1 :] + pd.Timedelta(hours=1)
+    return pd.DataFrame({"dst_predictions": predictions}, index=prediction_times)

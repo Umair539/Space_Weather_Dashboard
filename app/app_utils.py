@@ -3,6 +3,17 @@ from dotenv import load_dotenv
 import os
 import requests
 from datetime import datetime, timezone
+import sys
+from pathlib import Path
+
+current_dir = Path(__file__).resolve().parent
+project_root = current_dir.parent
+if str(project_root) not in sys.path:
+    sys.path.insert(0, str(project_root))
+
+from src.utils.logging_utils import setup_logger
+
+logger = setup_logger("app", "app.log")
 
 load_dotenv()
 neon_db_url = os.environ.get("DATABASE_READ_URL") or st.secrets.get("DATABASE_READ_URL")
@@ -22,8 +33,9 @@ def data_last_synced(conn):
 def safe_query(conn, query, ttl=60):
     try:
         return conn.query(query, ttl=ttl)
-    except Exception:
+    except Exception as e:
         st.info("Connecting to database. Please wait...")
+        logger.error(f"Database query failed: {e}")
         st.stop()
 
 

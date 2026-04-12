@@ -50,12 +50,12 @@ def transform_data():
         logger.info("Completed preparing data for model inference.")
 
         logger.info("Performing model inference...")
-        dst = model_inference(model_inputs, dst)
+        dst_predictions = model_inference(model_inputs)
         logger.info("Model inference complete.")
 
         logger.info("Data transformations completed.")
 
-        return (solar, dst, kp, ssn)
+        return (solar, dst, kp, ssn, dst_predictions)
     except Exception as e:
         logger.error(f"Data transformation failed: {str(e)}")
         raise

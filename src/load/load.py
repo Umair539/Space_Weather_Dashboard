@@ -33,7 +33,7 @@ def load_raw_data(extracted_data):
 
 def load_transformed_data(transformed_data):
     try:
-        solar, dst, kp, ssn = transformed_data
+        solar, dst, kp, ssn, dst_predictions = transformed_data
 
         engine = create_engine(neon_db_url)
 
@@ -43,18 +43,25 @@ def load_transformed_data(transformed_data):
 
             # Trim old data
             conn.execute(
-                text("DELETE FROM solar WHERE time < NOW() - INTERVAL '30 days'")
+                text("DELETE FROM solar WHERE time < NOW() - INTERVAL '31 days'")
             )
             conn.execute(
-                text("DELETE FROM dst WHERE time < NOW() - INTERVAL '30 days'")
+                text("DELETE FROM dst WHERE time < NOW() - INTERVAL '31 days'")
             )
-            conn.execute(text("DELETE FROM kp WHERE time < NOW() - INTERVAL '30 days'"))
+            conn.execute(text("DELETE FROM kp WHERE time < NOW() - INTERVAL '31 days'"))
             conn.execute(
                 text("DELETE FROM ssn WHERE time < NOW() - INTERVAL '13 months'")
             )
+            conn.execute(
+                text(
+                    "DELETE FROM dst_predictions WHERE time < NOW() - INTERVAL '31 days'"
+                )
+            )
 
-            # For solar table, insert new rows and replace previous 24 hours
-            lookback = solar.index[-1] - timedelta(hours=24)
+            # For solar dst, and dst_predictions table, insert new rows and replace previous 24 hours
+            # This is because solar wind and dst values get updated by NOAA, and the model uses the solar wind values as input
+            upsert_hours = 24
+            lookback = solar.index[-1] - timedelta(hours=upsert_hours)
             solar_upsert = solar[solar.index >= lookback]
 
             conn.execute(
@@ -76,8 +83,38 @@ def load_transformed_data(transformed_data):
                 solar_upsert.reset_index().to_dict(orient="records"),
             )
 
-            # For dst, kp and ssn tables, only insert new rows
-            for df, table in [(dst, "dst"), (kp, "kp"), (ssn, "ssn")]:
+            lookback = dst.index[-1] - timedelta(hours=upsert_hours)
+            dst_upsert = dst[dst.index >= lookback]
+
+            conn.execute(
+                text(
+                    """
+                    INSERT INTO dst (time, dst)
+                    VALUES (:time, :dst)
+                    ON CONFLICT (time) DO UPDATE SET
+                        dst = EXCLUDED.dst
+                """
+                ),
+                dst_upsert.reset_index().to_dict(orient="records"),
+            )
+
+            lookback = dst_predictions.index[-1] - timedelta(hours=upsert_hours)
+            dst_predictions_upsert = dst_predictions[dst_predictions.index >= lookback]
+
+            conn.execute(
+                text(
+                    """
+                    INSERT INTO dst_predictions (time, dst_predictions)
+                    VALUES (:time, :dst_predictions)
+                    ON CONFLICT (time) DO UPDATE SET
+                        dst_predictions = EXCLUDED.dst_predictions
+                """
+                ),
+                dst_predictions_upsert.reset_index().to_dict(orient="records"),
+            )
+
+            # For kp and ssn tables, only insert new rows
+            for df, table in [(kp, "kp"), (ssn, "ssn")]:
                 latest_db = conn.execute(
                     text(f"SELECT MAX(time) FROM {table}")
                 ).scalar()

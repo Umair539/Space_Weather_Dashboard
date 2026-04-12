@@ -9,7 +9,7 @@ def prepare_model_inputs(solar, smoothed_ssn):
     model_inputs = filter_complete_hours(model_inputs)
     model_inputs = downsample_data(model_inputs)
 
-    return model_inputs.values
+    return model_inputs
 
 
 def join_inputs(solar, smoothed_ssn):

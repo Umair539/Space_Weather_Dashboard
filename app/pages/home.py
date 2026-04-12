@@ -32,9 +32,14 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
-dst = safe_query(
-    conn, "SELECT time, dst, predictions FROM dst ORDER BY time DESC LIMIT 24"
-)
+dst_query = """
+    SELECT p.time, d.dst, p.dst_predictions
+    FROM dst_predictions p
+    LEFT JOIN dst d ON p.time = d.time
+    ORDER BY p.time DESC
+    LIMIT 25
+    """
+dst = safe_query(conn, dst_query)
 kp = safe_query(conn, "SELECT * FROM kp ORDER BY time DESC LIMIT 1")
 
 c1, c2 = st.columns((0.5, 0.5))
@@ -46,14 +51,14 @@ with c1:
     st.markdown(
         f'<div style="font-size: 24px; text-align: center; margin-top: 20px;">'
         f"Predicted Dst for {start_time.strftime('%d %b, %H:%M')}–{end_time.strftime('%H:%M')} UTC: "
-        f"{dst['predictions'].iloc[0].round(2)} nT</div>",
+        f"{dst['dst_predictions'].iloc[0].round(2)} nT</div>",
         unsafe_allow_html=True,
     )
 
     dst_chart = (
         alt.Chart(dst)
         .transform_fold(
-            ["dst", "predictions"],
+            ["dst", "dst_predictions"],
             as_=["Series", "Value"],
         )
         .mark_line()
@@ -78,7 +83,7 @@ with c1:
                     direction="vertical",  # vertical stack
                     title=None,
                     padding=5,
-                    labelExpr="datum.label == 'dst' ? 'Observed Dst' : datum.label == 'predictions' ? 'Model Prediction' : datum.label",
+                    labelExpr="datum.label == 'dst' ? 'Observed Dst' : datum.label == 'dst_predictions' ? 'Model Prediction' : datum.label",
                 ),
             ),
         )

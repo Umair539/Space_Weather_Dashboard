@@ -20,7 +20,14 @@ s_dst = st.select_slider(
     value=options[-1],
     format_func=lambda x: x.strftime("%b %d, %H:%M"),
 )
-query = f"SELECT time, dst, predictions FROM dst WHERE time >= '{s_dst}'LIMIT 25"
+query = f"""
+    SELECT p.time, d.dst, p.dst_predictions
+    FROM dst_predictions p
+    LEFT JOIN dst d ON p.time = d.time
+    WHERE p.time >= '{s_dst}'
+    ORDER BY p.time ASC
+    LIMIT 25
+    """
 plot_data = safe_query(conn, query)
 
 c1, c2 = st.columns(2)
@@ -51,7 +58,7 @@ st.markdown(
 chart = (
     alt.Chart(plot_data)
     .transform_fold(
-        ["dst", "predictions"],
+        ["dst", "dst_predictions"],
         as_=["Series", "Value"],
     )
     .mark_line()
@@ -76,7 +83,7 @@ chart = (
                 direction="vertical",  # vertical stack
                 title=None,
                 padding=5,
-                labelExpr="datum.label == 'dst' ? 'Observed Dst' : datum.label == 'predictions' ? 'Model Prediction' : datum.label",
+                labelExpr="datum.label == 'dst' ? 'Observed Dst' : datum.label == 'dst_predictions' ? 'Model Prediction' : datum.label",
             ),
         ),
     )
