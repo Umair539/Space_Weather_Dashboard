@@ -1144,5 +1144,11 @@
     "Kp": 1.67,
     "a_running": 6,
     "station_count": 8
+  },
+  {
+    "time_tag": "2026-04-12T21:00:00",
+    "Kp": 2.33,
+    "a_running": 9,
+    "station_count": 8
   }
 ]
