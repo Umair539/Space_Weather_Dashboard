@@ -1,6 +1,9 @@
 import json
 import boto3
 import os
+from dotenv import load_dotenv
+
+load_dotenv()
 
 
 class R2Client:

@@ -12,19 +12,7 @@ def process_solar_wind(mag, plasma):
     mag = set_time_index(mag)
     plasma = set_time_index(plasma)
 
-    mag, plasma = match_time_index(mag, plasma)
-
-    solar = join_mag_plasma(mag, plasma)
-
-    solar = cast_to_float(solar)
-    solar = filter_invalid_data(solar)
-    solar = handle_missing_data(solar)
-
-    solar = add_pressure_column(solar)
-    solar = round_values(solar)
-    solar = set_index_name(solar)
-
-    return solar
+    return mag, plasma
 
 
 def filter_columns(mag):

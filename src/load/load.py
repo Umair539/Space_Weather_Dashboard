@@ -1,6 +1,7 @@
 from src.utils.logging_utils import setup_logger
 from src.load.load_raw_json import load_raw_json
 from src.load.load_data_into_db import load_data_into_db
+from src.load.load_raw_rtsw import load_raw_rtsw
 
 logger = setup_logger("load_data", "load_data.log")
 
@@ -11,8 +12,8 @@ def load_raw_data(extracted_data):
 
         logger.info("Loading raw data...")
 
-        load_raw_json("mag", mag)
-        load_raw_json("plasma", plasma)
+        load_raw_rtsw("mag", mag)
+        load_raw_rtsw("plasma", plasma)
         load_raw_json("dst", dst)
         load_raw_json("kp", kp)
         load_raw_json("ssn", ssn)
