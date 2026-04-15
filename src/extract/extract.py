@@ -8,6 +8,9 @@ base_url = "https://services.swpc.noaa.gov/"
 mag_url = base_url + "products/solar-wind/mag-7-day.json"
 plasma_url = base_url + "products/solar-wind/plasma-7-day.json"
 
+# mag_url = base_url + "json/rtsw/rtsw_mag_1m.json"
+# plasma_url = base_url + "json/rtsw/rtsw_wind_1m.json"
+
 dst_url = base_url + "products/kyoto-dst.json"
 kp_url = base_url + "products/noaa-planetary-k-index.json"
 

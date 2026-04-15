@@ -1,44 +1,37 @@
-import os
 import pandas as pd
-import json
 from src.utils.parser import parse_data
+from src.utils.r2 import R2Client
 
 
 def fetch_saved_data(folder_path):
+    r2 = R2Client()
     dfs = []
-    time_col = None  # will detect once
+    time_col = None
 
     for fname in ["lists.json", "dicts.json"]:
-        path = os.path.join(folder_path, fname)
+        key = f"{folder_path}/{fname}"
+        raw = r2.download_json(key)
 
-        if os.path.exists(path):
-            with open(path, "r") as f:
-                raw = json.load(f)
+        if not raw:
+            continue
 
-            if not raw:
-                continue
+        parsed = parse_data(raw)
+        df = pd.DataFrame(parsed)
 
-            parsed = parse_data(raw)
-            df = pd.DataFrame(parsed)
+        if df.empty:
+            continue
 
-            if df.empty:
-                continue
+        if time_col is None:
+            time_col = df.columns[0]
 
-            # detect time column once
-            if time_col is None:
-                time_col = df.columns[0]
-
-            dfs.append(df)
+        dfs.append(df)
 
     if not dfs:
         return pd.DataFrame()
 
     df = pd.concat(dfs, ignore_index=True)
 
-    # normalise time using original column name
-    # handle different formats for time column using 'mixed'
     df[time_col] = pd.to_datetime(df[time_col], format="mixed")
-
     df = df.sort_values(time_col)
     df = df.drop_duplicates(subset=[time_col], keep="last")
 

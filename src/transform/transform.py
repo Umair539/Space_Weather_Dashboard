@@ -15,12 +15,12 @@ def transform_data():
     try:
         logger.info("Fetching saved data...")
 
-        mag = fetch_saved_data("data/raw/mag/")
-        plasma = fetch_saved_data("data/raw/plasma/")
-        dst = fetch_saved_data("data/raw/dst/")
-        kp = fetch_saved_data("data/raw/kp/")
-        ssn = fetch_saved_data("data/raw/ssn/")
-        smoothed_ssn = fetch_saved_data("data/raw/smoothed_ssn/")
+        mag = fetch_saved_data("mag")
+        plasma = fetch_saved_data("plasma")
+        dst = fetch_saved_data("dst")
+        kp = fetch_saved_data("kp")
+        ssn = fetch_saved_data("ssn")
+        smoothed_ssn = fetch_saved_data("smoothed_ssn")
 
         logger.info("Starting data transformation process...")
 

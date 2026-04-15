@@ -8,7 +8,7 @@ version = "0.1.0"
 description = "An ETL project for performing ETL on real time space weather data to display using a streamlit dashboard."
 authors = [{name = "Umair", email = "umohammed235@outlook.com"}]
 readme = "README.md"
-requires-python = ">=3.6"
+requires-python = ">=3.11"
 classifiers = [
     "Programming Language :: Python :: 3",
     "License :: OSI Approved :: MIT License",
@@ -23,6 +23,7 @@ Homepage = "https://github.com/Umair539/Capstone"
 run_etl = "scripts.run_etl:run_etl_pipeline"
 run_tests = "tests.run_tests:main"
 run_app = "app.cli:launch_app"
+run_extract = "scripts.run_extract:run_extract"
 
 [tool.setuptools.packages.find]
 where = ["."]
