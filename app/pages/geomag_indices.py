@@ -118,7 +118,7 @@ ss_kp = st.select_slider(
     value=options[-1],
     format_func=lambda x: x.strftime("%b %d, %H:%M"),
 )
-query_kp = f"""SELECT time, kp."Kp" FROM kp WHERE time >= '{ss_kp}' LIMIT 25"""
+query_kp = f"""SELECT time, kp."Kp" FROM kp WHERE time >= '{ss_kp}' ORDER BY time ASC LIMIT 25"""
 plot_data_kp = safe_query(conn, query_kp)
 
 start_str_kp = plot_data_kp["time"].iloc[0].strftime("%b %d, %H:%M")

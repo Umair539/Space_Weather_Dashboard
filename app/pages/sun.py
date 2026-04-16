@@ -47,7 +47,7 @@ s_ssn = st.select_slider(
     value=options[-1],
     format_func=lambda x: x.strftime("%b %d %Y"),
 )
-query = f"SELECT time, swpc_ssn FROM ssn WHERE time >= '{s_ssn}'LIMIT 31"
+query = f"SELECT time, swpc_ssn FROM ssn WHERE time >= '{s_ssn}' ORDER BY time ASC LIMIT 31"
 plot_data = safe_query(conn, query)
 
 c1, c2 = st.columns(2)
