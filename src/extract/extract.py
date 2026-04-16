@@ -5,8 +5,8 @@ logger = setup_logger("extract_data", "extract_data.log")
 
 base_url = "https://services.swpc.noaa.gov/"
 
-# mag_url = base_url + "products/solar-wind/mag-7-day.json"
-# plasma_url = base_url + "products/solar-wind/plasma-7-day.json"
+old_mag_url = base_url + "products/solar-wind/mag-7-day.json"
+old_plasma_url = base_url + "products/solar-wind/plasma-7-day.json"
 
 mag_url = base_url + "json/rtsw/rtsw_mag_1m.json"
 plasma_url = base_url + "json/rtsw/rtsw_wind_1m.json"
@@ -22,6 +22,10 @@ def extract_data():
     try:
         logger.info("Starting data extraction process")
 
+        # will be deprecated soon
+        old_mag = fetch_json(old_mag_url)
+        old_plasma = fetch_json(old_plasma_url)
+
         mag = fetch_json(mag_url)
         plasma = fetch_json(plasma_url)
         dst = fetch_json(dst_url)
@@ -31,7 +35,7 @@ def extract_data():
 
         logger.info("Completed data extraction process")
 
-        return (mag, plasma, dst, kp, ssn, smoothed_ssn)
+        return (old_mag, old_plasma, mag, plasma, dst, kp, ssn, smoothed_ssn)
 
     except Exception as e:
         logger.error(f"Failed to retrieve NOAA JSON data: {str(e)}.")

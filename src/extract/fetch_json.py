@@ -16,6 +16,7 @@ def fetch_json(url):
 
     except Exception as e:
         logger.error(f"Error fetching json data from {url}: {e}")
+        return None
 
 
 def get_response(url):

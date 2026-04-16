@@ -7,22 +7,25 @@ logger = setup_logger("load_data", "load_data.log")
 
 
 def load_raw_data(extracted_data):
-    try:
-        mag, plasma, dst, kp, ssn, smoothed_ssn = extracted_data
+    old_mag, old_plasma, mag, plasma, dst, kp, ssn, smoothed_ssn = extracted_data
+    logger.info("Loading raw data...")
 
-        logger.info("Loading raw data...")
+    for name, loader, data in [
+        ("old_mag", load_raw_json, old_mag),
+        ("old_plasma", load_raw_json, old_plasma),
+        ("mag", load_raw_rtsw, mag),
+        ("plasma", load_raw_rtsw, plasma),
+        ("dst", load_raw_json, dst),
+        ("kp", load_raw_json, kp),
+        ("ssn", load_raw_json, ssn),
+        ("smoothed_ssn", load_raw_json, smoothed_ssn),
+    ]:
+        try:
+            loader(name, data)
+        except Exception as e:
+            logger.error(f"Failed to load {name}: {e}")
 
-        load_raw_rtsw("mag", mag)
-        load_raw_rtsw("plasma", plasma)
-        load_raw_json("dst", dst)
-        load_raw_json("kp", kp)
-        load_raw_json("ssn", ssn)
-        load_raw_json("smoothed_ssn", smoothed_ssn)
-
-        logger.info("Loaded raw data.")
-
-    except Exception as e:
-        logger.error(f"Failed to load raw data: {str(e)}")
+    logger.info("Raw data loading complete.")
 
 
 def load_transformed_data(transformed_data):

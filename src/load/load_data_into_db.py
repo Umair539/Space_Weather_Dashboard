@@ -80,12 +80,15 @@ def load_data_into_db(transformed_data):
         )
 
         # For kp and ssn tables, only insert new rows
-        for df, table in [(kp, "kp"), (ssn, "ssn")]:
+        for df, table, value_col in [(kp, "kp", "Kp"), (ssn, "ssn", "swpc_ssn")]:
             latest_db = conn.execute(text(f"SELECT MAX(time) FROM {table}")).scalar()
             if latest_db is None or df.index[-1] > latest_db:
                 new_rows = df if latest_db is None else df[df.index > latest_db]
-                new_rows.reset_index().to_sql(
-                    table, conn, if_exists="append", index=False
+                conn.execute(
+                    text(
+                        f"INSERT INTO {table} (time, {value_col}) VALUES (:time, :{value_col}) ON CONFLICT (time) DO NOTHING"
+                    ),
+                    new_rows.reset_index().to_dict(orient="records"),
                 )
 
         # Metadata

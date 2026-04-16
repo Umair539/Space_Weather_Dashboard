@@ -3,6 +3,10 @@ from src.utils.r2 import R2Client
 
 
 def load_raw_json(folder_path, data):
+
+    if data is None:
+        return
+
     fmt = detect_format(data)
     r2 = R2Client()
 

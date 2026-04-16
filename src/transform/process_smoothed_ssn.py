@@ -1,7 +1,7 @@
-from src.transform.process_solar_wind import cast_to_float
-from src.transform.process_solar_wind import handle_missing_data
-from src.transform.process_solar_wind import set_index_name
-from src.transform.process_solar_wind import set_time_index
+from src.transform.process_rtsw import cast_to_float
+from src.transform.process_rtsw import handle_missing_data
+from src.transform.process_rtsw import set_index_name
+from src.transform.process_rtsw import set_time_index
 
 
 def process_smoothed_ssn(smoothed_ssn):

@@ -1,5 +1,5 @@
-from src.transform.fetch_saved_data import fetch_saved_data
-from src.transform.process_combined_sw import process_combined_sw
+from src.utils.fetch_saved_data import fetch_saved_data
+from src.transform.process_rtsw import process_rtsw
 from src.transform.process_dst import process_dst
 from src.transform.process_kp import process_kp
 from src.transform.process_ssn import process_ssn
@@ -27,7 +27,7 @@ def transform_data():
         logger.info("Starting data transformation process...")
 
         logger.info("Transforming solar wind data...")
-        solar = process_combined_sw(old_mag, old_plasma, mag, plasma)
+        solar = process_rtsw(mag, plasma, old_mag, old_plasma)
         logger.info("Solar wind data transformation complete.")
 
         logger.info("Transforming dst data...")

@@ -38,7 +38,7 @@ with col3:
     st.image(solar_flavors["Solar Flares (Teal/131Å)"], caption="Flares (131Å)")
 
 
-data_range = safe_query(conn, "SELECT time FROM ssn;")
+data_range = safe_query(conn, "SELECT time FROM ssn ORDER BY time ASC;")
 options = data_range.iloc[:, 0].tolist()
 options = options[:-30]
 s_ssn = st.select_slider(
@@ -47,7 +47,9 @@ s_ssn = st.select_slider(
     value=options[-1],
     format_func=lambda x: x.strftime("%b %d %Y"),
 )
-query = f"SELECT time, swpc_ssn FROM ssn WHERE time >= '{s_ssn}' ORDER BY time ASC LIMIT 31"
+query = (
+    f"SELECT time, swpc_ssn FROM ssn WHERE time >= '{s_ssn}' ORDER BY time ASC LIMIT 31"
+)
 plot_data = safe_query(conn, query)
 
 c1, c2 = st.columns(2)
