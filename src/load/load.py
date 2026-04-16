@@ -60,7 +60,7 @@ def load_transformed_data(transformed_data):
 
             # For solar dst, and dst_predictions table, insert new rows and replace previous 24 hours
             # This is because solar wind and dst values get updated by NOAA, and the model uses the solar wind values as input
-            upsert_hours = 24
+            upsert_hours = 72
             lookback = solar.index[-1] - timedelta(hours=upsert_hours)
             solar_upsert = solar[solar.index >= lookback]
 
