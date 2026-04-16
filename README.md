@@ -77,11 +77,19 @@ The data used can be seen in the table below
     ```bash
    pip install -e .
    ```
-6. Run the ETL pipeline
+6. Create a `.env` file in the project root with the following variables:
+   ```env
+   # Neon PostgreSQL — read/write connection for the ETL pipeline
+   DATABASE_URL=postgresql+psycopg://<user>:<password>@<host>/<dbname>
+
+   # Read-only connection for the Streamlit app — can be set to the same value as DATABASE_URL
+   DATABASE_READ_URL=postgresql+psycopg://<user>:<password>@<host>/<dbname>
+   ```
+7. Run the ETL pipeline
     ```
    run_etl
    ```
-7. Run the Streamlit app (This also starts the background ETL automatically)
+8. Run the Streamlit app (This also starts the background ETL automatically)
     ```
     run_app
    ```
