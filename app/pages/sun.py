@@ -6,7 +6,7 @@ from app_utils import safe_query, data_last_synced, init_db, is_data_fresh
 conn = init_db()
 synced = is_data_fresh(conn)
 
-st.title("Real Time Solar Activity ☀️")
+st.title("Solar Activity ☀️")
 
 c1, c2 = st.columns([3, 1], vertical_alignment="bottom")
 
@@ -47,7 +47,9 @@ s_ssn = st.select_slider(
     value=options[-1],
     format_func=lambda x: x.strftime("%b %d %Y"),
 )
-query = f"SELECT time, swpc_ssn FROM ssn WHERE time >= '{s_ssn}' ORDER BY time ASC LIMIT 31"
+query = (
+    f"SELECT time, swpc_ssn FROM ssn WHERE time >= '{s_ssn}' ORDER BY time ASC LIMIT 31"
+)
 plot_data = safe_query(conn, query)
 
 c1, c2 = st.columns(2)
