@@ -80,6 +80,7 @@ elif resolution == "Minutely":
         f"SELECT {cols_to_query} "
         f"FROM solar "
         f"WHERE time >= '{s}' "
+        f"ORDER BY time ASC "
         f"LIMIT {win[resolution]};"
     )
     time_col = "time"
