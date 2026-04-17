@@ -8,6 +8,7 @@ on:
 jobs:
   run-etl:
     runs-on: ubuntu-latest
+    environment: prod
     steps:
       - name: Checkout repo
         uses: actions/checkout@v4
@@ -21,7 +22,7 @@ jobs:
         run: pip install -e .
 
       - name: Run ETL
-        run: run_etl
+        run: run_etl --env prod
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
           R2_BUCKET: ${{ secrets.R2_BUCKET }}
