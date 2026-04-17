@@ -50,7 +50,7 @@ def load_transformed_data(transformed_data):
             )
             conn.execute(text("DELETE FROM kp WHERE time < NOW() - INTERVAL '31 days'"))
             conn.execute(
-                text("DELETE FROM ssn WHERE time < NOW() - INTERVAL '13 months'")
+                text("DELETE FROM ssn WHERE time < NOW() - INTERVAL '13 years'")
             )
             conn.execute(
                 text(
@@ -113,16 +113,35 @@ def load_transformed_data(transformed_data):
                 dst_predictions_upsert.reset_index().to_dict(orient="records"),
             )
 
-            # For kp and ssn tables, only insert new rows
-            for df, table in [(kp, "kp"), (ssn, "ssn")]:
-                latest_db = conn.execute(
-                    text(f"SELECT MAX(time) FROM {table}")
-                ).scalar()
-                if latest_db is None or df.index[-1] > latest_db:
-                    new_rows = df if latest_db is None else df[df.index > latest_db]
-                    new_rows.reset_index().to_sql(
-                        table, conn, if_exists="append", index=False
-                    )
+            lookback = kp.index[-1] - timedelta(hours=upsert_hours)
+            kp_upsert = kp[kp.index >= lookback]
+
+            conn.execute(
+                text(
+                    """
+                    INSERT INTO kp (time, "Kp")
+                    VALUES (:time, :Kp)
+                    ON CONFLICT (time) DO UPDATE SET
+                        "Kp" = EXCLUDED."Kp"
+                """
+                ),
+                kp_upsert.reset_index().to_dict(orient="records"),
+            )
+
+            lookback = ssn.index[-1] - timedelta(hours=upsert_hours)
+            ssn_upsert = ssn[ssn.index >= lookback]
+
+            conn.execute(
+                text(
+                    """
+                    INSERT INTO ssn (time, swpc_ssn)
+                    VALUES (:time, :swpc_ssn)
+                    ON CONFLICT (time) DO UPDATE SET
+                        swpc_ssn = EXCLUDED.swpc_ssn
+                """
+                ),
+                ssn_upsert.reset_index().to_dict(orient="records"),
+            )
 
             # Metadata
             conn.execute(
