@@ -19,14 +19,14 @@ def load_data_into_db(transformed_data):
         conn.execute(text("DELETE FROM solar WHERE time < NOW() - INTERVAL '31 days'"))
         conn.execute(text("DELETE FROM dst WHERE time < NOW() - INTERVAL '31 days'"))
         conn.execute(text("DELETE FROM kp WHERE time < NOW() - INTERVAL '31 days'"))
-        conn.execute(text("DELETE FROM ssn WHERE time < NOW() - INTERVAL '13 months'"))
+        conn.execute(text("DELETE FROM ssn WHERE time < NOW() - INTERVAL '13 years'"))
         conn.execute(
             text("DELETE FROM dst_predictions WHERE time < NOW() - INTERVAL '31 days'")
         )
 
-        # For solar, dst and dst_predictions tables, insert new rows and replace previous 24 hours
+        # For solar dst, and dst_predictions table, insert new rows and replace previous 24 hours
         # This is because solar wind and dst values get updated by NOAA, and the model uses the solar wind values as input
-        upsert_hours = 24
+        upsert_hours = 72
         lookback = solar.index[-1] - timedelta(hours=upsert_hours)
         solar_upsert = solar[solar.index >= lookback]
 
@@ -79,17 +79,35 @@ def load_data_into_db(transformed_data):
             dst_predictions_upsert.reset_index().to_dict(orient="records"),
         )
 
-        # For kp and ssn tables, only insert new rows
-        for df, table, value_col in [(kp, "kp", "Kp"), (ssn, "ssn", "swpc_ssn")]:
-            latest_db = conn.execute(text(f"SELECT MAX(time) FROM {table}")).scalar()
-            if latest_db is None or df.index[-1] > latest_db:
-                new_rows = df if latest_db is None else df[df.index > latest_db]
-                conn.execute(
-                    text(
-                        f"INSERT INTO {table} (time, {value_col}) VALUES (:time, :{value_col}) ON CONFLICT (time) DO NOTHING"
-                    ),
-                    new_rows.reset_index().to_dict(orient="records"),
-                )
+        lookback = kp.index[-1] - timedelta(hours=upsert_hours)
+        kp_upsert = kp[kp.index >= lookback]
+
+        conn.execute(
+            text(
+                """
+                INSERT INTO kp (time, "Kp")
+                VALUES (:time, :Kp)
+                ON CONFLICT (time) DO UPDATE SET
+                    "Kp" = EXCLUDED."Kp"
+            """
+            ),
+            kp_upsert.reset_index().to_dict(orient="records"),
+        )
+
+        lookback = ssn.index[-1] - timedelta(hours=upsert_hours)
+        ssn_upsert = ssn[ssn.index >= lookback]
+
+        conn.execute(
+            text(
+                """
+                INSERT INTO ssn (time, swpc_ssn)
+                VALUES (:time, :swpc_ssn)
+                ON CONFLICT (time) DO UPDATE SET
+                    swpc_ssn = EXCLUDED.swpc_ssn
+            """
+            ),
+            ssn_upsert.reset_index().to_dict(orient="records"),
+        )
 
         # Metadata
         conn.execute(

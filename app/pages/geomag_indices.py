@@ -6,7 +6,7 @@ from app_utils import safe_query, data_last_synced, init_db, is_data_fresh
 conn = init_db()
 synced = is_data_fresh(conn)
 
-st.title("Real Time Geomgagnetic Indices 📡")
+st.title("Geomgagnetic Indices 📡")
 
 if not is_data_fresh(conn):
     st.info("Syncing latest space weather data...")
