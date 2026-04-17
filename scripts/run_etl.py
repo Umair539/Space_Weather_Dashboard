@@ -11,7 +11,11 @@ from dotenv import load_dotenv
 def run_etl_pipeline(loop=False):
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        "--env", choices=["dev", "prod"], required=True, help="Target environment"
+        "--env",
+        choices=["dev", "prod"],
+        required=False,
+        help="Target environment",
+        default="dev",
     )
     args = parser.parse_args()
     load_dotenv(f".env.{args.env}", override=True)
