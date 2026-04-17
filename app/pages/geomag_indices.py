@@ -11,7 +11,7 @@ st.title("Geomgagnetic Indices 📡")
 if not is_data_fresh(conn):
     st.info("Syncing latest space weather data...")
 
-data_range = safe_query(conn, "SELECT time FROM dst ORDER BY time ASC;")
+data_range = safe_query(conn, "SELECT time FROM dst_predictions ORDER BY time ASC;")
 options = data_range.iloc[:, 0].tolist()
 options = options[:-24]
 s_dst = st.select_slider(
