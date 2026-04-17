@@ -21,9 +21,8 @@ notebooks/test.ipynb
 .env.dev
 .env.prod
 
-# raw data (stored in Cloudflare R2)
-data/raw
-data/raw_backup
+# data folder (stored in Cloudflare R2)
+data/
 
 # ml model
 model/data
