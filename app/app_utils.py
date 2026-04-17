@@ -1,5 +1,4 @@
 import streamlit as st
-from dotenv import load_dotenv
 import os
 import requests
 from datetime import datetime, timezone
@@ -14,10 +13,6 @@ if str(project_root) not in sys.path:
 from src.utils.logging_utils import setup_logger
 
 logger = setup_logger("app", "app.log")
-
-load_dotenv()
-neon_db_url = os.environ.get("DATABASE_READ_URL") or st.secrets.get("DATABASE_READ_URL")
-
 
 def data_last_synced(conn):
     try:
@@ -40,6 +35,7 @@ def safe_query(conn, query, ttl=60):
 
 
 def init_db():
+    neon_db_url = os.environ.get("DATABASE_READ_URL") or st.secrets.get("DATABASE_READ_URL")
     return st.connection(
         "neon_db",
         type="sql",

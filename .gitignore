@@ -17,10 +17,12 @@ __pycache__/
 # test notebook
 notebooks/test.ipynb
 
-# cloud db url
-.env
+# cloud db url + cloudflare keys
+.env.dev
+.env.prod
 
-# backup raw data
+# raw data (stored in Cloudflare R2)
+data/raw
 data/raw_backup
 
 # ml model

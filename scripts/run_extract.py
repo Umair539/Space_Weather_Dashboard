@@ -1,15 +1,24 @@
 from src.extract.extract import extract_data
 from src.load.load import load_raw_data
 from src.utils.logging_utils import setup_logger
+import argparse
 import time
+from dotenv import load_dotenv
 
 
 def run_extract(loop=False):
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "--env", choices=["dev", "prod"], required=True, help="Target environment"
+    )
+    args = parser.parse_args()
+    load_dotenv(f".env.{args.env}", override=True)
+
     # Setup ETL pipeline logger
     logger = setup_logger("extract", "extract.log")
     while True:
         try:
-            logger.info("Starting ETL pipeline")
+            logger.info(f"Starting extract [env={args.env}]")
 
             # Extraction phase
             logger.info("Beginning data extraction phase")

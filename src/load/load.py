@@ -10,9 +10,9 @@ def load_raw_data(extracted_data):
     old_mag, old_plasma, mag, plasma, dst, kp, ssn, smoothed_ssn = extracted_data
     logger.info("Loading raw data...")
 
-    for name, loader, data in [
-        ("old_mag", load_raw_json, old_mag),
-        ("old_plasma", load_raw_json, old_plasma),
+    for folder_path, loader, data in [
+        ("mag", load_raw_json, old_mag),
+        ("plasma", load_raw_json, old_plasma),
         ("mag", load_raw_rtsw, mag),
         ("plasma", load_raw_rtsw, plasma),
         ("dst", load_raw_json, dst),
@@ -21,9 +21,9 @@ def load_raw_data(extracted_data):
         ("smoothed_ssn", load_raw_json, smoothed_ssn),
     ]:
         try:
-            loader(name, data)
+            loader(folder_path, data)
         except Exception as e:
-            logger.error(f"Failed to load {name}: {e}")
+            logger.error(f"Failed to load {folder_path}: {e}")
 
     logger.info("Raw data loading complete.")
 

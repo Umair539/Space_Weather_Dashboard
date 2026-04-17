@@ -1,16 +1,12 @@
 from sqlalchemy import create_engine
 from sqlalchemy import text
-from dotenv import load_dotenv
 import os
 from datetime import timedelta
-
-load_dotenv()
-neon_db_url = os.environ.get("DATABASE_URL")
-
 
 def load_data_into_db(transformed_data):
     solar, dst, kp, ssn, dst_predictions = transformed_data
 
+    neon_db_url = os.environ.get("DATABASE_URL")
     engine = create_engine(neon_db_url)
 
     with engine.begin() as conn:
