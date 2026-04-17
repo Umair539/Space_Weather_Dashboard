@@ -9,7 +9,7 @@ def launch_app():
     parser.add_argument(
         "--env",
         choices=["dev", "prod"],
-        required=True,
+        required=False,
         help="Target environment",
         default="dev",
     )
