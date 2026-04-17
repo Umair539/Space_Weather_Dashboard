@@ -65,7 +65,7 @@ if resolution == "Hourly":
     time_col = "hourly_bucket"
 
 elif resolution == "Minutely":
-    data_range = safe_query(conn, "SELECT time FROM solar ORDER BY time")
+    data_range = safe_query(conn, "SELECT time FROM solar ORDER BY time ASC")
     options = data_range.iloc[:, 0].tolist()
     options = options[: -24 * 60 + 1]
     s = st.select_slider(

@@ -38,7 +38,7 @@ with col3:
     st.image(solar_flavors["Solar Flares (Teal/131Å)"], caption="Flares (131Å)")
 
 
-data_range = safe_query(conn, "SELECT time FROM ssn;")
+data_range = safe_query(conn, "SELECT time FROM ssn ORDER BY time ASC;")
 options = data_range.iloc[:, 0].tolist()
 options = options[:-30]
 s_ssn = st.select_slider(
