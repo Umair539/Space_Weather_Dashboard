@@ -3,6 +3,7 @@ from sqlalchemy import text
 import os
 from datetime import timedelta
 
+
 def load_data_into_db(transformed_data):
     solar, dst, kp, ssn, dst_predictions = transformed_data
 
@@ -22,7 +23,7 @@ def load_data_into_db(transformed_data):
 
         # For solar dst, and dst_predictions table, insert new rows and replace previous 24 hours
         # This is because solar wind and dst values get updated by NOAA, and the model uses the solar wind values as input
-        upsert_hours = 72
+        upsert_hours = 24
         lookback = solar.index[-1] - timedelta(hours=upsert_hours)
         solar_upsert = solar[solar.index >= lookback]
 
