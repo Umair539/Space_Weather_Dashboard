@@ -6,7 +6,9 @@ from streamlit.web import cli
 
 def launch_app():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--env", choices=["dev", "prod"], required=True, help="Target environment")
+    parser.add_argument(
+        "--env", choices=["dev", "prod"], required=True, help="Target environment"
+    )
     args, remaining = parser.parse_known_args()
     load_dotenv(f".env.{args.env}", override=True)
 
@@ -18,3 +20,7 @@ def launch_app():
 
     # Launch Streamlit
     cli.main()
+
+
+if __name__ == "__main__":
+    launch_app()
