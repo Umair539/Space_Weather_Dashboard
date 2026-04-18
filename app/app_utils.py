@@ -14,20 +14,33 @@ from src.utils.logging_utils import setup_logger
 logger = setup_logger("app", "app.log")
 
 
-def data_last_synced(conn):
+@st.cache_data(ttl=120)
+def data_last_synced(_conn):
+    # cached for 120s
+    # ttl=0 on conn.query so @st.cache_data is the only caching layer
     try:
-        query = "SELECT last_synced FROM metadata"
-        result = safe_query(conn, query, 5)
+        result = _conn.query("SELECT last_synced FROM metadata", ttl=0)
         last_synced = result.iloc[0].iloc[0].strftime("%d %b, %H:%M")
         return f"Data last synced at {last_synced} UTC"
-
     except Exception:
         return "Error fetching last synced"
 
 
-def safe_query(conn, query, ttl=60):
+@st.cache_data(ttl=120)
+def get_latest_timestamp(_conn, table):
+    # cheap MAX(time) check cached for 120s
+    # ttl=0 so conn.query doesn't add a second caching layer on top
+    result = _conn.query(f"SELECT MAX(time) FROM {table}", ttl=0)
+    return result.iloc[0, 0]
+
+
+@st.cache_data
+def cached_query(_conn, query, latest_ts):
+    # cached forever until version MAX(time) changes
+    # conn.query ttl=0 because @st.cache_data already guarantees this only
+    # runs on a cache miss, so there's nothing for conn.query to cache
     try:
-        return conn.query(query, ttl=ttl)
+        return _conn.query(query, ttl=0)
     except Exception as e:
         st.info("Connecting to database. Please wait...")
         logger.error(f"Database query failed: {e}")
