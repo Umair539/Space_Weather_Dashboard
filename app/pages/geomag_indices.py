@@ -7,42 +7,47 @@ conn = init_db()
 
 st.title("Geomgagnetic Indices 📡")
 
-data_range = safe_query(conn, "SELECT time FROM dst_predictions ORDER BY time ASC;")
-options = data_range.iloc[:, 0].tolist()
-options = options[:-24]
-s_dst = st.select_slider(
-    "Select start date",
-    options=options,
-    value=options[-1],
-    format_func=lambda x: x.strftime("%b %d, %H:%M"),
+st.markdown(
+    f"<div style='text-align: right; font-style: italic; color: gray;'>"
+    f"{data_last_synced(conn)}"
+    f"</div>",
+    unsafe_allow_html=True,
 )
-query = f"""
+
+intervals = {
+    "Last 24 Hours": "24 hours",
+    "Last Week": "7 days",
+    "Last Month": "31 days",
+}
+
+# --- Dst ---
+
+dst_range = st.radio(
+    "Dst time range",
+    options=list(intervals.keys()),
+    horizontal=True,
+    key="dst_range",
+)
+
+dst_interval = intervals[dst_range]
+
+dst_query = f"""
     SELECT p.time, d.dst, p.dst_predictions
     FROM dst_predictions p
-    LEFT JOIN dst d ON p.time = d.time
-    WHERE p.time >= '{s_dst}'
+    INNER JOIN dst d ON p.time = d.time
+    WHERE p.time >= NOW() - INTERVAL '{dst_interval}'
     ORDER BY p.time ASC
-    LIMIT 25
-    """
-plot_data = safe_query(conn, query)
+"""
+plot_data = safe_query(conn, dst_query)
 
 c1, c2 = st.columns(2)
 
 with c1:
     start_str = plot_data["time"].iloc[0].strftime("%b %d, %H:%M")
     end_str = plot_data["time"].iloc[-1].strftime("%b %d, %H:%M")
-
     st.markdown(
         f"<div style='text-align: left;'>"
         f"Displaying data from {start_str} to {end_str}</div>",
-        unsafe_allow_html=True,
-    )
-
-with c2:
-    st.markdown(
-        f"<div style='text-align: right; font-style: italic; color: gray;'>"
-        f"{data_last_synced(conn)}"
-        f"</div>",
         unsafe_allow_html=True,
     )
 
@@ -74,9 +79,9 @@ chart = (
             scale=alt.Scale(range=["#ff0000", "#a9a9a9"]),
             legend=alt.Legend(
                 orient="none",
-                legendX=5,  # pixels from the left
-                legendY=5,  # pixels from the top
-                direction="vertical",  # vertical stack
+                legendX=5,
+                legendY=5,
+                direction="vertical",
                 title=None,
                 padding=5,
                 labelExpr="datum.label == 'dst' ? 'Observed Dst' : datum.label == 'dst_predictions' ? 'Model Prediction' : datum.label",
@@ -105,23 +110,25 @@ with st.expander("More information on Dst index", expanded=True):
     """
     )
 
-data_range = safe_query(conn, "SELECT time FROM kp ORDER BY time ASC;")
-options = data_range.iloc[:, 0].tolist()
-options = options[:-24]
-ss_kp = st.select_slider(
-    "Select start date",
-    options=options,
-    value=options[-1],
-    format_func=lambda x: x.strftime("%b %d, %H:%M"),
+# --- Kp ---
+
+kp_range = st.radio(
+    "Kp time range",
+    options=list(intervals.keys()),
+    horizontal=True,
+    key="kp_range",
 )
-query_kp = f"""SELECT time, kp."Kp" FROM kp WHERE time >= '{ss_kp}' ORDER BY time ASC LIMIT 25"""
+
+kp_interval = intervals[kp_range]
+
+query_kp = f"""SELECT time, kp."Kp" FROM kp WHERE time >= NOW() - INTERVAL '{kp_interval}' ORDER BY time ASC"""
 plot_data_kp = safe_query(conn, query_kp)
 
 start_str_kp = plot_data_kp["time"].iloc[0].strftime("%b %d, %H:%M")
 end_str_kp = plot_data_kp["time"].iloc[-1].strftime("%b %d, %H:%M")
 
 st.markdown(
-    f"Displaying data from {start_str_kp} to {end_str_kp}</p></div>",
+    f"Displaying data from {start_str_kp} to {end_str_kp}",
     unsafe_allow_html=True,
 )
 

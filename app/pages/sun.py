@@ -13,7 +13,6 @@ with c1:
     st.subheader("Live Solar View")
 
 with c2:
-    # Use a div to keep the text right-aligned within its column
     st.markdown(
         f"<div style='text-align: right; font-style: italic; color: gray;'>"
         f"{data_last_synced(conn)}"
@@ -36,25 +35,25 @@ with col2:
 with col3:
     st.image(solar_flavors["Solar Flares (Teal/131Å)"], caption="Flares (131Å)")
 
+ssn_range = st.radio(
+    "Time range",
+    options=["Last Month", "Last Year", "Last Full Cycle"],
+    horizontal=True,
+)
 
-data_range = safe_query(conn, "SELECT time FROM ssn ORDER BY time ASC;")
-options = data_range.iloc[:, 0].tolist()
-options = options[:-30]
-s_ssn = st.select_slider(
-    "Select start date",
-    options=options,
-    value=options[-1],
-    format_func=lambda x: x.strftime("%b %d %Y"),
-)
-query = (
-    f"SELECT time, swpc_ssn FROM ssn WHERE time >= '{s_ssn}' ORDER BY time ASC LIMIT 31"
-)
+if ssn_range == "Last Month":
+    query = "SELECT time, swpc_ssn FROM ssn WHERE time >= NOW() - INTERVAL '31 days' ORDER BY time ASC"
+    fmt = "%b %d %Y"
+elif ssn_range == "Last Year":
+    query = "SELECT time, swpc_ssn FROM ssn WHERE time >= NOW() - INTERVAL '1 year' ORDER BY time ASC"
+    fmt = "%b %Y"
+else:
+    query = "SELECT time, swpc_ssn FROM ssn ORDER BY time ASC"
+    fmt = "%Y"
+
 plot_data = safe_query(conn, query)
 
-c1, c2 = st.columns(2)
-
-
-start_str = plot_data["time"].iloc[0].strftime("%b %d")
+start_str = plot_data["time"].iloc[0].strftime("%b %d %Y")
 end_str = plot_data["time"].iloc[-1].strftime("%b %d %Y")
 
 st.markdown(
@@ -77,7 +76,7 @@ chart = (
             axis=alt.Axis(
                 labelAngle=0,
                 tickCount=6,
-                format="%b %d",
+                format=fmt,
                 title="Time",
             ),
         ),

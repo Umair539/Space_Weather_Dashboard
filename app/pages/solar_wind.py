@@ -19,68 +19,43 @@ columns = [c.capitalize() for c in df.columns][1:]
 
 with col2:
     features = st.multiselect(
-        label="Select features", options=columns, default=columns[:2]
+        label="Select features", options=columns, default=["Speed", "Bz"]
     )
 
-win = {"Minutely": 24 * 60, "Hourly": 24}
+time_range = st.radio(
+    "Time range",
+    options=["Last 24 Hours", "Last Week", "Last Month"],
+    horizontal=True,
+)
+
+intervals = {
+    "Last 24 Hours": "24 hours",
+    "Last Week": "7 days",
+    "Last Month": "31 days",
+}
+interval = intervals[time_range]
 
 if resolution == "Hourly":
-    data_range = safe_query(
-        conn,
-        """
-        SELECT date_trunc('hour', time) AS hour
-        FROM solar
-        GROUP BY hour
-        HAVING count(*) = 60
-        ORDER BY hour ASC
-        """,
+    cols_agg = "".join(
+        f", round(avg({col})::numeric, 2) AS {col.lower()}" for col in features
     )
-    options = data_range.iloc[:, 0].tolist()
-    options = options[:-24]
-    s = st.select_slider(
-        "Select start date",
-        options=options,
-        value=options[-1],
-        format_func=lambda x: x.strftime("%b %d, %H:%M"),
-    )
-
-    cols_to_query = []
-    for col in features:
-        cols_to_query.append(f", round(avg({col})::numeric, 2) AS {col.lower()}")
-
-    cols_to_query = "".join(cols_to_query)
-
     data_query = (
-        f"SELECT "
-        f"date_trunc('hour', time) AS hourly_bucket"
-        f"{cols_to_query}"
-        f" FROM solar "
-        f"WHERE date_trunc('hour', time) >= '{s}' "
-        f"GROUP BY hourly_bucket "
-        f"HAVING COUNT(*) = 60 "
-        f"ORDER BY hourly_bucket ASC "
-        f"LIMIT {win[resolution]};"
+        f"SELECT date_trunc('hour', time) AS hourly_bucket"
+        f"{cols_agg}"
+        f" FROM solar"
+        f" WHERE time >= NOW() - INTERVAL '{interval}'"
+        f" GROUP BY hourly_bucket"
+        f" HAVING COUNT(*) = 60"
+        f" ORDER BY hourly_bucket ASC;"
     )
     time_col = "hourly_bucket"
-
-elif resolution == "Minutely":
-    data_range = safe_query(conn, "SELECT time FROM solar ORDER BY time ASC")
-    options = data_range.iloc[:, 0].tolist()
-    options = options[: -24 * 60 + 1]
-    s = st.select_slider(
-        "Select start date",
-        options=options,
-        value=options[-1],
-        format_func=lambda x: x.strftime("%b %d, %H:%M"),
-    )
-
-    cols_to_query = ", ".join(["time"] + features)
+else:
+    cols_str = ", ".join(["time"] + features)
     data_query = (
-        f"SELECT {cols_to_query} "
-        f"FROM solar "
-        f"WHERE time >= '{s}' "
-        f"ORDER BY time ASC "
-        f"LIMIT {win[resolution]};"
+        f"SELECT {cols_str}"
+        f" FROM solar"
+        f" WHERE time >= NOW() - INTERVAL '{interval}'"
+        f" ORDER BY time ASC;"
     )
     time_col = "time"
 
@@ -91,7 +66,6 @@ c1, c2 = st.columns(2)
 with c1:
     start_str = plot_data[time_col].iloc[0].strftime("%b %d, %H:%M")
     end_str = plot_data[time_col].iloc[-1].strftime("%b %d, %H:%M")
-
     st.markdown(
         f"<div style='text-align: left;'>"
         f"Displaying data from {start_str} to {end_str}</div>",
@@ -118,13 +92,8 @@ label = {
 }
 
 for feature in features:
-
     st.markdown(
-        (
-            f"<div style='text-align: center;'>"
-            f"<h3>Solar Wind {feature}</h3>"
-            f"</div>"
-        ),
+        f"<div style='text-align: center;'><h3>Solar Wind {feature}</h3></div>",
         unsafe_allow_html=True,
     )
 
