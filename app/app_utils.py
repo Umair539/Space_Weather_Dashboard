@@ -1,7 +1,6 @@
 import streamlit as st
 import os
 import requests
-from datetime import datetime, timezone
 import sys
 from pathlib import Path
 
@@ -59,15 +58,3 @@ def get_noaa_advisory():
         return full_text
     except Exception as e:
         return f"Error fetching advisory: {e}"
-
-
-def is_data_fresh(conn):
-    try:
-        result = conn.query("SELECT last_synced FROM metadata", ttl=5)
-        last_synced = result.iloc[0].iloc[0]
-        age = (
-            datetime.now(timezone.utc).replace(tzinfo=None) - last_synced
-        ).total_seconds()
-        return age < 180
-    except Exception:
-        return False

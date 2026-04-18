@@ -1,10 +1,9 @@
 import streamlit as st
 import altair as alt
 from streamlit_autorefresh import st_autorefresh
-from app_utils import safe_query, data_last_synced, init_db, is_data_fresh
+from app_utils import safe_query, data_last_synced, init_db
 
 conn = init_db()
-synced = is_data_fresh(conn)
 
 st.title("Solar Wind Properties 🛰️")
 
@@ -169,7 +168,4 @@ with st.expander("More information on Solar Wind", expanded=True):
     """
     )
 
-if synced:
-    st_autorefresh(60000)
-else:
-    st_autorefresh(5000)
+st_autorefresh(300000)

@@ -5,14 +5,12 @@ from app_utils import (
     safe_query,
     data_last_synced,
     init_db,
-    is_data_fresh,
     get_noaa_advisory,
 )
 import altair as alt
 from datetime import timedelta
 
 conn = init_db()
-synced = is_data_fresh(conn)
 
 st.title("Space Weather Dashboard 🪐")
 
@@ -130,7 +128,4 @@ with st.container(border=True):
 
 st.caption("Source: NOAA/SWPC Advisory Outlook")
 
-if synced:
-    st_autorefresh(60000)
-else:
-    st_autorefresh(5000)
+st_autorefresh(300000)

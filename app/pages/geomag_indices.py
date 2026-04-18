@@ -1,15 +1,11 @@
 import streamlit as st
 import altair as alt
 from streamlit_autorefresh import st_autorefresh
-from app_utils import safe_query, data_last_synced, init_db, is_data_fresh
+from app_utils import safe_query, data_last_synced, init_db
 
 conn = init_db()
-synced = is_data_fresh(conn)
 
 st.title("Geomgagnetic Indices 📡")
-
-if not is_data_fresh(conn):
-    st.info("Syncing latest space weather data...")
 
 data_range = safe_query(conn, "SELECT time FROM dst_predictions ORDER BY time ASC;")
 options = data_range.iloc[:, 0].tolist()
@@ -168,7 +164,4 @@ with st.expander("More information on Kp index", expanded=True):
     """
     )
 
-if synced:
-    st_autorefresh(60000)
-else:
-    st_autorefresh(5000)
+st_autorefresh(300000)
