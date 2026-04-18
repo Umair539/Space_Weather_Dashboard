@@ -8,7 +8,7 @@ def load_data_into_db(transformed_data):
     solar, dst, kp, ssn, dst_predictions = transformed_data
 
     neon_db_url = os.environ.get("DATABASE_URL")
-    engine = create_engine(neon_db_url)
+    engine = create_engine(neon_db_url, connect_args={"prepare_threshold": None})
 
     with engine.begin() as conn:
 
@@ -21,9 +21,9 @@ def load_data_into_db(transformed_data):
             text("DELETE FROM dst_predictions WHERE time < NOW() - INTERVAL '31 days'")
         )
 
-        # For solar dst, and dst_predictions table, insert new rows and replace previous 24 hours
+        # For solar dst, and dst_predictions table, insert new rows and replace previous week
         # This is because solar wind and dst values get updated by NOAA, and the model uses the solar wind values as input
-        upsert_hours = 24
+        upsert_hours = 24 * 7
         lookback = solar.index[-1] - timedelta(hours=upsert_hours)
         solar_upsert = solar[solar.index >= lookback]
 

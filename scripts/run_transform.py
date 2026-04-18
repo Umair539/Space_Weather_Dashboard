@@ -1,0 +1,44 @@
+from src.transform.transform import transform_data
+from src.load.load import load_transformed_data
+from src.utils.logging_utils import setup_logger
+import argparse
+import time
+from dotenv import load_dotenv
+
+
+def run_transform(loop=False):
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "--env",
+        choices=["dev", "prod"],
+        required=False,
+        help="Target environment",
+        default="dev",
+    )
+    args = parser.parse_args()
+    load_dotenv(f".env.{args.env}", override=True)
+
+    # Setup ETL pipeline logger
+    logger = setup_logger("transform", "transform_script.log")
+    while True:
+        try:
+            # Transformation phase
+            logger.info("Beginning data transformation phase")
+            transformed_data = transform_data()
+            logger.info("Data transformation phase completed")
+
+            # Load transformed data
+            logger.info("Beginning data load phase on transformed data")
+            load_transformed_data(transformed_data)
+            logger.info("Completed data load phase on transformed data")
+
+            logger.info("ETL pipeline successful")
+
+        except Exception as e:
+            logger.error(f"Extract failed: {e}")
+
+        if not loop:
+            break
+
+        logger.info("Sleeping for 60 seconds")
+        time.sleep(60)

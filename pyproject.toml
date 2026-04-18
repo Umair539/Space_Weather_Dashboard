@@ -24,6 +24,7 @@ run_etl = "scripts.run_etl:run_etl_pipeline"
 run_tests = "tests.run_tests:main"
 run_app = "app.cli:launch_app"
 run_extract = "scripts.run_extract:run_extract"
+run_transform = "scripts.run_transform:run_transform"
 
 [tool.setuptools.packages.find]
 where = ["."]

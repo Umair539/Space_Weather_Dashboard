@@ -9,13 +9,17 @@ from dotenv import load_dotenv
 def run_extract(loop=False):
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        "--env", choices=["dev", "prod"], required=True, help="Target environment"
+        "--env",
+        choices=["dev", "prod"],
+        required=False,
+        help="Target environment",
+        default="dev",
     )
     args = parser.parse_args()
     load_dotenv(f".env.{args.env}", override=True)
 
     # Setup ETL pipeline logger
-    logger = setup_logger("extract", "extract.log")
+    logger = setup_logger("extract", "extract_script.log")
     while True:
         try:
             logger.info(f"Starting extract [env={args.env}]")

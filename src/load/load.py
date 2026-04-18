@@ -30,9 +30,9 @@ def load_raw_data(extracted_data):
 
 def load_transformed_data(transformed_data):
     try:
-        logger.info("Saving transformed data to Neon SQL database...")
+        logger.info("Saving transformed data to Supabase SQL database...")
         load_data_into_db(transformed_data)
-        logger.info("Neon SQL database updated successfully.")
+        logger.info("Supabase SQL database updated successfully.")
 
     except Exception as e:
         logger.error(f"Failed to load transformed data: {str(e)}")
