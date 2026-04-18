@@ -45,7 +45,9 @@ def process_rtsw(mag, plasma, old_mag, old_plasma):
     solar = join_mag_plasma(mag, plasma)
 
     solar = cast_to_float(solar)
+
     solar = filter_invalid_data(solar)
+    solar = filter_outliers(solar)
     solar = handle_missing_data(solar)
 
     solar = add_pressure_column(solar)
@@ -136,6 +138,12 @@ def filter_invalid_data(solar):
     cols = ["density", "speed", "temperature"]
     solar[cols] = solar[cols].mask(solar[cols] <= 0)
     return solar
+
+
+def filter_outliers(df, quantile=0.97):
+    roc = df.diff().abs()
+    mask = roc > roc.quantile(quantile)
+    return df.where(~mask)
 
 
 def handle_missing_data(df):

@@ -14,6 +14,7 @@ from src.utils.logging_utils import setup_logger
 
 logger = setup_logger("app", "app.log")
 
+
 def data_last_synced(conn):
     try:
         query = "SELECT last_synced FROM metadata"
@@ -35,7 +36,9 @@ def safe_query(conn, query, ttl=60):
 
 
 def init_db():
-    neon_db_url = os.environ.get("DATABASE_READ_URL") or st.secrets.get("DATABASE_READ_URL")
+    neon_db_url = os.environ.get("DATABASE_READ_URL") or st.secrets.get(
+        "DATABASE_READ_URL"
+    )
     return st.connection(
         "neon_db",
         type="sql",
