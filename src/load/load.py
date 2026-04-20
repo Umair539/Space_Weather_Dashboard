@@ -7,25 +7,37 @@ logger = setup_logger("load_data", "load_data.log")
 
 
 def load_raw_data(extracted_data):
-    old_mag, old_plasma, mag, plasma, dst, kp, ssn, smoothed_ssn = extracted_data
+    try:
+        old_mag, old_plasma, mag, plasma, dst, kp, ssn, smoothed_ssn = extracted_data
+    except Exception as e:
+        logger.error(f"Failed to unpack extracted data: {e}")
+        return ()
     logger.info("Loading raw data...")
 
-    for folder_path, loader, data in [
-        ("mag", load_raw_json, old_mag),
-        ("plasma", load_raw_json, old_plasma),
-        ("mag", load_raw_rtsw, mag),
-        ("plasma", load_raw_rtsw, plasma),
-        ("dst", load_raw_json, dst),
-        ("kp", load_raw_json, kp),
-        ("ssn", load_raw_json, ssn),
-        ("smoothed_ssn", load_raw_json, smoothed_ssn),
+    results = {}
+    for name, folder_path, loader, data in [
+        ("old_mag", "mag", load_raw_json, old_mag),
+        ("old_plasma", "plasma", load_raw_json, old_plasma),
+        ("mag", "mag", load_raw_rtsw, mag),
+        ("plasma", "plasma", load_raw_rtsw, plasma),
+        ("dst", "dst", load_raw_json, dst),
+        ("kp", "kp", load_raw_json, kp),
+        ("ssn", "ssn", load_raw_json, ssn),
+        ("smoothed_ssn", "smoothed_ssn", load_raw_json, smoothed_ssn),
     ]:
         try:
-            loader(folder_path, data)
+            results[name] = loader(folder_path, data)
         except Exception as e:
             logger.error(f"Failed to load {folder_path}: {e}")
+            results[name] = None
 
     logger.info("Raw data loading complete.")
+    return (
+        results["old_mag"], results["old_plasma"],
+        results["mag"], results["plasma"],
+        results["dst"], results["kp"],
+        results["ssn"], results["smoothed_ssn"],
+    )
 
 
 def load_transformed_data(transformed_data):

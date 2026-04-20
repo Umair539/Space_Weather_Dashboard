@@ -12,11 +12,11 @@ def load_raw_json(folder_path, data):
 
     if fmt == "list_of_lists":
         key = f"{folder_path}/lists.json"
-        load_raw_json_lists(r2, key, data)
+        return load_raw_json_lists(r2, key, data)
 
     elif fmt == "list_of_dicts":
         key = f"{folder_path}/dicts.json"
-        load_raw_json_dicts(r2, key, data)
+        return load_raw_json_dicts(r2, key, data)
 
     else:
         raise ValueError(f"Unsupported format: {fmt}")
@@ -36,7 +36,9 @@ def load_raw_json_lists(r2, key, new_data):
 
     existing_dict.update({row[0]: row for row in new_rows})
 
-    r2.upload_json(key, [headers] + list(existing_dict.values()))
+    updated_data = [headers] + list(existing_dict.values())
+    r2.upload_json(key, updated_data)
+    return updated_data
 
 
 def load_raw_json_dicts(r2, key, new_data):
@@ -47,4 +49,6 @@ def load_raw_json_dicts(r2, key, new_data):
 
     existing_dict.update({row[id_key]: row for row in new_data})
 
-    r2.upload_json(key, list(existing_dict.values()))
+    updated_data = list(existing_dict.values())
+    r2.upload_json(key, updated_data)
+    return updated_data

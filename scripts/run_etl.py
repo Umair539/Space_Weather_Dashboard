@@ -32,12 +32,12 @@ def run_etl_pipeline(loop=False):
 
             # Load raw data
             logger.info("Beginning data load phase on raw data")
-            load_raw_data(extracted_data)
+            updated_data = load_raw_data(extracted_data)
             logger.info("Completed data load phase on raw data")
 
             # Transformation phase
             logger.info("Beginning data transformation phase")
-            transformed_data = transform_data()
+            transformed_data = transform_data(updated_data)
             logger.info("Data transformation phase completed")
 
             # Load transformed data

@@ -16,4 +16,6 @@ def load_raw_rtsw(folder_path, data):
 
     existing_dict.update({(row["time_tag"], row["source"]): row for row in data})
 
-    r2.upload_json(key, list(existing_dict.values()))
+    updated_data = list(existing_dict.values())
+    r2.upload_json(key, updated_data)
+    return updated_data

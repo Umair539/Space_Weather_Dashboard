@@ -11,18 +11,18 @@ from src.utils.logging_utils import setup_logger
 logger = setup_logger("transform_data", "transform_data.log")
 
 
-def transform_data():
+def transform_data(updated_data=None):
     try:
-        logger.info("Fetching saved data...")
+        old_mag, old_plasma, mag, plasma, dst, kp, ssn, smoothed_ssn = updated_data if updated_data else (None,) * 8
 
-        old_mag = fetch_saved_data("mag/lists.json")
-        old_plasma = fetch_saved_data("plasma/lists.json")
-        mag = fetch_saved_data("mag/dicts.json")
-        plasma = fetch_saved_data("plasma/dicts.json")
-        dst = fetch_saved_data("dst/dicts.json")
-        kp = fetch_saved_data("kp/dicts.json")
-        ssn = fetch_saved_data("ssn/dicts.json")
-        smoothed_ssn = fetch_saved_data("smoothed_ssn/dicts.json")
+        old_mag = fetch_saved_data("mag/lists.json", old_mag)
+        old_plasma = fetch_saved_data("plasma/lists.json", old_plasma)
+        mag = fetch_saved_data("mag/dicts.json", mag)
+        plasma = fetch_saved_data("plasma/dicts.json", plasma)
+        dst = fetch_saved_data("dst/dicts.json", dst)
+        kp = fetch_saved_data("kp/dicts.json", kp)
+        ssn = fetch_saved_data("ssn/dicts.json", ssn)
+        smoothed_ssn = fetch_saved_data("smoothed_ssn/dicts.json", smoothed_ssn)
 
         logger.info("Starting data transformation process...")
 
