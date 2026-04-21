@@ -39,10 +39,12 @@ def process_rtsw(mag, plasma, old_mag, old_plasma):
 
     mag = combine_dataframes(old_mag, mag)
     plasma = combine_dataframes(old_plasma, plasma)
+    del old_mag, old_plasma
 
     mag, plasma = match_time_index(mag, plasma)
 
     solar = join_mag_plasma(mag, plasma)
+    del mag, plasma
 
     solar = cast_to_float(solar)
 
@@ -104,6 +106,7 @@ def drop_duplicates(df):
 def set_time_index(df, time_col="time_tag"):
     time_index_series = pd.to_datetime(df[time_col])
     df = df.set_index(time_index_series)
+    del time_index_series
     df = df.drop(columns=[time_col])
     return df
 
@@ -130,7 +133,7 @@ def join_mag_plasma(mag, plasma):
 
 
 def cast_to_float(df):
-    df = df.astype("float64")
+    df = df.astype("float32")
     return df
 
 
@@ -142,12 +145,15 @@ def filter_invalid_data(solar):
 
 def filter_outliers(df, quantile=0.97):
     roc = df.diff().abs()
-    mask = roc > roc.quantile(quantile)
-    return df.where(~mask)
+    result = df.where(~(roc > roc.quantile(quantile)))
+    del roc
+    return result
 
 
 def handle_missing_data(df):
-    df = df.interpolate(method="linear", axis=0).ffill().bfill()
+    df = df.interpolate(method="linear", axis=0)
+    df = df.ffill()
+    df = df.bfill()
     return df
 
 

@@ -13,7 +13,9 @@ logger = setup_logger("transform_data", "transform_data.log")
 
 def transform_data(updated_data=None):
     try:
-        old_mag, old_plasma, mag, plasma, dst, kp, ssn, smoothed_ssn = updated_data if updated_data else (None,) * 8
+        old_mag, old_plasma, mag, plasma, dst, kp, ssn, smoothed_ssn = (
+            updated_data if updated_data else (None,) * 8
+        )
 
         old_mag = fetch_saved_data("mag/lists.json", old_mag)
         old_plasma = fetch_saved_data("plasma/lists.json", old_plasma)
@@ -28,6 +30,7 @@ def transform_data(updated_data=None):
 
         logger.info("Transforming solar wind data...")
         solar = process_rtsw(mag, plasma, old_mag, old_plasma)
+        del mag, plasma, old_mag, old_plasma
         logger.info("Solar wind data transformation complete.")
 
         logger.info("Transforming dst data...")
@@ -49,10 +52,12 @@ def transform_data(updated_data=None):
         # model inference
         logger.info("Preparing data for model inference...")
         model_inputs = prepare_model_inputs(solar, smoothed_ssn)
+        del smoothed_ssn
         logger.info("Completed preparing data for model inference.")
 
         logger.info("Performing model inference...")
         dst_predictions = model_inference(model_inputs)
+        del model_inputs
         logger.info("Model inference complete.")
 
         logger.info("Data transformations completed.")

@@ -17,13 +17,12 @@ def model_inference(model_inputs):
 
 
 def prepare_dataset(model_inputs, sequence_length=168):
-    X = np.array(
-        [
-            model_inputs[i : i + sequence_length]
-            for i in range(len(model_inputs) - sequence_length + 1)
-        ]
-    )
-    return X.astype(np.float32)
+    model_inputs = np.asarray(model_inputs, dtype=np.float32)
+    n = len(model_inputs) - sequence_length + 1
+    X = np.empty((n, sequence_length, model_inputs.shape[1]), dtype=np.float32)
+    for i in range(n):
+        X[i] = model_inputs[i : i + sequence_length]
+    return X
 
 
 def perform_inference(X, sess):
