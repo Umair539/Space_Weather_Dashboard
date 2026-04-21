@@ -27,7 +27,7 @@ This project is engineered as a decoupled system where data ingestion and visual
 * **Extract:** Pulls near-real-time JSON data from NOAA API endpoints.
 * **Transform:** Uses Pandas to clean, align, and transform datasets.
 * **Load:** Saves raw extracted JSON to AWS S3, then upserts transformed data into a serverless PostgreSQL database hosted on Supabase, replacing the previous 24 hours of data to account for any updates at source.
-* **Fault Tolerant:** The pipeline is resilient at every stage. Extraction failures do not affect the transform step, which reads from locally saved raw data. Transform failures do not affect the dashboard, which reads from the cloud database. In the event of database failure, raw data persisted in S3 ensures the database can be fully reproduced.
+* **Fault Tolerant:** The pipeline is resilient at every stage. Extraction failures do not affect the transform step, which falls back to the latest raw data in S3. Transform failures do not affect the dashboard, which reads from the cloud database. In the event of database failure, raw data persisted in S3 ensures the database can be fully reproduced.
 * **Schema Flexible:** Handles format changes in NOAA API responses. After observing the Dst and Kp Index endpoints switching from a list of lists to a list of dictionaries format, format detection was introduced at extraction time to parse either structure correctly. The pipeline is also forward-compatible with future switches between the two formats.
 
 ### 2. Real-Time ML Inference
