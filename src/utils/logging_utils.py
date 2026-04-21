@@ -1,3 +1,4 @@
+import os
 from pathlib import Path
 import logging
 from typing import Optional, Tuple
@@ -12,8 +13,12 @@ def _ensure_log_directory(base_path: Optional[str] = None) -> Path:
     Returns:
         Path to the logs directory.
     """
-    project_root = Path(base_path or __file__).resolve().parent.parent
-    log_directory = project_root / "logs"
+    if os.environ.get("AWS_LAMBDA_FUNCTION_NAME"):
+        log_directory = Path("/tmp/logs")
+    else:
+        project_root = Path(base_path or __file__).resolve().parent.parent
+        log_directory = project_root / "logs"
+
     log_directory.mkdir(parents=True, exist_ok=True)
     return log_directory
 
@@ -24,9 +29,7 @@ def _create_formatter() -> logging.Formatter:
     Returns:
         Configured logging formatter.
     """
-    return logging.Formatter(
-        "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-    )
+    return logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
 
 
 def _create_handlers(
@@ -78,9 +81,7 @@ def setup_logger(
     logger.setLevel(level)
 
     if not logger.handlers:
-        file_handler, console_handler = _create_handlers(
-            log_directory, log_file, level
-        )
+        file_handler, console_handler = _create_handlers(log_directory, log_file, level)
         logger.addHandler(file_handler)
         logger.addHandler(console_handler)
 
@@ -108,9 +109,7 @@ def log_extract_success(
     logger.info(f"Execution time: {execution_time} seconds")
 
     if execution_time / shape[0] <= expected_rate:
-        logger.info(
-            "Execution time per row: " f"{execution_time / shape[0]} seconds"
-        )
+        logger.info("Execution time per row: " f"{execution_time / shape[0]} seconds")
     else:
         logger.warning(
             f"Execution time per row exceeds {expected_rate}: "
