@@ -8,7 +8,7 @@ on:
 jobs:
   run-etl:
     runs-on: ubuntu-latest
-    environment: prod
+    environment: dev
     steps:
       - name: Checkout repo
         uses: actions/checkout@v4
