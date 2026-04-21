@@ -1,5 +1,5 @@
 from src.utils.parser import detect_format
-from src.utils.s3 import S3Client
+from src.utils.r2 import R2Client
 
 
 def load_raw_json(folder_path, data):
@@ -8,42 +8,47 @@ def load_raw_json(folder_path, data):
         return
 
     fmt = detect_format(data)
-    s3 = S3Client()
+    r2 = R2Client()
 
     if fmt == "list_of_lists":
         key = f"{folder_path}/lists.json"
-        return load_raw_json_lists(s3, key, data)
+        return load_raw_json_lists(r2, key, data)
 
     elif fmt == "list_of_dicts":
         key = f"{folder_path}/dicts.json"
-        return load_raw_json_dicts(s3, key, data)
+        return load_raw_json_dicts(r2, key, data)
 
     else:
         raise ValueError(f"Unsupported format: {fmt}")
 
 
-def load_raw_json_lists(s3, key, new_data):
+# Instead of appending new data,
+# replace saved data with newly fetched for any overlapping data
+# this is to replace any data that has been updated by NOAA
+
+
+def load_raw_json_lists(r2, key, new_data):
     headers = new_data[0]
     new_rows = new_data[1:]
 
-    existing = s3.download_json(key)
+    existing = r2.download_json(key)
     existing_dict = {row[0]: row for row in existing[1:]} if existing else {}
 
     existing_dict.update({row[0]: row for row in new_rows})
 
     updated_data = [headers] + list(existing_dict.values())
-    s3.upload_json(key, updated_data)
+    r2.upload_json(key, updated_data)
     return updated_data
 
 
-def load_raw_json_dicts(s3, key, new_data):
+def load_raw_json_dicts(r2, key, new_data):
     id_key = next(iter(new_data[0]))
 
-    existing = s3.download_json(key)
+    existing = r2.download_json(key)
     existing_dict = {row[id_key]: row for row in existing} if existing else {}
 
     existing_dict.update({row[id_key]: row for row in new_data})
 
     updated_data = list(existing_dict.values())
-    s3.upload_json(key, updated_data)
+    r2.upload_json(key, updated_data)
     return updated_data

@@ -1,4 +1,4 @@
-from src.utils.s3 import S3Client
+from src.utils.r2 import R2Client
 
 PLASMA_KEEP_COLS = {
     "time_tag",
@@ -25,12 +25,12 @@ def load_raw_rtsw(folder_path, data):
     if data is None:
         return
 
-    s3 = S3Client()
+    r2 = R2Client()
     key = f"{folder_path}/dicts.json"
 
     keep_cols = MAG_KEEP_COLS if folder_path == "mag" else PLASMA_KEEP_COLS
 
-    existing = s3.download_json(key)
+    existing = r2.download_json(key)
     existing_filtered = (
         [{k: v for k, v in row.items() if k in keep_cols} for row in existing]
         if existing
@@ -50,6 +50,6 @@ def load_raw_rtsw(folder_path, data):
     )
 
     updated_data = list(existing_dict.values())
-    s3.upload_json(key, updated_data)
+    r2.upload_json(key, updated_data)
 
     return updated_data
