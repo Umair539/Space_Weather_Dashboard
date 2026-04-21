@@ -10,7 +10,7 @@ st.title("Space Weather Dashboard 🪐")
 
 st.markdown(
     """
-    This Space Weather Dashboard provides near real time data on key
+    This Space Weather Dashboard provides frequently updated data on key
     space environment properties, including solar wind parameters and
     geomagnetic indices, collected from the
     [NOAA Space Weather Prediction Center](https://www.swpc.noaa.gov).

@@ -14,7 +14,7 @@ def sun_section():
     c1, c2 = st.columns([3, 1], vertical_alignment="bottom")
 
     with c1:
-        st.subheader("Live Solar View")
+        st.subheader("Latest Solar View")
 
     with c2:
         st.markdown(

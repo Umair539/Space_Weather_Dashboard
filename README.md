@@ -1,6 +1,6 @@
 # Space Weather Dashboard
 
-The goal of this project was to create a real-time space weather dashboard, a useful tool that provides people and organizations time to prepare for severe solar storms. This included creating a full ETL pipeline for space weather data with extraction, transformation and loading phases. The ETL pipeline was followed by an interactive web application developed using Streamlit and deployed onto Streamlit Community Cloud.
+The goal of this project was to create a space weather dashboard, a useful tool that provides people and organizations time to prepare for severe solar storms. This included creating a full ETL pipeline for space weather data with extraction, transformation and loading phases. The ETL pipeline was followed by an interactive web application developed using Streamlit and deployed onto Streamlit Community Cloud.
 
 [Live Dashboard Link](https://spaceweatherdashboard.streamlit.app/)
 
@@ -30,8 +30,10 @@ This project is engineered as a decoupled system where data ingestion and visual
 * **Fault Tolerant:** The pipeline is resilient at every stage. Extraction failures do not affect the transform step, which falls back to the latest raw data in S3. Transform failures do not affect the dashboard, which reads from the cloud database. In the event of database failure, raw data persisted in S3 ensures the database can be fully reproduced.
 * **Schema Flexible:** Handles format changes in NOAA API responses. After observing the Dst and Kp Index endpoints switching from a list of lists to a list of dictionaries format, format detection was introduced at extraction time to parse either structure correctly. The pipeline is also forward-compatible with future switches between the two formats.
 
-### 2. Real-Time ML Inference
-* A CNN model trained using Keras / TensorFlow generates real-time Dst Index predictions at the end of each ETL cycle using full hourly aggregations.
+### 2. ML Inference
+
+![Dst Predictions](docs/Dst-predictions.png)
+* A CNN model trained using Keras / TensorFlow generates Dst Index predictions at the end of each ETL cycle using full hourly aggregations.
 * Predictions are stored alongside the processed data, making them immediately available to the dashboard without any additional latency.
 * The model was trained on historical space weather data as part of a Final Year Project at university. For full details on the architecture, training process, and evaluation, see the [dissertation repository](https://github.com/Umair539/Dissertation).
 * The trained Keras model was converted to ONNX format, removing the TensorFlow dependency so that the memory consumption of the deployed app would be significantly reduced.
@@ -56,7 +58,7 @@ The data used can be seen in the table below
 
 | Dataset | Resolution | Primary Features Used | Notes |
 | :--- | :--- | :--- | :--- |
-| **Dst Index** | Hourly | `time_tag`, `dst` | — |
+| **Dst Index** | Hourly | `time_tag`, `dst` | Quicklook (provisional) values. |
 | **Kp Index** | 3-Hourly | `time_tag`, `Kp` | — |
 | **Solar Wind Magnetometer** | Minute | `time_tag`, `bt`, `bz_gsm`, `by_gsm`, `bx_gsm` | In the process of migrating to a new endpoint as the original is being deprecated. |
 | **Solar Wind Plasma** | Minute | `time_tag`, `speed`, `density`, `temperature` | In the process of migrating to a new endpoint as the original is being deprecated. |
