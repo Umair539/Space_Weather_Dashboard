@@ -23,7 +23,7 @@ def solar_wind_section():
 
     with col2:
         features = st.multiselect(
-            label="Select features", options=columns, default=columns[:2]
+            label="Select features", options=columns, default=["Speed", "Bz"]
         )
 
     time_range = st.radio(
