@@ -35,7 +35,9 @@ def sun_section():
     with col1:
         st.image(solar_flavors["Sunspots (Visible/HMI)"], caption="Sunspots (HMI)")
     with col2:
-        st.image(solar_flavors["Solar Eruptions (Red/304Å)"], caption="Eruptions (304Å)")
+        st.image(
+            solar_flavors["Solar Eruptions (Red/304Å)"], caption="Eruptions (304Å)"
+        )
     with col3:
         st.image(solar_flavors["Solar Flares (Teal/131Å)"], caption="Flares (131Å)")
 
@@ -52,7 +54,12 @@ def sun_section():
         query = "SELECT time, swpc_ssn FROM ssn WHERE time >= (SELECT MAX(time) FROM ssn) - INTERVAL '1 year' ORDER BY time ASC"
         fmt = "%b %Y"
     else:
-        query = "SELECT time, swpc_ssn FROM ssn ORDER BY time ASC"
+        query = """
+        SELECT DATE_TRUNC('month', time) AS time, AVG(swpc_ssn) AS swpc_ssn
+        FROM ssn
+        GROUP BY DATE_TRUNC('month', time)
+        ORDER BY time ASC
+        """
         fmt = "%Y"
 
     plot_data = cached_query(conn, query, latest_ts)
