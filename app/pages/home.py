@@ -2,7 +2,13 @@ import streamlit as st
 import plotly.graph_objects as go
 import altair as alt
 from datetime import timedelta
-from app_utils import data_last_synced, init_db, get_latest_timestamp, cached_query, get_noaa_advisory
+from app_utils import (
+    data_last_synced,
+    init_db,
+    get_latest_timestamp,
+    cached_query,
+    get_noaa_advisory,
+)
 
 conn = init_db()
 
@@ -35,7 +41,7 @@ def home_section():
         FROM dst_predictions p
         LEFT JOIN dst d ON p.time = d.time
         ORDER BY p.time DESC
-        LIMIT 25
+        LIMIT 169
     """
     dst = cached_query(conn, dst_query, latest_ts_dst)
     kp = cached_query(conn, "SELECT * FROM kp ORDER BY time DESC LIMIT 1", latest_ts_kp)
