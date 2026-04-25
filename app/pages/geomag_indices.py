@@ -1,31 +1,32 @@
 import streamlit as st
 import altair as alt
+import pandas as pd
 from app_utils import data_last_synced, init_db, get_latest_timestamp, cached_query
 
 conn = init_db()
 
 st.title("Geomgagnetic Indices 📡")
 
-intervals = {"Last 24 Hours": "24 hours", "Last Week": "7 days", "Last Month": "31 days"}
+intervals = {
+    "Last 24 Hours": "24 hours",
+    "Last Week": "7 days",
+    "Last Month": "31 days",
+}
 
 
 @st.fragment(run_every=120)
 def dst_section():
     latest_ts = get_latest_timestamp(conn, "dst_predictions")
 
-    st.markdown(
-        f"<div style='text-align: right; font-style: italic; color: gray;'>"
-        f"{data_last_synced(conn)}"
-        f"</div>",
-        unsafe_allow_html=True,
-    )
-
-    dst_range = st.radio(
-        "Dst time range",
-        options=list(intervals.keys()),
-        horizontal=True,
-        key="dst_range",
-    )
+    cl1, cl2, cl3 = st.columns([1, 2, 1])
+    with cl1:
+        dst_range = st.radio(
+            "Dst time range",
+            options=list(intervals.keys()),
+            horizontal=True,
+            key="dst_range",
+            label_visibility="collapsed",
+        )
 
     dst_interval = intervals[dst_range]
 
@@ -40,38 +41,44 @@ def dst_section():
 
     start_str = plot_data["time"].iloc[0].strftime("%b %d, %H:%M")
     end_str = plot_data["time"].iloc[-1].strftime("%b %d, %H:%M")
-    st.markdown(
-        f"<div style='text-align: left;'>"
-        f"Displaying data from {start_str} to {end_str}</div>",
-        unsafe_allow_html=True,
-    )
+    with cl2:
+        st.markdown(
+            "<div style='text-align:center;'><h3>Dst Index</h3></div>",
+            unsafe_allow_html=True,
+        )
+    with cl3:
+        st.markdown(
+            f"<div style='text-align:right;'>Displaying data from {start_str} to {end_str}</div>",
+            unsafe_allow_html=True,
+        )
+        st.markdown(
+            f"<div style='text-align:right; font-style:italic; color:gray;'>{data_last_synced(conn)}</div>",
+            unsafe_allow_html=True,
+        )
 
-    st.markdown(
-        "<div style='text-align: center;'><h3>Dst index</h3></div>",
-        unsafe_allow_html=True,
-    )
+    dst_vals = pd.concat([plot_data["dst"], plot_data["dst_predictions"]]).dropna()
+    y_min_dst = float(dst_vals.min()) - 5
+    y_max_dst = float(dst_vals.max()) + 5
 
     chart = (
         alt.Chart(plot_data)
-        .transform_fold(
-            ["dst", "dst_predictions"],
-            as_=["Series", "Value"],
-        )
+        .transform_fold(["dst", "dst_predictions"], as_=["Series", "Value"])
         .mark_line()
         .encode(
             x=alt.X(
                 "time:T",
                 axis=alt.Axis(
-                    labelAngle=0,
-                    tickCount=6,
-                    format="%b %d, %H:%M",
-                    title="Time",
+                    labelAngle=0, tickCount=6, format="%b %d, %H:%M", title="Time"
                 ),
             ),
-            y=alt.Y("Value:Q", title="Dst (nT)"),
+            y=alt.Y(
+                "Value:Q",
+                title="Dst (nT)",
+                scale=alt.Scale(domain=[y_min_dst, y_max_dst]),
+            ),
             color=alt.Color(
                 "Series:N",
-                scale=alt.Scale(range=["#ff0000", "#a9a9a9"]),
+                scale=alt.Scale(range=["#ff0000", "#ffffff"]),
                 legend=alt.Legend(
                     orient="none",
                     legendX=5,
@@ -79,7 +86,7 @@ def dst_section():
                     direction="vertical",
                     title=None,
                     padding=5,
-                    labelExpr="datum.label == 'dst' ? 'Observed Dst' : datum.label == 'dst_predictions' ? 'Model Prediction' : datum.label",
+                    labelExpr="datum.label == 'dst' ? 'Observed Dst' : 'Model Prediction'",
                 ),
             ),
         )
@@ -110,12 +117,15 @@ def dst_section():
 def kp_section():
     latest_ts = get_latest_timestamp(conn, "kp")
 
-    kp_range = st.radio(
-        "Kp time range",
-        options=list(intervals.keys()),
-        horizontal=True,
-        key="kp_range",
-    )
+    cl1, cl2, cl3 = st.columns([1, 2, 1])
+    with cl1:
+        kp_range = st.radio(
+            "Kp time range",
+            options=list(intervals.keys()),
+            horizontal=True,
+            key="kp_range",
+            label_visibility="collapsed",
+        )
 
     kp_interval = intervals[kp_range]
 
@@ -129,16 +139,20 @@ def kp_section():
 
     start_str_kp = plot_data_kp["time"].iloc[0].strftime("%b %d, %H:%M")
     end_str_kp = plot_data_kp["time"].iloc[-1].strftime("%b %d, %H:%M")
-
-    st.markdown(
-        f"Displaying data from {start_str_kp} to {end_str_kp}",
-        unsafe_allow_html=True,
-    )
-
-    st.markdown(
-        "<div style='text-align: center;'><h3>Kp Index</h3></div>",
-        unsafe_allow_html=True,
-    )
+    with cl2:
+        st.markdown(
+            "<div style='text-align:center;'><h3>Kp Index</h3></div>",
+            unsafe_allow_html=True,
+        )
+    with cl3:
+        st.markdown(
+            f"<div style='text-align:right;'>Displaying data from {start_str_kp} to {end_str_kp}</div>",
+            unsafe_allow_html=True,
+        )
+        st.markdown(
+            f"<div style='text-align:right; font-style:italic; color:gray;'>{data_last_synced(conn)}</div>",
+            unsafe_allow_html=True,
+        )
 
     chart_kp = (
         alt.Chart(plot_data_kp)
@@ -147,10 +161,7 @@ def kp_section():
             x=alt.X(
                 "time:T",
                 axis=alt.Axis(
-                    labelAngle=0,
-                    tickCount=6,
-                    format="%b %d, %H:%M",
-                    title="Time",
+                    labelAngle=0, tickCount=6, format="%b %d, %H:%M", title="Time"
                 ),
             ),
             y=alt.Y("Kp:Q", title="Kp Index", scale=alt.Scale(domain=[0, 9])),

@@ -11,18 +11,7 @@ st.title("Solar Activity ☀️")
 def sun_section():
     latest_ts = get_latest_timestamp(conn, "ssn")
 
-    c1, c2 = st.columns([3, 1], vertical_alignment="bottom")
-
-    with c1:
-        st.subheader("Latest Solar View")
-
-    with c2:
-        st.markdown(
-            f"<div style='text-align: right; font-style: italic; color: gray;'>"
-            f"{data_last_synced(conn)}"
-            f"</div>",
-            unsafe_allow_html=True,
-        )
+    st.subheader("Latest Solar View")
 
     solar_flavors = {
         "Sunspots (Visible/HMI)": "https://services.swpc.noaa.gov/images/animations/sdo-hmii/latest.jpg",
@@ -30,22 +19,54 @@ def sun_section():
         "Solar Flares (Teal/131Å)": "https://services.swpc.noaa.gov/images/animations/suvi/primary/131/latest.png",
     }
 
-    col1, col2, col3 = st.columns(3)
+    image_meta = [
+        {
+            "key": "Sunspots (Visible/HMI)",
+            "badge": "SDO / HMI",
+            "color": "#00bcd4",
+            "subtitle": "Continuum · Visible Light",
+            "description": "Active regions and sunspots on the photosphere",
+        },
+        {
+            "key": "Solar Eruptions (Red/304Å)",
+            "badge": "GOES SUVI · 304Å",
+            "color": "#e05d0b",
+            "subtitle": "He II · Chromosphere / Transition Region",
+            "description": "Filaments, prominences and coronal holes (75,000 K)",
+        },
+        {
+            "key": "Solar Flares (Teal/131Å)",
+            "badge": "GOES SUVI · 131Å",
+            "color": "#2dd4bf",
+            "subtitle": "Fe VIII/XXI · Flare Plasma",
+            "description": "High-energy flare and eruptive plasma (10 MK)",
+        },
+    ]
 
-    with col1:
-        st.image(solar_flavors["Sunspots (Visible/HMI)"], caption="Sunspots (HMI)")
-    with col2:
-        st.image(
-            solar_flavors["Solar Eruptions (Red/304Å)"], caption="Eruptions (304Å)"
+    cols = st.columns(3)
+    for col, meta in zip(cols, image_meta):
+        with col:
+            st.markdown(
+                f"""<div style="border:1px solid {meta['color']}55; border-radius:8px; padding:12px 14px; margin-bottom:8px;">
+                    <span style="border:1px solid {meta['color']}; color:{meta['color']}; border-radius:4px;
+                        padding:3px 10px; font-weight:700; letter-spacing:1px;">{meta['badge']}</span>
+                    <div style="color:#c9d1d9; margin-top:8px;">{meta['subtitle']}</div>
+                    <div style="color:{meta['color']}cc; font-style:italic; margin-top:4px;">{meta['description']}</div>
+                </div>""",
+                unsafe_allow_html=True,
+            )
+            st.image(solar_flavors[meta["key"]], width="stretch")
+
+    st.markdown("<br>", unsafe_allow_html=True)
+
+    cl1, cl2, cl3 = st.columns([1, 2, 1])
+    with cl1:
+        ssn_range = st.radio(
+            "Time range",
+            options=["Last Month", "Last Year", "Last Full Cycle"],
+            horizontal=True,
+            label_visibility="collapsed",
         )
-    with col3:
-        st.image(solar_flavors["Solar Flares (Teal/131Å)"], caption="Flares (131Å)")
-
-    ssn_range = st.radio(
-        "Time range",
-        options=["Last Month", "Last Year", "Last Full Cycle"],
-        horizontal=True,
-    )
 
     if ssn_range == "Last Month":
         query = "SELECT time, swpc_ssn FROM ssn WHERE time >= (SELECT MAX(time) FROM ssn) - INTERVAL '31 days' ORDER BY time ASC"
@@ -66,17 +87,20 @@ def sun_section():
 
     start_str = plot_data["time"].iloc[0].strftime("%b %d %Y")
     end_str = plot_data["time"].iloc[-1].strftime("%b %d %Y")
-
-    st.markdown(
-        f"<div style='text-align: left;'>"
-        f"Displaying data from {start_str} to {end_str}</div>",
-        unsafe_allow_html=True,
-    )
-
-    st.markdown(
-        "<div style='text-align: center;'><h3>Sunspots</h3></div>",
-        unsafe_allow_html=True,
-    )
+    with cl2:
+        st.markdown(
+            "<div style='text-align:center;'><h3>Sunspots</h3></div>",
+            unsafe_allow_html=True,
+        )
+    with cl3:
+        st.markdown(
+            f"<div style='text-align:right;'>Displaying data from {start_str} to {end_str}</div>",
+            unsafe_allow_html=True,
+        )
+        st.markdown(
+            f"<div style='text-align:right; font-style:italic; color:gray;'>{data_last_synced(conn)}</div>",
+            unsafe_allow_html=True,
+        )
 
     chart = (
         alt.Chart(plot_data)

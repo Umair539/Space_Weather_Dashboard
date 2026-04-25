@@ -4,6 +4,17 @@ from app_utils import data_last_synced, init_db, get_latest_timestamp, cached_qu
 
 conn = init_db()
 
+PARAM_COLORS = {
+    "Speed": "#00bcd4",
+    "Density": "#69db7c",
+    "Temperature": "#f4c430",
+    "Bz": "#c084fc",
+    "Bx": "#60a5fa",
+    "By": "#2dd4bf",
+    "Bt": "#fbbf24",
+    "Pressure": "#fb923c",
+}
+
 st.title("Solar Wind Properties 🛰️")
 
 
@@ -26,13 +37,20 @@ def solar_wind_section():
             label="Select features", options=columns, default=["Speed", "Bz"]
         )
 
-    time_range = st.radio(
-        "Time range",
-        options=["Last 24 Hours", "Last Week", "Last Month"],
-        horizontal=True,
-    )
+    cl1, cl2 = st.columns([1, 1])
+    with cl1:
+        time_range = st.radio(
+            "Time range",
+            options=["Last 24 Hours", "Last Week", "Last Month"],
+            horizontal=True,
+            label_visibility="collapsed",
+        )
 
-    intervals = {"Last 24 Hours": "24 hours", "Last Week": "7 days", "Last Month": "31 days"}
+    intervals = {
+        "Last 24 Hours": "24 hours",
+        "Last Week": "7 days",
+        "Last Month": "31 days",
+    }
     interval = intervals[time_range]
 
     if resolution == "Hourly":
@@ -61,22 +79,15 @@ def solar_wind_section():
 
     plot_data = cached_query(conn, data_query, latest_ts)
 
-    c1, c2 = st.columns(2)
-
-    with c1:
-        start_str = plot_data[time_col].iloc[0].strftime("%b %d, %H:%M")
-        end_str = plot_data[time_col].iloc[-1].strftime("%b %d, %H:%M")
+    start_str = plot_data[time_col].iloc[0].strftime("%b %d, %H:%M")
+    end_str = plot_data[time_col].iloc[-1].strftime("%b %d, %H:%M")
+    with cl2:
         st.markdown(
-            f"<div style='text-align: left;'>"
-            f"Displaying data from {start_str} to {end_str}</div>",
+            f"<div style='text-align:right;'>Displaying data from {start_str} to {end_str}</div>",
             unsafe_allow_html=True,
         )
-
-    with c2:
         st.markdown(
-            f"<div style='text-align: right; font-style: italic; color: gray;'>"
-            f"{data_last_synced(conn)}"
-            f"</div>",
+            f"<div style='text-align:right; font-style:italic; color:gray;'>{data_last_synced(conn)}</div>",
             unsafe_allow_html=True,
         )
 
@@ -99,7 +110,7 @@ def solar_wind_section():
 
         chart = (
             alt.Chart(plot_data)
-            .mark_line(color="#ff0000")
+            .mark_line(color=PARAM_COLORS.get(feature, "#00bcd4"))
             .encode(
                 x=alt.X(
                     f"{time_col}:T",
