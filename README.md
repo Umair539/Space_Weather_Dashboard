@@ -36,10 +36,10 @@ This project is engineered as a decoupled system where data ingestion and visual
 * A CNN model trained using Keras / TensorFlow generates Dst Index predictions at the end of each ETL cycle using full hourly aggregations.
 * Predictions are stored alongside the processed data, making them immediately available to the dashboard without any additional latency.
 * The model was trained on historical space weather data as part of a Final Year Project at university. For full details on the architecture, training process, and evaluation, see the [dissertation repository](https://github.com/Umair539/Dissertation).
-* The trained Keras model was converted to ONNX format, removing the TensorFlow dependency so that the memory consumption of the deployed app would be significantly reduced.
+* The trained Keras model was converted to ONNX format, removing the TensorFlow dependency so that the memory consumption of the Lambda function would be significantly reduced.
 
 ### 3. Interactive Dashboard
-* **Interactive Controls:** Uses sliders and dropdowns to let users filter date ranges and toggle between different space weather metrics.
+* **Interactive Controls:** Uses radio buttons and dropdowns to let users filter date ranges (Last 24 Hours, Last Week, Last Month, etc.) and toggle between different space weather metrics.
 * **Dynamic Querying:** Uses dynamic SQL queries to pull only the data required for the user's current view based on what user has filtered, keeping the app lightweight.
 * **Auto-Refresh:** Automatically updates the charts to show the newest data from the scheduled pipeline without a manual reload.
 * **Caching:** Query results are cached to minimise repeated database calls and avoid exceeding free tier limits.
@@ -62,6 +62,6 @@ The data used can be seen in the table below
 | **Kp Index** | 3-Hourly | `time_tag`, `Kp` | — |
 | **Solar Wind Magnetometer** | Minute | `time_tag`, `bt`, `bz_gsm`, `by_gsm`, `bx_gsm` | In the process of migrating to a new endpoint as the original is being deprecated. |
 | **Solar Wind Plasma** | Minute | `time_tag`, `speed`, `density`, `temperature` | In the process of migrating to a new endpoint as the original is being deprecated. |
-| **Sunspots** | Daily | `time_tag`, `ssn` | — |
-| **Predicted Solar Cycle** | Monthly | `time_tag`, `predicted_ssn` | `predicted_ssn` represents the predicted 13-month smoothed SSN, required as part of model input. Not used for visualisation. |
+| **Sunspots** | Daily | `Obsdate`, `ssn` | — |
+| **Predicted Solar Cycle** | Monthly | `time-tag`, `predicted_ssn` | `predicted_ssn` represents the predicted 13-month smoothed SSN, required as part of model input. Not used for visualisation. |
 
