@@ -129,101 +129,98 @@ def home_section():
     dst = dst.sort_values("time")
     kp_status, kp_color = _kp_severity(kp_val)
 
-    # Chart row (titles live inside each column so mobile stacks correctly)
-    c1, c2 = st.columns((0.5, 0.5))
+    # Dst chart
+    st.markdown(
+        f'<div style="text-align:center;">'
+        f'<div style="font-size:24px;">Dst Index — Last 7 Days</div>'
+        f'<div style="font-size:14px; color:#8b949e; margin-top:4px;">'
+        f'Predicted: {next_pred} nT | {start_time.strftime("%d %b, %H:%M")} UTC'
+        f"</div></div>",
+        unsafe_allow_html=True,
+    )
+    dst_vals = pd.concat([dst["dst"], dst["dst_predictions"]]).dropna()
+    y_min_dst = float(dst_vals.min()) - 5
+    y_max_dst = float(dst_vals.max()) + 5
 
-    with c1:
-        st.markdown(
-            f'<div style="text-align:center;">'
-            f'<div style="font-size:24px;">Dst Index — Last 7 Days</div>'
-            f'<div style="font-size:14px; color:#8b949e; margin-top:4px;">'
-            f'Predicted: {next_pred} nT | {start_time.strftime("%d %b, %H:%M")} UTC'
-            f"</div></div>",
-            unsafe_allow_html=True,
+    dst_chart = (
+        alt.Chart(dst)
+        .transform_fold(["dst", "dst_predictions"], as_=["Series", "Value"])
+        .mark_line()
+        .encode(
+            x=alt.X(
+                "time:T",
+                axis=alt.Axis(
+                    labelAngle=0, tickCount=6, format="%d %b", title="Time"
+                ),
+            ),
+            y=alt.Y(
+                "Value:Q",
+                title="Dst (nT)",
+                scale=alt.Scale(domain=[y_min_dst, y_max_dst]),
+            ),
+            color=alt.Color(
+                "Series:N",
+                scale=alt.Scale(range=["#ff0000", "#ffffff"]),
+                legend=alt.Legend(
+                    orient="none",
+                    legendX=5,
+                    legendY=5,
+                    direction="vertical",
+                    title=None,
+                    padding=5,
+                    labelExpr="datum.label == 'dst' ? 'Observed Dst' : 'Model Prediction'",
+                ),
+            ),
         )
-        dst_vals = pd.concat([dst["dst"], dst["dst_predictions"]]).dropna()
-        y_min_dst = float(dst_vals.min()) - 5
-        y_max_dst = float(dst_vals.max()) + 5
+    )
+    st.altair_chart(dst_chart.properties(height=400), width="stretch")
 
-        dst_chart = (
-            alt.Chart(dst)
-            .transform_fold(["dst", "dst_predictions"], as_=["Series", "Value"])
-            .mark_line()
-            .encode(
-                x=alt.X(
-                    "time:T",
-                    axis=alt.Axis(
-                        labelAngle=0, tickCount=6, format="%d %b", title="Time"
-                    ),
-                ),
-                y=alt.Y(
-                    "Value:Q",
-                    title="Dst (nT)",
-                    scale=alt.Scale(domain=[y_min_dst, y_max_dst]),
-                ),
-                color=alt.Color(
-                    "Series:N",
-                    scale=alt.Scale(range=["#ff0000", "#ffffff"]),
-                    legend=alt.Legend(
-                        orient="none",
-                        legendX=5,
-                        legendY=5,
-                        direction="vertical",
-                        title=None,
-                        padding=5,
-                        labelExpr="datum.label == 'dst' ? 'Observed Dst' : 'Model Prediction'",
-                    ),
-                ),
-            )
-        )
-        st.altair_chart(dst_chart.properties(height=400), width="stretch")
-
-    with c2:
-        st.markdown(
-            f'<div style="text-align:center;">'
-            f'<div style="font-size:24px;">Kp Index</div>'
-            f'<div style="font-size:14px; color:{kp_color}; margin-top:4px; text-transform:uppercase; letter-spacing:1px;">'
-            f"{kp_status}"
-            f"</div></div>",
-            unsafe_allow_html=True,
-        )
-        fig = go.Figure(
-            go.Indicator(
-                mode="gauge+number",
-                value=kp_val,
-                number={
-                    "font": {"size": 52, "color": kp_color, "family": "sans-serif"},
+    # Kp chart
+    st.markdown(
+        f'<div style="text-align:center;">'
+        f'<div style="font-size:24px;">Kp Index</div>'
+        f'<div style="font-size:14px; color:{kp_color}; margin-top:4px; text-transform:uppercase; letter-spacing:1px;">'
+        f"{kp_status}"
+        f"</div></div>",
+        unsafe_allow_html=True,
+    )
+    fig = go.Figure(
+        go.Indicator(
+            mode="gauge+number",
+            value=kp_val,
+            number={
+                "font": {"size": 52, "color": kp_color, "family": "sans-serif"},
+            },
+            gauge={
+                "shape": "angular",
+                "axis": {
+                    "range": [0, 9],
+                    "tickvals": [0, 1, 2, 3, 4, 5, 6, 7, 8, 9],
+                    "ticktext": ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9"],
+                    "tickfont": {"color": "#8b949e", "size": 11},
+                    "tickcolor": "#30363d",
+                    "tickwidth": 1,
                 },
-                gauge={
-                    "shape": "angular",
-                    "axis": {
-                        "range": [0, 9],
-                        "tickvals": [0, 1, 2, 3, 4, 5, 6, 7, 8, 9],
-                        "ticktext": ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9"],
-                        "tickfont": {"color": "#8b949e", "size": 11},
-                        "tickcolor": "#30363d",
-                        "tickwidth": 1,
-                    },
-                    "steps": [
-                        {"range": [0, 4], "color": "#0d2b0d"},
-                        {"range": [4, 5], "color": "#2d2200"},
-                        {"range": [5, 7], "color": "#2d1500"},
-                        {"range": [7, 8], "color": "#2d0000"},
-                        {"range": [8, 9], "color": "#200020"},
-                    ],
-                    "bar": {"color": kp_color, "thickness": 0.25},
-                    "bgcolor": "#0d1117",
-                    "borderwidth": 0,
-                },
-            )
+                "steps": [
+                    {"range": [0, 4], "color": "#0d2b0d"},
+                    {"range": [4, 5], "color": "#2d2200"},
+                    {"range": [5, 7], "color": "#2d1500"},
+                    {"range": [7, 8], "color": "#2d0000"},
+                    {"range": [8, 9], "color": "#200020"},
+                ],
+                "bar": {"color": kp_color, "thickness": 0.25},
+                "bgcolor": "#0d1117",
+                "borderwidth": 0,
+            },
         )
-        fig.update_layout(
-            height=350,
-            paper_bgcolor="#0d1117",
-            font={"color": "#e6edf3", "family": "sans-serif"},
-            margin={"t": 20, "b": 10, "l": 40, "r": 40},
-        )
-        st.plotly_chart(fig, width="stretch")
+    )
+    fig.update_layout(
+        height=350,
+        paper_bgcolor="#0d1117",
+        font={"color": "#e6edf3", "family": "sans-serif"},
+        margin={"t": 20, "b": 10, "l": 40, "r": 40},
+    )
+    st.plotly_chart(fig, width="stretch")
 
     # Metric cards below plots
     dst_status, dst_color = _dst_severity(dst_val)
