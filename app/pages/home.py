@@ -129,9 +129,10 @@ def home_section():
     dst = dst.sort_values("time")
     kp_status, kp_color = _kp_severity(kp_val)
 
-    # Title row
-    t1, t2 = st.columns((0.5, 0.5))
-    with t1:
+    # Chart row (titles live inside each column so mobile stacks correctly)
+    c1, c2 = st.columns((0.5, 0.5))
+
+    with c1:
         st.markdown(
             f'<div style="text-align:center;">'
             f'<div style="font-size:24px;">Dst Index — Last 7 Days</div>'
@@ -140,20 +141,6 @@ def home_section():
             f"</div></div>",
             unsafe_allow_html=True,
         )
-    with t2:
-        st.markdown(
-            f'<div style="text-align:center;">'
-            f'<div style="font-size:24px;">Kp Index</div>'
-            f'<div style="font-size:14px; color:{kp_color}; margin-top:4px; text-transform:uppercase; letter-spacing:1px;">'
-            f"{kp_status}"
-            f"</div></div>",
-            unsafe_allow_html=True,
-        )
-
-    # Chart row
-    c1, c2 = st.columns((0.5, 0.5))
-
-    with c1:
         dst_vals = pd.concat([dst["dst"], dst["dst_predictions"]]).dropna()
         y_min_dst = float(dst_vals.min()) - 5
         y_max_dst = float(dst_vals.max()) + 5
@@ -192,6 +179,14 @@ def home_section():
         st.altair_chart(dst_chart.properties(height=400), width="stretch")
 
     with c2:
+        st.markdown(
+            f'<div style="text-align:center;">'
+            f'<div style="font-size:24px;">Kp Index</div>'
+            f'<div style="font-size:14px; color:{kp_color}; margin-top:4px; text-transform:uppercase; letter-spacing:1px;">'
+            f"{kp_status}"
+            f"</div></div>",
+            unsafe_allow_html=True,
+        )
         fig = go.Figure(
             go.Indicator(
                 mode="gauge+number",
