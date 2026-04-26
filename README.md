@@ -49,6 +49,7 @@ This project is engineered as a decoupled system where data ingestion and visual
 * **AWS EventBridge Scheduler** triggers the Lambda every 15 minutes, keeping both S3 and the database continuously up to date.
 * **AWS CloudWatch** captures Lambda logs for monitoring and debugging each pipeline run.
 * **AWS SNS** sends alarm notifications when the pipeline fails, enabling rapid incident response.
+* **GitHub Actions** automates the deployment pipeline: on every push to main that changes relevant files, the Docker image is rebuilt, pushed to ECR, and the Lambda function is updated to use the latest image.
 * As NOAA API endpoints only provide the last week of data, this ensures the database is kept up to date during periods of inactivity.
 ---
 ## Data Source and Description
