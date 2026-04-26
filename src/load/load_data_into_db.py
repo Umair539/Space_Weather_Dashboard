@@ -4,7 +4,7 @@ import os
 from datetime import timedelta
 
 
-def load_data_into_db(transformed_data):
+def load_data_into_db(transformed_data, upsert_hours=24 * 7):
     solar, dst, kp, ssn, dst_predictions = transformed_data
 
     neon_db_url = os.environ.get("DATABASE_URL")
@@ -12,18 +12,6 @@ def load_data_into_db(transformed_data):
 
     with engine.begin() as conn:
 
-        # Trim old data
-        conn.execute(text("DELETE FROM solar WHERE time < NOW() - INTERVAL '31 days'"))
-        conn.execute(text("DELETE FROM dst WHERE time < NOW() - INTERVAL '31 days'"))
-        conn.execute(text("DELETE FROM kp WHERE time < NOW() - INTERVAL '31 days'"))
-        conn.execute(text("DELETE FROM ssn WHERE time < NOW() - INTERVAL '13 years'"))
-        conn.execute(
-            text("DELETE FROM dst_predictions WHERE time < NOW() - INTERVAL '31 days'")
-        )
-
-        # For solar dst, and dst_predictions table, insert new rows and replace previous week
-        # This is because solar wind and dst values get updated by NOAA, and the model uses the solar wind values as input
-        upsert_hours = 24 * 7
         lookback = solar.index[-1] - timedelta(hours=upsert_hours)
         solar_upsert = solar[solar.index >= lookback]
 
@@ -104,6 +92,33 @@ def load_data_into_db(transformed_data):
             """
             ),
             ssn_upsert.reset_index().to_dict(orient="records"),
+        )
+
+        # Trim old data relative to the last timestamp in each table
+        conn.execute(
+            text(
+                "DELETE FROM solar WHERE time < (SELECT MAX(time) FROM solar) - INTERVAL '31 days'"
+            )
+        )
+        conn.execute(
+            text(
+                "DELETE FROM dst WHERE time < (SELECT MAX(time) FROM dst) - INTERVAL '31 days'"
+            )
+        )
+        conn.execute(
+            text(
+                "DELETE FROM kp WHERE time < (SELECT MAX(time) FROM kp) - INTERVAL '31 days'"
+            )
+        )
+        conn.execute(
+            text(
+                "DELETE FROM ssn WHERE time < (SELECT MAX(time) FROM ssn) - INTERVAL '13 years'"
+            )
+        )
+        conn.execute(
+            text(
+                "DELETE FROM dst_predictions WHERE time < (SELECT MAX(time) FROM dst_predictions) - INTERVAL '31 days'"
+            )
         )
 
         # Metadata

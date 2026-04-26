@@ -133,7 +133,7 @@ def join_mag_plasma(mag, plasma):
 
 
 def cast_to_float(df):
-    df = df.astype("float32")
+    df = df.astype("float64")
     return df
 
 
