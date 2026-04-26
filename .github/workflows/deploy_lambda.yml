@@ -1,0 +1,49 @@
+name: Build & Deploy Lambda Container
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "src/**"
+      - "model/**"
+      - "docker/**"
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: prod
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
+
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build, tag, and push image
+        env:
+          IMAGE_URI: ${{ steps.login-ecr.outputs.registry }}/${{ vars.ECR_REPOSITORY }}
+        run: |
+          SHORT_SHA=${GITHUB_SHA::7}
+          docker build --provenance=false -f docker/Dockerfile -t $IMAGE_URI:$SHORT_SHA -t $IMAGE_URI:latest .
+          docker push $IMAGE_URI:$SHORT_SHA
+          docker push $IMAGE_URI:latest
+          echo "image=$IMAGE_URI:$SHORT_SHA" >> $GITHUB_ENV
+
+      - name: Update Lambda function code
+        run: |
+          aws lambda update-function-code \
+            --function-name ${{ vars.LAMBDA_FUNCTION_NAME }} \
+            --image-uri ${{ env.image }} \
+            --region ${{ vars.AWS_REGION }}
