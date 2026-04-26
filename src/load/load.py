@@ -40,10 +40,10 @@ def load_raw_data(extracted_data):
     )
 
 
-def load_transformed_data(transformed_data):
+def load_transformed_data(transformed_data, upsert_hours=24 * 7):
     try:
         logger.info("Saving transformed data to Supabase SQL database...")
-        load_data_into_db(transformed_data)
+        load_data_into_db(transformed_data, upsert_hours=upsert_hours)
         logger.info("Supabase SQL database updated successfully.")
 
     except Exception as e:

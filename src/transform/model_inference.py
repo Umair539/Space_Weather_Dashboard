@@ -1,7 +1,7 @@
 import onnxruntime as rt
 import numpy as np
 import pandas as pd
-from src.transform.process_rtsw import round_values
+from src.transform.process_rtsw import round_values, cast_to_float
 
 sess = rt.InferenceSession("model/model.onnx")
 
@@ -12,12 +12,13 @@ def model_inference(model_inputs):
     predictions = perform_inference(X, sess)
     predictions = denormalise_predictions(predictions)
     predictions = prediction_dataframe(predictions, model_inputs)
+    predictions = cast_to_float(predictions)
     predictions = round_values(predictions)
     return predictions
 
 
 def prepare_dataset(model_inputs, sequence_length=168):
-    model_inputs = np.asarray(model_inputs, dtype=np.float32)
+    model_inputs = np.asarray(model_inputs)
     n = len(model_inputs) - sequence_length + 1
     X = np.empty((n, sequence_length, model_inputs.shape[1]), dtype=np.float32)
     for i in range(n):

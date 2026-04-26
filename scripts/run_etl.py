@@ -17,6 +17,13 @@ def run_etl_pipeline(loop=False):
         help="Target environment",
         default="dev",
     )
+    parser.add_argument(
+        "--upsert-hours",
+        type=int,
+        required=False,
+        help="Hours of data to upsert (default: 168 = 1 week)",
+        default=24 * 7,
+    )
     args = parser.parse_args()
     load_dotenv(f".env.{args.env}", override=True)
     # Setup ETL pipeline logger
@@ -42,7 +49,7 @@ def run_etl_pipeline(loop=False):
 
             # Load transformed data
             logger.info("Beginning data load phase on transformed data")
-            load_transformed_data(transformed_data)
+            load_transformed_data(transformed_data, upsert_hours=args.upsert_hours)
             logger.info("Completed data load phase on transformed data")
 
             logger.info("ETL pipeline successful")
