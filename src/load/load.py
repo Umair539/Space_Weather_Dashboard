@@ -12,7 +12,7 @@ def load_raw_data(extracted_data):
     except Exception as e:
         logger.error(f"Failed to unpack extracted data: {e}")
         return ()
-    logger.info("Loading raw data...")
+    logger.info("Loading raw data to cloud...")
 
     results = {}
     for name, folder_path, loader, data in [
@@ -33,10 +33,14 @@ def load_raw_data(extracted_data):
 
     logger.info("Raw data loading complete.")
     return (
-        results["old_mag"], results["old_plasma"],
-        results["mag"], results["plasma"],
-        results["dst"], results["kp"],
-        results["ssn"], results["smoothed_ssn"],
+        results["old_mag"],
+        results["old_plasma"],
+        results["mag"],
+        results["plasma"],
+        results["dst"],
+        results["kp"],
+        results["ssn"],
+        results["smoothed_ssn"],
     )
 
 
