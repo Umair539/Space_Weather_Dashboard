@@ -32,6 +32,7 @@ jobs:
         uses: aws-actions/amazon-ecr-login@v2
 
       - name: Build, tag, and push image
+        id: build
         env:
           IMAGE_URI: ${{ steps.login-ecr.outputs.registry }}/${{ vars.ECR_REPOSITORY }}
         run: |
@@ -39,11 +40,11 @@ jobs:
           docker build --provenance=false -f docker/Dockerfile -t $IMAGE_URI:$SHORT_SHA -t $IMAGE_URI:latest .
           docker push $IMAGE_URI:$SHORT_SHA
           docker push $IMAGE_URI:latest
-          echo "image=$IMAGE_URI:$SHORT_SHA" >> $GITHUB_ENV
+          echo "image=$IMAGE_URI:$SHORT_SHA" >> $GITHUB_OUTPUT
 
       - name: Update Lambda function code
         run: |
           aws lambda update-function-code \
             --function-name ${{ vars.LAMBDA_FUNCTION_NAME }} \
-            --image-uri ${{ env.image }} \
+            --image-uri ${{ steps.build.outputs.image }} \
             --region ${{ vars.AWS_REGION }}

@@ -27,4 +27,4 @@ jobs:
       - name: Run ETL with full refresh
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
-        run: run_etl --env prod --upsert-hours ${{ github.event.inputs.upsert_hours }}
+        run: run_etl --env prod --upsert-hours ${{ inputs.upsert_hours }}
