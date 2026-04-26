@@ -59,7 +59,7 @@ def sun_section():
 
     st.markdown("<br>", unsafe_allow_html=True)
 
-    cl1, cl2, cl3 = st.columns([1, 2, 1])
+    cl1, cl2, cl3 = st.columns([1, 1, 1])
     with cl1:
         ssn_range = st.radio(
             "Time range",

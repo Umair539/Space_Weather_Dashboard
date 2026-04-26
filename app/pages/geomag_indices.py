@@ -18,7 +18,7 @@ intervals = {
 def dst_section():
     latest_ts = get_latest_timestamp(conn, "dst_predictions")
 
-    cl1, cl2, cl3 = st.columns([1, 2, 1])
+    cl1, cl2, cl3 = st.columns([1, 1, 1])
     with cl1:
         dst_range = st.radio(
             "Dst time range",
@@ -117,7 +117,7 @@ def dst_section():
 def kp_section():
     latest_ts = get_latest_timestamp(conn, "kp")
 
-    cl1, cl2, cl3 = st.columns([1, 2, 1])
+    cl1, cl2, cl3 = st.columns([1, 1, 1])
     with cl1:
         kp_range = st.radio(
             "Kp time range",
