@@ -69,7 +69,7 @@ def sun_section():
         )
 
     if ssn_range == "Last Month":
-        query = "SELECT time, swpc_ssn FROM ssn WHERE time >= (SELECT MAX(time) FROM ssn) - INTERVAL '31 days' ORDER BY time ASC"
+        query = "SELECT time, swpc_ssn FROM ssn WHERE time >= (SELECT MAX(time) FROM ssn) - INTERVAL '1 month' ORDER BY time ASC"
         fmt = "%b %d %Y"
     elif ssn_range == "Last Year":
         query = "SELECT time, swpc_ssn FROM ssn WHERE time >= (SELECT MAX(time) FROM ssn) - INTERVAL '1 year' ORDER BY time ASC"

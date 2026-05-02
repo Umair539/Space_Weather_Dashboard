@@ -49,7 +49,7 @@ def solar_wind_section():
     intervals = {
         "Last 24 Hours": "24 hours",
         "Last Week": "7 days",
-        "Last Month": "31 days",
+        "Last Month": "1 month",
     }
     interval = intervals[time_range]
 
