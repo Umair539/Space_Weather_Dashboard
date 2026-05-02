@@ -1,16 +1,20 @@
 # Space Weather Dashboard
 
-The goal of this project was to create a space weather dashboard, a useful tool that provides people and organizations time to prepare for severe solar storms. This included creating a full ETL pipeline for space weather data with extraction, transformation and loading phases. The ETL pipeline was followed by an interactive web application developed using Streamlit and deployed onto Streamlit Community Cloud.
+## Motivation
+
+My [dissertation](https://github.com/Umair539/Dissertation) involved training and testing machine learning models with historical space weather data. After working with static data, I wanted to gain experience working with live, frequently updated data, building something that continuously ingests, transforms, and delivers data to a frontend application.
+
+Space weather was a natural fit. Having studied it through my dissertation, and with astronomy being a genuine interest of mine, it made sense to keep working in the same domain. What started as a way to gain experience ended up growing into a full production-grade AWS pipeline with automated orchestration, ML inference, and a live dashboard.
 
 [Live Dashboard Link](https://spaceweatherdashboard.streamlit.app/)
 
-**Note:** The app and database are hosted on free tiers and may need a moment to wake up on first load.
+**Note:** The pipeline and database run continuously. The Streamlit app is hosted on a free tier and may require a moment to wake up on first load.
 
 ---
 
 ## Tech Stack
 
-**AWS** (Lambda · ECR · EventBridge · S3 · CloudWatch · SNS) · **Streamlit** · **PostgreSQL** · **Pandas** · **Keras / TensorFlow** · **Python**
+**AWS** (Lambda · ECR · EventBridge · S3 · CloudWatch · SNS · IAM) · **Streamlit** · **Supabase** (PostgreSQL database) · **Pandas** · **Keras / TensorFlow** · **GitHub Actions** · **Python** · **Docker**
 
 ---
 
