@@ -97,17 +97,17 @@ def load_data_into_db(transformed_data, upsert_hours=24 * 7):
         # Trim old data relative to the last timestamp in each table
         conn.execute(
             text(
-                "DELETE FROM solar WHERE time < (SELECT MAX(time) FROM solar) - INTERVAL '31 days'"
+                "DELETE FROM solar WHERE time < (SELECT MAX(time) FROM solar) - INTERVAL '1 year'"
             )
         )
         conn.execute(
             text(
-                "DELETE FROM dst WHERE time < (SELECT MAX(time) FROM dst) - INTERVAL '31 days'"
+                "DELETE FROM dst WHERE time < (SELECT MAX(time) FROM dst) - INTERVAL '1 year'"
             )
         )
         conn.execute(
             text(
-                "DELETE FROM kp WHERE time < (SELECT MAX(time) FROM kp) - INTERVAL '31 days'"
+                "DELETE FROM kp WHERE time < (SELECT MAX(time) FROM kp) - INTERVAL '1 year'"
             )
         )
         conn.execute(
@@ -117,7 +117,7 @@ def load_data_into_db(transformed_data, upsert_hours=24 * 7):
         )
         conn.execute(
             text(
-                "DELETE FROM dst_predictions WHERE time < (SELECT MAX(time) FROM dst_predictions) - INTERVAL '31 days'"
+                "DELETE FROM dst_predictions WHERE time < (SELECT MAX(time) FROM dst_predictions) - INTERVAL '1 year'"
             )
         )
 
