@@ -31,3 +31,6 @@ model/*.keras
 
 # vscode
 .vscode
+
+# prod to dev migration
+scripts/r2_migration.py
