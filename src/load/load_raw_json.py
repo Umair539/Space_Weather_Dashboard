@@ -1,5 +1,5 @@
 from src.utils.parser import detect_format
-from src.utils.s3 import S3Client
+from src.utils.storage import get_storage_client
 
 
 def load_raw_json(folder_path, data):
@@ -8,7 +8,7 @@ def load_raw_json(folder_path, data):
         return
 
     fmt = detect_format(data)
-    s3 = S3Client()
+    s3 = get_storage_client()
 
     if fmt == "list_of_lists":
         key = f"{folder_path}/lists.json"

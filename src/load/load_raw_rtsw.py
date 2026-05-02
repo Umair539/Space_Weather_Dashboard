@@ -1,4 +1,4 @@
-from src.utils.s3 import S3Client
+from src.utils.storage import get_storage_client
 
 PLASMA_KEEP_COLS = {
     "time_tag",
@@ -25,7 +25,7 @@ def load_raw_rtsw(folder_path, data):
     if data is None:
         return
 
-    s3 = S3Client()
+    s3 = get_storage_client()
     key = f"{folder_path}/dicts.json"
 
     keep_cols = MAG_KEEP_COLS if folder_path == "mag" else PLASMA_KEEP_COLS
