@@ -55,6 +55,11 @@ This project is engineered as a decoupled system where data ingestion and visual
 * **AWS SNS** sends alarm notifications when the pipeline fails, enabling rapid incident response.
 * **GitHub Actions** automates the deployment pipeline: on every push to main that changes relevant files, the Docker image is rebuilt, pushed to ECR, and the Lambda function is updated to use the latest image.
 * As NOAA API endpoints only provide the last week of data, this ensures the database is kept up to date during periods of inactivity.
+
+### 5. Development Environment
+* A parallel dev environment mirrors the production pipeline for testing purposes.
+* The dev branch runs the pipeline on GitHub Actions (in contrast to AWS Lambda/EventBridge in prod), stores raw data in a Cloudflare R2 bucket, and writes to a separate dev Supabase instance, keeping test runs fully isolated from production data.
+* The Streamlit frontend can also be run locally against the dev database for UI testing without affecting the live dashboard.
 ---
 ## Data Source and Description
 The data used in this project is retrieved from the [NOAA Space Weather Prediction Center](https://www.swpc.noaa.gov) which is the most reliable source of space weather data available. Each successful extraction retrieves the latest data from NOAA, which is appended to the database to build a continuously growing historical record.
