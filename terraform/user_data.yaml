@@ -1,0 +1,53 @@
+#cloud-config
+
+package_update: true
+package_upgrade: true
+
+packages:
+  - docker
+  - nginx
+  - python3-certbot-nginx
+
+runcmd:
+  # Start Docker and enable on reboot
+  - systemctl enable docker
+  - systemctl start docker
+
+  # Get temp ECR credentials and log Docker in
+  - aws ecr get-login-password --region ${aws_region} |
+    docker login --username AWS --password-stdin
+    $(echo ${image_uri} | cut -d/ -f1)
+
+  # Pull the Streamlit app image from ECR
+  - docker pull ${image_uri}
+
+  # Write database URL to env file
+  - echo "DATABASE_READ_URL=${db_url}" > /home/ec2-user/.env
+
+  # Run Streamlit container - restart on crash or reboot, pass in db url, expose port 8501
+  - docker run -d
+    --name space-weather-app
+    --restart unless-stopped
+    --env-file /home/ec2-user/.env
+    -p 8501:8501
+    ${image_uri}
+
+  # Write nginx config - forward port 80 to Streamlit on 8501, with WebSocket headers
+  - |
+    cat > /etc/nginx/conf.d/streamlit.conf <<'EOF'
+    server {
+        listen 80;
+        server_name spaceweatherdashboard.com;
+        location / {
+            proxy_pass http://localhost:8501;
+            proxy_http_version 1.1;
+            proxy_set_header Upgrade $http_upgrade;
+            proxy_set_header Connection "upgrade";
+            proxy_read_timeout 86400;
+        }
+    }
+    EOF
+
+  # Start nginx and enable on reboot
+  - systemctl enable nginx
+  - systemctl start nginx

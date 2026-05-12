@@ -10,3 +10,6 @@ secondaryBackgroundColor = "#161b22"
 textColor = "#ffffffff"
 # Font family
 font = "sans-serif"
+
+[server]
+enableCORS = false

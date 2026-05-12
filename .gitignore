@@ -21,9 +21,6 @@ notebooks/test.ipynb
 .env.dev
 .env.prod
 
-# data folder (stored in Cloudflare R2)
-data/
-
 # ml model
 model/data
 model/*.ipynb
@@ -34,3 +31,11 @@ model/*.keras
 
 # prod to dev migration
 scripts/r2_migration.py
+
+#terraform
+terraform/.terraform/
+terraform/*.tfstate
+terraform/*.tfstate.backup
+terraform/*.tfvars
+terraform/.terraform.lock.hcl
+terraform/*.md
