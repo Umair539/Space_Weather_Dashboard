@@ -6,7 +6,7 @@ on:
     paths:
       - "src/**"
       - "model/**"
-      - "docker/**"
+      - "docker/etl/**"
 
 permissions:
   id-token: write
@@ -37,7 +37,7 @@ jobs:
           IMAGE_URI: ${{ steps.login-ecr.outputs.registry }}/${{ vars.ECR_REPOSITORY }}
         run: |
           SHORT_SHA=${GITHUB_SHA::7}
-          docker build --provenance=false -f docker/Dockerfile -t $IMAGE_URI:$SHORT_SHA -t $IMAGE_URI:latest .
+          docker build --provenance=false -f docker/etl/Dockerfile -t $IMAGE_URI:$SHORT_SHA -t $IMAGE_URI:latest .
           docker push $IMAGE_URI:$SHORT_SHA
           docker push $IMAGE_URI:latest
           echo "image=$IMAGE_URI:$SHORT_SHA" >> $GITHUB_OUTPUT
