@@ -12,6 +12,7 @@ runcmd:
   # Start Docker and enable on reboot
   - systemctl enable docker
   - systemctl start docker
+  - usermod -aG docker ec2-user
 
   # Get temp ECR credentials and log Docker in
   - aws ecr get-login-password --region ${aws_region} |
