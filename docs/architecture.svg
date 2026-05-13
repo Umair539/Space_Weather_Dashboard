@@ -1,101 +1,64 @@
-<svg width="100%" viewBox="0 0 680 320" role="img" xmlns="http://www.w3.org/2000/svg">
-  <title>Space Weather Dashboard architecture</title>
-  <desc>ETL pipeline architecture for the Space Weather Dashboard</desc>
+<svg width="100%" viewBox="0 0 680 320" role="img" xmlns="http://www.w3.org/2000/svg" style="">
+  <title style="fill:rgb(0, 0, 0);stroke:none;color:rgb(255, 255, 255);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:&quot;Anthropic Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:16px;font-weight:400;text-anchor:start;dominant-baseline:auto">Space Weather Dashboard architecture</title>
+  <desc style="fill:rgb(0, 0, 0);stroke:none;color:rgb(255, 255, 255);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:&quot;Anthropic Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:16px;font-weight:400;text-anchor:start;dominant-baseline:auto">ETL pipeline architecture for the Space Weather Dashboard</desc>
   <defs>
     <marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
       <path d="M2 1L8 5L2 9" fill="none" stroke="context-stroke" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
     </marker>
-    <style>
-      text { font-family: sans-serif; fill: #1a1a1a; }
-      .th { font-size: 14px; font-weight: 600; }
-      .ts { font-size: 12px; }
-
-      .c-gray rect  { fill: #F1EFE8; stroke: #5F5E5A; }
-      .c-gray .th   { fill: #444441; }
-      .c-gray .ts   { fill: #5F5E5A; }
-
-      .c-teal rect  { fill: #E1F5EE; stroke: #0F6E56; }
-      .c-teal .th   { fill: #085041; }
-      .c-teal .ts   { fill: #0F6E56; }
-
-      .c-purple rect { fill: #EEEDFE; stroke: #534AB7; }
-      .c-purple .th  { fill: #3C3489; }
-      .c-purple .ts  { fill: #534AB7; }
-
-      .c-green rect  { fill: #EAF3DE; stroke: #3B6D11; }
-      .c-green .th   { fill: #27500A; }
-      .c-green .ts   { fill: #3B6D11; }
-
-      @media (prefers-color-scheme: dark) {
-        text { fill: #e0e0e0; }
-
-        .c-gray rect  { fill: #2e2d2a; stroke: #9e9d99; }
-        .c-gray .th   { fill: #d4d3ce; }
-        .c-gray .ts   { fill: #9e9d99; }
-
-        .c-teal rect  { fill: #0d2e25; stroke: #2db887; }
-        .c-teal .th   { fill: #7de8c0; }
-        .c-teal .ts   { fill: #2db887; }
-
-        .c-purple rect { fill: #1e1a3e; stroke: #8b82e8; }
-        .c-purple .th  { fill: #c0bbff; }
-        .c-purple .ts  { fill: #8b82e8; }
-
-        .c-green rect  { fill: #182b0a; stroke: #72b83a; }
-        .c-green .th   { fill: #b8e87a; }
-        .c-green .ts   { fill: #72b83a; }
-      }
-    </style>
+    
   </defs>
 
   <!-- NOAA -->
-  <text font-family="sans-serif" font-size="12" x="75" y="193" text-anchor="middle" fill="#999">External</text>
-  <g class="c-gray">
-    <rect x="10" y="200" width="130" height="56" rx="8" stroke-width="0.5"/>
-    <text class="th" x="75" y="221" text-anchor="middle" dominant-baseline="central">NOAA SWPC</text>
-    <text class="ts" x="75" y="239" text-anchor="middle" dominant-baseline="central">Space weather data</text>
+  <text font-family="sans-serif" font-size="12" x="75" y="193" text-anchor="middle" fill="#999" style="fill:rgb(224, 224, 224);stroke:none;color:rgb(255, 255, 255);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:sans-serif;font-size:12px;font-weight:400;text-anchor:middle;dominant-baseline:auto">External</text>
+  <g style="fill:rgb(0, 0, 0);stroke:none;color:rgb(255, 255, 255);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:&quot;Anthropic Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:16px;font-weight:400;text-anchor:start;dominant-baseline:auto">
+    <rect x="10" y="200" width="130" height="56" rx="8" stroke-width="0.5" style="fill:rgb(68, 68, 65);stroke:rgb(180, 178, 169);color:rgb(255, 255, 255);stroke-width:0.5px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:&quot;Anthropic Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:16px;font-weight:400;text-anchor:start;dominant-baseline:auto"/>
+    <text x="75" y="221" text-anchor="middle" dominant-baseline="central" style="fill:rgb(212, 211, 206);stroke:none;color:rgb(255, 255, 255);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:sans-serif;font-size:14px;font-weight:600;text-anchor:middle;dominant-baseline:central">NOAA SWPC</text>
+    <text x="75" y="239" text-anchor="middle" dominant-baseline="central" style="fill:rgb(158, 157, 153);stroke:none;color:rgb(255, 255, 255);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:sans-serif;font-size:12px;font-weight:400;text-anchor:middle;dominant-baseline:central">Space weather data</text>
   </g>
 
-  <line x1="140" y1="228" x2="184" y2="228" fill="none" stroke="#888" stroke-width="1.2" marker-end="url(#arrow)"/>
+  <line x1="140" y1="228" x2="184" y2="228" fill="none" stroke="#888" stroke-width="1.2" marker-end="url(#arrow)" style="fill:none;stroke:rgb(136, 136, 136);color:rgb(255, 255, 255);stroke-width:1.2px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:&quot;Anthropic Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:16px;font-weight:400;text-anchor:start;dominant-baseline:auto"/>
 
-  <!-- AWS -->
-  <text font-family="sans-serif" font-size="12" x="270" y="87" text-anchor="middle" fill="#999">AWS</text>
-  <rect x="184" y="94" width="172" height="178" rx="12" fill="none" stroke="#aaa" stroke-width="1" stroke-dasharray="6 4"/>
+  <!-- AWS dashed boundary (Lambda + S3) — EC2 box: x=200,y=200 w=140 h=56 → outer: x=184,y=184 w=172 h=88, label at y=177 -->
+  <text font-family="sans-serif" font-size="12" x="270" y="87" text-anchor="middle" fill="#999" style="fill:rgb(224, 224, 224);stroke:none;color:rgb(255, 255, 255);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:sans-serif;font-size:12px;font-weight:400;text-anchor:middle;dominant-baseline:auto">AWS</text>
+  <rect x="184" y="94" width="172" height="178" rx="12" fill="none" stroke="#aaa" stroke-width="1" stroke-dasharray="6 4" style="fill:none;stroke:rgb(170, 170, 170);color:rgb(255, 255, 255);stroke-width:1px;stroke-dasharray:6px, 4px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:&quot;Anthropic Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:16px;font-weight:400;text-anchor:start;dominant-baseline:auto"/>
 
   <!-- S3 -->
-  <g class="c-teal">
-    <rect x="200" y="110" width="140" height="56" rx="8" stroke-width="0.5"/>
-    <text class="th" x="270" y="131" text-anchor="middle" dominant-baseline="central">S3</text>
-    <text class="ts" x="270" y="149" text-anchor="middle" dominant-baseline="central">Raw JSON storage</text>
+  <g style="fill:rgb(0, 0, 0);stroke:none;color:rgb(255, 255, 255);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:&quot;Anthropic Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:16px;font-weight:400;text-anchor:start;dominant-baseline:auto">
+    <rect x="200" y="110" width="140" height="56" rx="8" stroke-width="0.5" style="fill:rgb(8, 80, 65);stroke:rgb(93, 202, 165);color:rgb(255, 255, 255);stroke-width:0.5px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:&quot;Anthropic Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:16px;font-weight:400;text-anchor:start;dominant-baseline:auto"/>
+    <text x="270" y="131" text-anchor="middle" dominant-baseline="central" style="fill:rgb(125, 232, 192);stroke:none;color:rgb(255, 255, 255);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:sans-serif;font-size:14px;font-weight:600;text-anchor:middle;dominant-baseline:central">S3</text>
+    <text x="270" y="149" text-anchor="middle" dominant-baseline="central" style="fill:rgb(45, 184, 135);stroke:none;color:rgb(255, 255, 255);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:sans-serif;font-size:12px;font-weight:400;text-anchor:middle;dominant-baseline:central">Raw JSON storage</text>
   </g>
 
   <!-- Lambda -->
-  <g class="c-purple">
-    <rect x="200" y="200" width="140" height="56" rx="8" stroke-width="0.5"/>
-    <text class="th" x="270" y="221" text-anchor="middle" dominant-baseline="central">Lambda</text>
-    <text class="ts" x="270" y="239" text-anchor="middle" dominant-baseline="central">Scheduled ETL</text>
+  <g style="fill:rgb(0, 0, 0);stroke:none;color:rgb(255, 255, 255);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:&quot;Anthropic Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:16px;font-weight:400;text-anchor:start;dominant-baseline:auto">
+    <rect x="200" y="200" width="140" height="56" rx="8" stroke-width="0.5" style="fill:rgb(60, 52, 137);stroke:rgb(175, 169, 236);color:rgb(255, 255, 255);stroke-width:0.5px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:&quot;Anthropic Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:16px;font-weight:400;text-anchor:start;dominant-baseline:auto"/>
+    <text x="270" y="221" text-anchor="middle" dominant-baseline="central" style="fill:rgb(192, 187, 255);stroke:none;color:rgb(255, 255, 255);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:sans-serif;font-size:14px;font-weight:600;text-anchor:middle;dominant-baseline:central">Lambda</text>
+    <text x="270" y="239" text-anchor="middle" dominant-baseline="central" style="fill:rgb(139, 130, 232);stroke:none;color:rgb(255, 255, 255);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:sans-serif;font-size:12px;font-weight:400;text-anchor:middle;dominant-baseline:central">Scheduled ETL</text>
   </g>
 
-  <line x1="255" y1="200" x2="255" y2="166" fill="none" stroke="#888" stroke-width="1.2" marker-end="url(#arrow)"/>
-  <line x1="285" y1="166" x2="285" y2="200" fill="none" stroke="#888" stroke-width="1.2" marker-end="url(#arrow)"/>
-  <line x1="356" y1="228" x2="394" y2="228" fill="none" stroke="#888" stroke-width="1.2" marker-end="url(#arrow)"/>
+  <line x1="255" y1="200" x2="255" y2="166" fill="none" stroke="#888" stroke-width="1.2" marker-end="url(#arrow)" style="fill:none;stroke:rgb(136, 136, 136);color:rgb(255, 255, 255);stroke-width:1.2px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:&quot;Anthropic Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:16px;font-weight:400;text-anchor:start;dominant-baseline:auto"/>
+  <line x1="285" y1="166" x2="285" y2="200" fill="none" stroke="#888" stroke-width="1.2" marker-end="url(#arrow)" style="fill:none;stroke:rgb(136, 136, 136);color:rgb(255, 255, 255);stroke-width:1.2px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:&quot;Anthropic Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:16px;font-weight:400;text-anchor:start;dominant-baseline:auto"/>
+  <line x1="356" y1="228" x2="394" y2="228" fill="none" stroke="#888" stroke-width="1.2" marker-end="url(#arrow)" style="fill:none;stroke:rgb(136, 136, 136);color:rgb(255, 255, 255);stroke-width:1.2px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:&quot;Anthropic Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:16px;font-weight:400;text-anchor:start;dominant-baseline:auto"/>
 
   <!-- Supabase -->
-  <text font-family="sans-serif" font-size="12" x="459" y="193" text-anchor="middle" fill="#999">External</text>
-  <g class="c-green">
-    <rect x="394" y="200" width="130" height="56" rx="8" stroke-width="0.5"/>
-    <text class="th" x="459" y="221" text-anchor="middle" dominant-baseline="central">Supabase</text>
-    <text class="ts" x="459" y="239" text-anchor="middle" dominant-baseline="central">PostgreSQL DB</text>
+  <text font-family="sans-serif" font-size="12" x="459" y="193" text-anchor="middle" fill="#999" style="fill:rgb(224, 224, 224);stroke:none;color:rgb(255, 255, 255);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:sans-serif;font-size:12px;font-weight:400;text-anchor:middle;dominant-baseline:auto">External</text>
+  <g style="fill:rgb(0, 0, 0);stroke:none;color:rgb(255, 255, 255);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:&quot;Anthropic Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:16px;font-weight:400;text-anchor:start;dominant-baseline:auto">
+    <rect x="394" y="200" width="130" height="56" rx="8" stroke-width="0.5" style="fill:rgb(39, 80, 10);stroke:rgb(151, 196, 89);color:rgb(255, 255, 255);stroke-width:0.5px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:&quot;Anthropic Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:16px;font-weight:400;text-anchor:start;dominant-baseline:auto"/>
+    <text x="459" y="221" text-anchor="middle" dominant-baseline="central" style="fill:rgb(184, 232, 122);stroke:none;color:rgb(255, 255, 255);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:sans-serif;font-size:14px;font-weight:600;text-anchor:middle;dominant-baseline:central">Supabase</text>
+    <text x="459" y="239" text-anchor="middle" dominant-baseline="central" style="fill:rgb(114, 184, 58);stroke:none;color:rgb(255, 255, 255);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:sans-serif;font-size:12px;font-weight:400;text-anchor:middle;dominant-baseline:central">PostgreSQL DB</text>
   </g>
 
-  <line x1="524" y1="228" x2="552" y2="228" fill="none" stroke="#888" stroke-width="1.2" marker-end="url(#arrow)"/>
+  <line x1="524" y1="228" x2="538" y2="228" fill="none" stroke="#888" stroke-width="1.2" marker-end="url(#arrow)" style="fill:none;stroke:rgb(136, 136, 136);color:rgb(255, 255, 255);stroke-width:1.2px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:&quot;Anthropic Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:16px;font-weight:400;text-anchor:start;dominant-baseline:auto"/>
 
-  <!-- Streamlit -->
-  <text font-family="sans-serif" font-size="12" x="611" y="193" text-anchor="middle" fill="#999">External</text>
-  <g class="c-teal">
-    <rect x="552" y="200" width="118" height="56" rx="8" stroke-width="0.5"/>
-    <text class="th" x="611" y="221" text-anchor="middle" dominant-baseline="central">Streamlit</text>
-    <text class="ts" x="611" y="239" text-anchor="middle" dominant-baseline="central">Deployed app</text>
+  <!-- EC2: rect x=554,y=200,w=100,h=56 → AWS boundary 16px padding each side: x=538,y=184,w=132,h=88 → label y=177 -->
+  <text font-family="sans-serif" font-size="12" x="604" y="177" text-anchor="middle" fill="#999" style="fill:rgb(224, 224, 224);stroke:none;color:rgb(255, 255, 255);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:sans-serif;font-size:12px;font-weight:400;text-anchor:middle;dominant-baseline:auto">AWS</text>
+  <rect x="538" y="184" width="132" height="88" rx="12" fill="none" stroke="#aaa" stroke-width="1" stroke-dasharray="6 4" style="fill:none;stroke:rgb(170, 170, 170);color:rgb(255, 255, 255);stroke-width:1px;stroke-dasharray:6px, 4px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:&quot;Anthropic Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:16px;font-weight:400;text-anchor:start;dominant-baseline:auto"/>
+
+  <!-- EC2 -->
+  <g style="fill:rgb(0, 0, 0);stroke:none;color:rgb(255, 255, 255);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:&quot;Anthropic Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:16px;font-weight:400;text-anchor:start;dominant-baseline:auto">
+    <rect x="554" y="200" width="100" height="56" rx="8" stroke-width="0.5" style="fill:rgb(12, 68, 124);stroke:rgb(133, 183, 235);color:rgb(255, 255, 255);stroke-width:0.5px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:&quot;Anthropic Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:16px;font-weight:400;text-anchor:start;dominant-baseline:auto"/>
+    <text x="604" y="221" text-anchor="middle" dominant-baseline="central" style="fill:rgb(144, 200, 248);stroke:none;color:rgb(255, 255, 255);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:sans-serif;font-size:14px;font-weight:600;text-anchor:middle;dominant-baseline:central">EC2</text>
+    <text x="604" y="239" text-anchor="middle" dominant-baseline="central" style="fill:rgb(58, 143, 212);stroke:none;color:rgb(255, 255, 255);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:sans-serif;font-size:12px;font-weight:400;text-anchor:middle;dominant-baseline:central">Streamlit app</text>
   </g>
 
 </svg>

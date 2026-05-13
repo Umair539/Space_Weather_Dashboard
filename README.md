@@ -6,15 +6,13 @@ My [dissertation](https://github.com/Umair539/Dissertation) involved training an
 
 Space weather was a natural fit. Having studied it through my dissertation, and with astronomy being a genuine interest of mine, it made sense to keep working in the same domain. What started as a way to gain experience ended up growing into a full production-grade AWS pipeline with automated orchestration, ML inference, and a live dashboard.
 
-[Live Dashboard Link](https://spaceweatherdashboard.streamlit.app/)
-
-**Note:** The pipeline and database run continuously. The Streamlit app is hosted on a free tier and may require a moment to wake up on first load.
+**Live Dashboard Link:** https://spaceweatherdashboard.com
 
 ---
 
 ## Tech Stack
 
-**AWS** (Lambda · ECR · EventBridge · S3 · CloudWatch · SNS · IAM) · **Streamlit** · **Supabase** (PostgreSQL database) · **Pandas** · **Keras / TensorFlow** · **GitHub Actions** · **Python** · **Docker**
+**AWS** (Lambda · ECR · EventBridge · S3 · CloudWatch · SNS · IAM · EC2) · **Streamlit** · **Supabase** (PostgreSQL database) · **Pandas** · **Keras / TensorFlow** · **GitHub Actions** · **Python** · **Docker** · **Terraform** · **Nginx** · **Cloudflare**
 
 ---
 
@@ -31,7 +29,7 @@ This project is engineered as a decoupled system where data ingestion and visual
 * **Extract:** Pulls near-real-time JSON data from NOAA API endpoints.
 * **Transform:** Uses Pandas to clean, align, and transform datasets.
 * **Load:** Saves raw extracted JSON to AWS S3, then upserts transformed data into a serverless PostgreSQL database hosted on Supabase, replacing the previous 24 hours of data to account for any updates at source.
-* **Fault Tolerant:** The pipeline is resilient at every stage. Extraction failures do not affect the transform step, which falls back to the latest raw data in S3. Transform failures do not affect the dashboard, which reads from the cloud database. In the event of database failure, raw data persisted in S3 ensures the database can be fully reproduced.
+* **Fault Tolerant:** The pipeline is resilient at every stage. Extraction failures do not affect the transform step, which falls back to the latest raw data in S3. Transform failures do not affect the dashboard, which reads from the cloud database. In the event of database failure, raw data persisted in S3 ensures the database can be fully reproduced. A parallel dev pipeline running on GitHub Actions with a Cloudflare R2 bucket provides an additional layer of redundancy, if prod raw storage is lost, the dev pipeline's R2 bucket can serve as a backup source.
 * **Schema Flexible:** Handles format changes in NOAA API responses. After observing the Dst and Kp Index endpoints switching from a list of lists to a list of dictionaries format, format detection was introduced at extraction time to parse either structure correctly. The pipeline is also forward-compatible with future switches between the two formats.
 
 ### 2. ML Inference
@@ -56,7 +54,17 @@ This project is engineered as a decoupled system where data ingestion and visual
 * **GitHub Actions** automates the deployment pipeline: on every push to main that changes relevant files, the Docker image is rebuilt, pushed to ECR, and the Lambda function is updated to use the latest image.
 * As NOAA API endpoints only provide the last week of data, this ensures the database is kept up to date during periods of inactivity.
 
-### 5. Development Environment
+### 5. App Hosting
+
+* The Streamlit frontend is containerised and self-hosted on an **AWS EC2 instance**, provisioned with **Terraform** and served over HTTPS via Nginx and Certbot.
+* **Infrastructure as Code:** Terraform provisions the EC2 instance (`t3.micro`), ECR repository, IAM role, security group, and Elastic IP.
+* **Automated Setup:** A `user_data.yaml` cloud-init config runs on first boot. It installs Docker and Nginx, authenticates with ECR via IAM role, pulls the app image, and starts the container.
+* **Reverse Proxy:** Nginx forwards traffic from port 80/443 to the Streamlit container on port 8501.
+* **TLS:** HTTPS provided by Certbot (Let's Encrypt). DNS managed via Cloudflare, pointed at the Elastic IP, serving the dashboard at https://spaceweatherdashboard.com
+*  **SSH Access:** Port 22 open on the security group for direct access to the instance.
+* **CD:** GitHub Actions builds and pushes a new app image to ECR on every relevant push to `main`, then SSHs into the EC2 instance to pull the latest image and restart the container automatically.
+
+### 6. Development Environment
 * A parallel dev environment mirrors the production pipeline for testing purposes.
 * The dev branch runs the pipeline on GitHub Actions (in contrast to AWS Lambda/EventBridge in prod), stores raw data in a Cloudflare R2 bucket, and writes to a separate dev Supabase instance, keeping test runs fully isolated from production data.
 * The Streamlit frontend can also be run locally against the dev database for UI testing without affecting the live dashboard.
