@@ -6,9 +6,9 @@ from src.load.load_raw_rtsw import load_raw_rtsw
 logger = setup_logger("load_data", "load_data.log")
 
 
-def load_raw_data(extracted_data):
+def load_raw_data(extracted_data, filter_raw=False):
     try:
-        old_mag, old_plasma, mag, plasma, dst, kp, ssn, smoothed_ssn = extracted_data
+        mag, plasma, dst, kp, ssn, smoothed_ssn = extracted_data
     except Exception as e:
         logger.error(f"Failed to unpack extracted data: {e}")
         return ()
@@ -16,8 +16,6 @@ def load_raw_data(extracted_data):
 
     results = {}
     for name, folder_path, loader, data in [
-        ("old_mag", "mag", load_raw_json, old_mag),
-        ("old_plasma", "plasma", load_raw_json, old_plasma),
         ("mag", "mag", load_raw_rtsw, mag),
         ("plasma", "plasma", load_raw_rtsw, plasma),
         ("dst", "dst", load_raw_json, dst),
@@ -26,15 +24,13 @@ def load_raw_data(extracted_data):
         ("smoothed_ssn", "smoothed_ssn", load_raw_json, smoothed_ssn),
     ]:
         try:
-            results[name] = loader(folder_path, data)
+            results[name] = loader(folder_path, data, filter_raw=filter_raw)
         except Exception as e:
             logger.error(f"Failed to load {folder_path}: {e}")
             results[name] = None
 
     logger.info("Raw data loading complete.")
     return (
-        results["old_mag"],
-        results["old_plasma"],
         results["mag"],
         results["plasma"],
         results["dst"],
