@@ -14,14 +14,12 @@ conn = init_db()
 
 st.title("Space Weather Dashboard 🪐")
 
-st.markdown(
-    """
+st.markdown("""
     This Space Weather Dashboard provides frequently updated data on key
     space environment properties, including solar wind parameters and
     geomagnetic indices, collected from the
     [NOAA Space Weather Prediction Center](https://www.swpc.noaa.gov).
-    """
-)
+    """)
 
 
 def _kp_severity(k):
@@ -102,8 +100,8 @@ def home_section():
         SELECT p.time, d.dst, p.dst_predictions
         FROM dst_predictions p
         LEFT JOIN dst d ON p.time = d.time
+        WHERE p.time >= (SELECT MAX(time) FROM dst_predictions) - INTERVAL '1 month'
         ORDER BY p.time DESC
-        LIMIT 169
     """
     dst = cached_query(conn, dst_query, latest_ts_dst)
     kp = cached_query(conn, "SELECT * FROM kp ORDER BY time DESC LIMIT 1", latest_ts_kp)
@@ -132,9 +130,9 @@ def home_section():
     # Dst chart
     st.markdown(
         f'<div style="text-align:center;">'
-        f'<div style="font-size:24px;">Dst Index — Last 7 Days</div>'
+        f'<div style="font-size:24px;">Dst Index — Last Month</div>'
         f'<div style="font-size:14px; color:#8b949e; margin-top:4px;">'
-        f'Predicted: {next_pred} nT | {start_time.strftime("%d %b, %H:%M")} UTC'
+        f'Predicted: {next_pred} nT | {start_time.strftime("%d %b %H:%M")} – {(start_time + pd.Timedelta(hours=1)).strftime("%H:%M")} UTC'
         f"</div></div>",
         unsafe_allow_html=True,
     )
@@ -149,9 +147,7 @@ def home_section():
         .encode(
             x=alt.X(
                 "time:T",
-                axis=alt.Axis(
-                    labelAngle=0, tickCount=6, format="%d %b", title="Time"
-                ),
+                axis=alt.Axis(labelAngle=0, tickCount=6, format="%d %b", title="Time"),
             ),
             y=alt.Y(
                 "Value:Q",
