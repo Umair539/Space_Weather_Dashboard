@@ -24,7 +24,9 @@ def load_raw_data(extracted_data):
             logger.warning(f"No data for {name}, skipping.")
             continue
         try:
+            logger.info(f"Loading {name}...")
             loader(name, data)
+            logger.info(f"Loaded {name}.")
         except Exception as e:
             logger.error(f"Failed to load {name}: {e}")
 

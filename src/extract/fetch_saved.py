@@ -58,7 +58,8 @@ def _get_metadata(storage, folder):
 def _download_partitions(storage, folder, months):
     records = []
     for month in months:
-        data = storage.download_json(f"{folder}/dicts/{month}.json")
+        path = f"{folder}/dicts/{month}.json"
+        data = storage.download_json(path)
         if data:
             records.extend(data)
 

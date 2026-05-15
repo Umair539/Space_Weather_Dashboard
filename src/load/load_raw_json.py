@@ -1,6 +1,8 @@
 from src.utils.parser import detect_format
 from src.utils.storage import get_storage_client
 
+PARTITIONED_FOLDERS = {"dst", "kp"}
+
 
 def load_raw_json(folder_path, data):
 
@@ -15,7 +17,10 @@ def load_raw_json(folder_path, data):
         return load_raw_json_lists(storage, key, data)
 
     elif fmt == "list_of_dicts":
-        return load_raw_json_dicts(storage, folder_path, data)
+        if folder_path in PARTITIONED_FOLDERS:
+            return load_raw_json_dicts(storage, folder_path, data)
+        else:
+            return load_raw_json_dicts_single(storage, folder_path, data)
 
     else:
         raise ValueError(f"Unsupported format: {fmt}")
@@ -58,8 +63,30 @@ def load_raw_json_dicts(storage, folder_path, new_data):
         partition_data = sorted(existing_dict.values(), key=lambda r: r[time_key])
         storage.upload_json(partition_key, partition_data)
 
-    # Write metadata with max timestamp from incoming data
-    max_timestamp = max(str(r[time_key]) for r in new_data)
-    storage.upload_json(f"{folder_path}/metadata.json", {"last_updated": max_timestamp})
+    # Update metadata
+    existing_metadata = storage.download_json(f"{folder_path}/metadata.json") or {}
+    existing_partitions = set(existing_metadata.get("partitions", []))
+    existing_partitions.update(by_month.keys())
+
+    storage.upload_json(
+        f"{folder_path}/metadata.json",
+        {
+            "partitions": sorted(existing_partitions),
+        },
+    )
 
     return new_data
+
+
+def load_raw_json_dicts_single(storage, folder_path, new_data):
+    time_key = next(iter(new_data[0]))
+    key = f"{folder_path}/dicts.json"
+
+    existing = storage.download_json(key)
+    existing_dict = {r[time_key]: r for r in existing} if existing else {}
+
+    existing_dict.update({r[time_key]: r for r in new_data})
+
+    updated_data = list(existing_dict.values())
+    storage.upload_json(key, updated_data)
+    return updated_data

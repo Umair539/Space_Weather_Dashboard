@@ -54,8 +54,16 @@ def load_raw_rtsw(folder_path, data):
         )
         storage.upload_json(partition_key, partition_data)
 
-    # Write metadata with max timestamp from incoming data
-    max_timestamp = max(str(r["time_tag"]) for r in filtered_data)
-    storage.upload_json(f"{folder_path}/metadata.json", {"last_updated": max_timestamp})
+    # Update metadata
+    existing_metadata = storage.download_json(f"{folder_path}/metadata.json") or {}
+    existing_partitions = set(existing_metadata.get("partitions", []))
+    existing_partitions.update(by_month.keys())
+
+    storage.upload_json(
+        f"{folder_path}/metadata.json",
+        {
+            "partitions": sorted(existing_partitions),
+        },
+    )
 
     return filtered_data
