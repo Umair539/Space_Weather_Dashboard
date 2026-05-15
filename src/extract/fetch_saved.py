@@ -15,6 +15,8 @@ def fetch_saved(folder, filter_raw=True):
     storage = get_storage_client()
 
     if folder in FULL_LISTS:
+        if filter_raw:
+            return pd.DataFrame()
         return _fetch_full(storage, f"{folder}/lists.json")
 
     if folder in FULL_DICTS:
@@ -44,6 +46,7 @@ def _fetch_partitions(storage, folder, filter_raw):
         months = metadata["partitions"][-2:]
     else:
         months = metadata["partitions"]
+    logger.info(f"Fetching months: {months}")
 
     return _download_partitions(storage, folder, months)
 

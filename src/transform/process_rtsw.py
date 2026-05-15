@@ -1,19 +1,28 @@
 import pandas as pd
+import logging
 from src.transform.process_old_solar_wind import process_old_solar_wind
+from src.utils.logging_utils import setup_logger
+
+logger = setup_logger(__name__, "transform_data.log", level=logging.DEBUG)
 
 
 def process_rtsw(mag, plasma, old_mag, old_plasma):
 
+    logger.info(f"Input mag shape: {mag.shape}, plasma shape: {plasma.shape}")
+
+    logger.info("Filtering columns...")
     mag = filter_columns(mag, ["bz_gsm", "bx_gsm", "by_gsm", "bt"])
     plasma = filter_columns(
         plasma, ["proton_speed", "proton_temperature", "proton_density"]
     )
 
+    logger.info("Filtering source...")
     mag = filter_source(mag, ["bz_gsm", "bx_gsm", "by_gsm", "bt"])
     plasma = filter_source(
         plasma, ["proton_speed", "proton_temperature", "proton_density"]
     )
 
+    logger.info("Dropping active column, formatting names, deduplicating...")
     mag = drop_active_column(mag)
     plasma = drop_active_column(plasma)
 
@@ -32,6 +41,7 @@ def process_rtsw(mag, plasma, old_mag, old_plasma):
     mag = drop_duplicates(mag)
     plasma = drop_duplicates(plasma)
 
+    logger.info("Setting time index...")
     mag = set_time_index(mag)
     plasma = set_time_index(plasma)
 
@@ -41,26 +51,37 @@ def process_rtsw(mag, plasma, old_mag, old_plasma):
         and old_plasma is not None
         and not old_plasma.empty
     ):
+        logger.info("Combining with old solar wind data...")
         old_mag, old_plasma = process_old_solar_wind(old_mag, old_plasma)
         mag = combine_dataframes(old_mag, mag)
         plasma = combine_dataframes(old_plasma, plasma)
         del old_mag, old_plasma
 
+    logger.info("Matching time index...")
     mag, plasma = match_time_index(mag, plasma)
+    logger.info(f"Matched time index shape: {mag.shape}")
 
+    logger.info("Joining mag and plasma...")
     solar = join_mag_plasma(mag, plasma)
     del mag, plasma
 
+    logger.info("Casting to float...")
     solar = cast_to_float(solar)
 
+    logger.info("Filtering invalid data...")
     solar = filter_invalid_data(solar)
+
+    logger.info("Filtering outliers...")
     solar = filter_outliers(solar)
+
+    logger.info("Handling missing data...")
     solar = handle_missing_data(solar)
 
     solar = add_pressure_column(solar)
     solar = round_values(solar)
     solar = set_index_name(solar)
 
+    logger.info(f"Solar wind processing complete. Output shape: {solar.shape}")
     return solar
 
 
@@ -71,28 +92,31 @@ def filter_columns(df, data_cols):
 def filter_source(df, data_cols):
     df = df.sort_values(["time_tag", "active"], ascending=[True, False])
 
-    df = (
-        df.groupby("time_tag", sort=False)
-        .apply(pick_row, data_cols=data_cols, include_groups=False)
-        .reset_index()
-    )
+    # Split into active and inactive rows, indexed by timestamp
+    active = df[df["active"]].set_index("time_tag")
+    inactive = df[~df["active"]].set_index("time_tag")
 
-    return df
+    # Find timestamps where active row is entirely NaN
+    active_all_nan = active[data_cols].isna().all(axis=1)
+    fallback_timestamps = active_all_nan.index[active_all_nan]
 
+    # Find inactive rows where all data columns are valid
+    inactive_all_valid = inactive[data_cols].notna().all(axis=1)
+    valid_inactive_timestamps = inactive_all_valid.index[inactive_all_valid]
 
-def pick_row(g, data_cols):
-    active_row = g.iloc[0]
-    inactive_row = g.iloc[-1] if len(g) > 1 else None
+    # Only replace where active is bad AND inactive is fully valid
+    replaceable = fallback_timestamps.intersection(valid_inactive_timestamps)
 
-    active_all_nan = active_row[data_cols].isna().all()
+    # Start with active rows, replace bad ones with valid inactive
+    result = active.copy()
+    result.loc[replaceable] = inactive.loc[replaceable]
 
-    if (
-        active_all_nan
-        and inactive_row is not None
-        and inactive_row[data_cols].notna().all()
-    ):
-        return inactive_row
-    return active_row
+    # Add timestamps that only exist in inactive (no active row at all)
+    inactive_only = inactive.index.difference(active.index)
+    if len(inactive_only) > 0:
+        result = pd.concat([result, inactive.loc[inactive_only]])
+
+    return result.reset_index()
 
 
 def format_column_names(df, columns):

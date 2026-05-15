@@ -1,4 +1,5 @@
 import argparse
+import tracemalloc
 from dotenv import load_dotenv
 
 from src.extract.extract import extract_live_data, extract_saved_data
@@ -35,6 +36,8 @@ def run_etl_pipeline():
 
     logger = setup_logger("etl_pipeline", "etl_pipeline.log")
 
+    tracemalloc.start()
+
     try:
         logger.info(
             f"Starting ETL pipeline [env={args.env}, filter_raw={args.filter_raw}]"
@@ -60,8 +63,14 @@ def run_etl_pipeline():
         load_transformed_data(transformed_data, upsert_hours=args.upsert_hours)
         logger.info("Transformed data load complete.")
 
+        current, peak = tracemalloc.get_traced_memory()
+        logger.info(f"Peak memory usage: {peak / 1024 / 1024:.1f} MB")
+
         logger.info("ETL pipeline successful.")
 
     except Exception as e:
         logger.error(f"ETL pipeline failed: {e}")
         raise
+
+    finally:
+        tracemalloc.stop()
