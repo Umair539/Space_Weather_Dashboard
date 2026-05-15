@@ -8,42 +8,58 @@ def load_raw_json(folder_path, data):
         return
 
     fmt = detect_format(data)
-    s3 = get_storage_client()
+    storage = get_storage_client()
 
     if fmt == "list_of_lists":
         key = f"{folder_path}/lists.json"
-        return load_raw_json_lists(s3, key, data)
+        return load_raw_json_lists(storage, key, data)
 
     elif fmt == "list_of_dicts":
-        key = f"{folder_path}/dicts.json"
-        return load_raw_json_dicts(s3, key, data)
+        return load_raw_json_dicts(storage, folder_path, data)
 
     else:
         raise ValueError(f"Unsupported format: {fmt}")
 
 
-def load_raw_json_lists(s3, key, new_data):
+def load_raw_json_lists(storage, key, new_data):
     headers = new_data[0]
     new_rows = new_data[1:]
 
-    existing = s3.download_json(key)
+    existing = storage.download_json(key)
     existing_dict = {row[0]: row for row in existing[1:]} if existing else {}
 
     existing_dict.update({row[0]: row for row in new_rows})
 
     updated_data = [headers] + list(existing_dict.values())
-    s3.upload_json(key, updated_data)
+    storage.upload_json(key, updated_data)
     return updated_data
 
 
-def load_raw_json_dicts(s3, key, new_data):
-    id_key = next(iter(new_data[0]))
+def load_raw_json_dicts(storage, folder_path, new_data):
+    time_key = next(iter(new_data[0]))
 
-    existing = s3.download_json(key)
-    existing_dict = {row[id_key]: row for row in existing} if existing else {}
+    # Group incoming records by month
+    by_month = {}
+    for record in new_data:
+        month = str(record[time_key])[:7]  # "YYYY-MM"
+        if month not in by_month:
+            by_month[month] = {}
+        by_month[month][record[time_key]] = record
 
-    existing_dict.update({row[id_key]: row for row in new_data})
+    # Merge each month's records into its partition
+    for month, new_records in by_month.items():
+        partition_key = f"{folder_path}/dicts/{month}.json"
 
-    updated_data = list(existing_dict.values())
-    s3.upload_json(key, updated_data)
-    return updated_data
+        existing = storage.download_json(partition_key)
+        existing_dict = {r[time_key]: r for r in existing} if existing else {}
+
+        existing_dict.update(new_records)
+
+        partition_data = sorted(existing_dict.values(), key=lambda r: r[time_key])
+        storage.upload_json(partition_key, partition_data)
+
+    # Write metadata with max timestamp from incoming data
+    max_timestamp = max(str(r[time_key]) for r in new_data)
+    storage.upload_json(f"{folder_path}/metadata.json", {"last_updated": max_timestamp})
+
+    return new_data

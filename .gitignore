@@ -29,8 +29,11 @@ model/*.keras
 # vscode
 .vscode
 
-# prod to dev migration
+# one-time scripts
 scripts/r2_migration.py
+scripts/partition_script.py
+scripts/run_extract.py
+scripts/run_transform.py
 
 #terraform
 terraform/.terraform/

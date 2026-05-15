@@ -1,8 +1,8 @@
 import logging
 
-from src.extract.extract import extract_data
-from src.transform.transform import transform_data
+from src.extract.extract import extract_live_data, extract_saved_data
 from src.load.load import load_raw_data, load_transformed_data
+from src.transform.transform import transform_data
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
@@ -12,23 +12,27 @@ def handler(event, context):
     try:
         logger.info("Starting ETL pipeline")
 
-        logger.info("Beginning data extraction phase")
-        extracted_data = extract_data()
-        logger.info("Data extraction phase completed")
+        logger.info("Beginning live data extraction phase...")
+        live_data = extract_live_data()
+        logger.info("Live data extraction complete.")
 
-        logger.info("Beginning data load phase on raw data")
-        updated_data = load_raw_data(extracted_data)
-        logger.info("Completed data load phase on raw data")
+        logger.info("Beginning raw data load phase...")
+        load_raw_data(live_data)
+        logger.info("Raw data load complete.")
 
-        logger.info("Beginning data transformation phase")
-        transformed_data = transform_data(updated_data)
-        logger.info("Data transformation phase completed")
+        logger.info("Beginning saved data extraction phase...")
+        saved_data = extract_saved_data(filter_raw=True)
+        logger.info("Saved data extraction complete.")
 
-        logger.info("Beginning data load phase on transformed data")
+        logger.info("Beginning transformation phase...")
+        transformed_data = transform_data(saved_data)
+        logger.info("Transformation complete.")
+
+        logger.info("Beginning transformed data load phase...")
         load_transformed_data(transformed_data)
-        logger.info("Completed data load phase on transformed data")
+        logger.info("Transformed data load complete.")
 
-        logger.info("ETL pipeline successful")
+        logger.info("ETL pipeline successful.")
 
     except Exception as e:
         logger.error(f"ETL pipeline failed: {e}")

@@ -4,8 +4,6 @@ from src.transform.process_old_solar_wind import process_old_solar_wind
 
 def process_rtsw(mag, plasma, old_mag, old_plasma):
 
-    old_mag, old_plasma = process_old_solar_wind(old_mag, old_plasma)
-
     mag = filter_columns(mag, ["bz_gsm", "bx_gsm", "by_gsm", "bt"])
     plasma = filter_columns(
         plasma, ["proton_speed", "proton_temperature", "proton_density"]
@@ -37,9 +35,16 @@ def process_rtsw(mag, plasma, old_mag, old_plasma):
     mag = set_time_index(mag)
     plasma = set_time_index(plasma)
 
-    mag = combine_dataframes(old_mag, mag)
-    plasma = combine_dataframes(old_plasma, plasma)
-    del old_mag, old_plasma
+    if (
+        old_mag is not None
+        and not old_mag.empty
+        and old_plasma is not None
+        and not old_plasma.empty
+    ):
+        old_mag, old_plasma = process_old_solar_wind(old_mag, old_plasma)
+        mag = combine_dataframes(old_mag, mag)
+        plasma = combine_dataframes(old_plasma, plasma)
+        del old_mag, old_plasma
 
     mag, plasma = match_time_index(mag, plasma)
 

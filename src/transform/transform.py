@@ -1,4 +1,3 @@
-from src.utils.fetch_saved_data import fetch_saved_data
 from src.transform.process_rtsw import process_rtsw
 from src.transform.process_dst import process_dst
 from src.transform.process_kp import process_kp
@@ -11,20 +10,16 @@ from src.utils.logging_utils import setup_logger
 logger = setup_logger("transform_data", "transform_data.log")
 
 
-def transform_data(updated_data=None):
+def transform_data(saved_data):
     try:
-        old_mag, old_plasma, mag, plasma, dst, kp, ssn, smoothed_ssn = (
-            updated_data if updated_data else (None,) * 8
-        )
-
-        old_mag = fetch_saved_data("mag/lists.json", old_mag)
-        old_plasma = fetch_saved_data("plasma/lists.json", old_plasma)
-        mag = fetch_saved_data("mag/dicts.json", mag)
-        plasma = fetch_saved_data("plasma/dicts.json", plasma)
-        dst = fetch_saved_data("dst/dicts.json", dst)
-        kp = fetch_saved_data("kp/dicts.json", kp)
-        ssn = fetch_saved_data("ssn/dicts.json", ssn)
-        smoothed_ssn = fetch_saved_data("smoothed_ssn/dicts.json", smoothed_ssn)
+        old_mag = saved_data.get("old_mag")
+        old_plasma = saved_data.get("old_plasma")
+        mag = saved_data.get("mag")
+        plasma = saved_data.get("plasma")
+        dst = saved_data.get("dst")
+        kp = saved_data.get("kp")
+        ssn = saved_data.get("ssn")
+        smoothed_ssn = saved_data.get("smoothed_ssn")
 
         logger.info("Starting data transformation process...")
 
@@ -63,6 +58,7 @@ def transform_data(updated_data=None):
         logger.info("Data transformations completed.")
 
         return (solar, dst, kp, ssn, dst_predictions)
+
     except Exception as e:
         logger.error(f"Data transformation failed: {str(e)}")
         raise
