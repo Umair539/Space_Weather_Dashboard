@@ -135,12 +135,12 @@ def solar_wind_section():
         st.markdown(
             """
             The solar wind is a continuous stream of charged particles
-            (plasma) emmited by the Sun's atmosphere. When this stream
+            (plasma) emitted by the Sun's atmosphere. When this stream
             of particles reaches Earth, it transfers energy into the Earth's
             magnetosphere. Solar wind is made up of two components: the
             properties of the plasma (e.g. speed and density), and the
             properties of the embedded magnetic field, which is
-            called the Interplanetary Magnetic Field (IMF). Geomganetic
+            called the Interplanetary Magnetic Field (IMF). Geomagnetic
             storms are typically triggered due to high speed solar wind
             combined with a strong IMF in the southward direction
             (Z-component). Storm intensity increases as the Bz value
