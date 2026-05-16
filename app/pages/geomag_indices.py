@@ -5,7 +5,7 @@ from app_utils import data_last_synced, init_db, get_latest_timestamp, cached_qu
 
 conn = init_db()
 
-st.title("Geomgagnetic Indices 📡")
+st.title("Geomagnetic Indices 📡")
 
 intervals = {
     "Last 24 Hours": "24 hours",
