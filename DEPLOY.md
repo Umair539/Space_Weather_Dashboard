@@ -20,7 +20,7 @@ terraform apply -auto-approve
 ### SSH
 ```bash
 ssh -i ~/space-weather-key.pem ec2-user@<output-ip>
-sudo certbot --nginx -d spaceweatherdashboard.com --non-interactive --agree-tos -m <your-email>
+sudo certbot --nginx -d spaceweatherdashboard.com --non-interactive --agree-tos -m <email>
 ```
 
 ### Cloudflare
