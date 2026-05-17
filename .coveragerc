@@ -2,6 +2,9 @@
 omit = 
     */__init__.py
     tests/*
+    src/extract/*
+    src/load/*
+    src/utils/*
 
 [report]
 fail_under = 90

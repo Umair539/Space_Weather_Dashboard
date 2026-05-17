@@ -5,22 +5,21 @@ from src.utils.logging_utils import setup_logger
 
 logger = setup_logger(__name__, "transform_data.log", level=logging.DEBUG)
 
+MAG_DATA_COLS = ["bz_gsm", "bx_gsm", "by_gsm", "bt"]
+PLASMA_DATA_COLS = ["proton_speed", "proton_temperature", "proton_density"]
+
 
 def process_rtsw(mag, plasma, old_mag, old_plasma):
 
     logger.info(f"Input mag shape: {mag.shape}, plasma shape: {plasma.shape}")
 
     logger.info("Filtering columns...")
-    mag = filter_columns(mag, ["bz_gsm", "bx_gsm", "by_gsm", "bt"])
-    plasma = filter_columns(
-        plasma, ["proton_speed", "proton_temperature", "proton_density"]
-    )
+    mag = filter_columns(mag, MAG_DATA_COLS, extra_cols=["active"])
+    plasma = filter_columns(plasma, PLASMA_DATA_COLS, extra_cols=["active"])
 
     logger.info("Filtering source...")
-    mag = filter_source(mag, ["bz_gsm", "bx_gsm", "by_gsm", "bt"])
-    plasma = filter_source(
-        plasma, ["proton_speed", "proton_temperature", "proton_density"]
-    )
+    mag = filter_source(mag, MAG_DATA_COLS)
+    plasma = filter_source(plasma, PLASMA_DATA_COLS)
 
     logger.info("Dropping active column, formatting names, deduplicating...")
     mag = drop_active_column(mag)
@@ -85,8 +84,10 @@ def process_rtsw(mag, plasma, old_mag, old_plasma):
     return solar
 
 
-def filter_columns(df, data_cols):
-    return df[["time_tag", "active"] + data_cols]
+def filter_columns(df, data_cols, extra_cols=None, time_col="time_tag"):
+    if extra_cols is None:
+        extra_cols = []
+    return df[[time_col] + extra_cols + data_cols]
 
 
 def filter_source(df, data_cols):

@@ -21,7 +21,7 @@ def main():
         if cov_sources:
             cov_command = (
                 f"coverage run --source={cov_sources} "
-                f"--omit=*/__init__.py -m pytest --verbose {test_dir} "
+                f"-m pytest --verbose {test_dir} "
                 "&& coverage report -m && coverage html "
                 "&& coverage report --fail-under=90"
             )
