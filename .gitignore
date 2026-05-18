@@ -34,6 +34,7 @@ scripts/r2_migration.py
 scripts/partition_script.py
 scripts/run_extract.py
 scripts/run_transform.py
+scripts/fixture_data.py
 
 #terraform
 terraform/.terraform/
@@ -41,3 +42,6 @@ terraform/*.tfstate
 terraform/*.tfstate.backup
 terraform/*.tfvars
 terraform/.terraform.lock.hcl
+
+#tests
+tests/unit_tests/utils/*
