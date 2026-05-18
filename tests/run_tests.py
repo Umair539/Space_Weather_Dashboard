@@ -7,7 +7,16 @@ def main():
 
     # Define test directories and corresponding coverage targets
     test_config = {
-        "unit": {"dir": "tests/unit_tests", "cov": ["config", "src"]},
+        "unit": {"dir": "tests/unit_tests", "cov": ["src/transform"]},
+        "component": {
+            "dir": "tests/component_tests/transform",
+            "cov": ["src/transform"],
+        },
+        "integration": {
+            "dir": "tests/integration_tests",
+            "cov": ["src/transform", "src/extract"],
+        },
+        "all": {"dir": "tests", "cov": ["src/transform"]},
     }
 
     # Check to see if a command was supplied for the test run
@@ -27,10 +36,6 @@ def main():
             )
         else:
             cov_command = f"pytest --verbose {test_dir}"
-
-        # Run lint for 'all' command
-        if command == "all":
-            run_lint()
 
         subprocess.run(cov_command, shell=True)
     elif command == "lint":

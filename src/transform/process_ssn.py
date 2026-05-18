@@ -6,7 +6,7 @@ from src.transform.process_rtsw import (
     filter_columns,
 )
 
-SSN_DATA_COLS = ["ssn"]
+SSN_DATA_COLS = ["swpc_ssn"]
 TWELVE_YEARS_IN_DAYS = int(12 * 365.25)
 
 
