@@ -61,13 +61,21 @@ This project is engineered as a decoupled system where data ingestion and visual
 * **Automated Setup:** A `user_data.yaml` cloud-init config runs on first boot. It installs Docker and Nginx, authenticates with ECR via IAM role, pulls the app image, and starts the container.
 * **Reverse Proxy:** Nginx forwards traffic from port 80/443 to the Streamlit container on port 8501.
 * **TLS:** HTTPS provided by Certbot (Let's Encrypt). DNS managed via Cloudflare, pointed at the Elastic IP, serving the dashboard at https://spaceweatherdashboard.com
-*  **SSH Access:** Port 22 open on the security group for direct access to the instance.
+* **SSH Access:** Port 22 open on the security group for direct access to the instance.
 * **CD:** GitHub Actions builds and pushes a new app image to ECR on every relevant push to `main`, then SSHs into the EC2 instance to pull the latest image and restart the container automatically.
 
-### 6. Development Environment
+### 6. Testing
+* **Unit tests** cover all individual transform functions -- outlier filtering, missing data handling, source fallback logic, column filtering, pressure calculation, model inference helpers, and more.
+* **Component tests** cover all transform orchestrators end to end -- `process_rtsw`, `process_dst`, `process_kp`, `process_ssn`, `prepare_model_inputs`, `model_inference`, and others.
+* **Integration tests** run the full transform pipeline against a fixed fixture snapshot of real NOAA data, asserting schema, null counts and datetime index integrity.
+* **99% coverage** across the transform layer, enforced by a coverage gate in CI.
+* **CI gate** runs lint, unit, component, and integration tests on every push to `main` before the Docker build, blocking deploy on any failure.
+
+### 7. Development Environment
 * A parallel dev environment mirrors the production pipeline for testing purposes.
 * The dev branch runs the pipeline on GitHub Actions (in contrast to AWS Lambda/EventBridge in prod), stores raw data in a Cloudflare R2 bucket, and writes to a separate dev Supabase instance, keeping test runs fully isolated from production data.
 * The Streamlit frontend can also be run locally against the dev database for UI testing without affecting the live dashboard.
+
 ---
 ## Data Source and Description
 The data used in this project is retrieved from the [NOAA Space Weather Prediction Center](https://www.swpc.noaa.gov) which is the most reliable source of space weather data available. Each successful extraction retrieves the latest data from NOAA, which is appended to the database to build a continuously growing historical record.
@@ -78,8 +86,7 @@ The data used can be seen in the table below
 | :--- | :--- | :--- | :--- |
 | **Dst Index** | Hourly | `time_tag`, `dst` | Quicklook (provisional) values. |
 | **Kp Index** | 3-Hourly | `time_tag`, `Kp` | — |
-| **Solar Wind Magnetometer** | Minute | `time_tag`, `bt`, `bz_gsm`, `by_gsm`, `bx_gsm` | In the process of migrating to a new endpoint as the original is being deprecated. |
-| **Solar Wind Plasma** | Minute | `time_tag`, `speed`, `density`, `temperature` | In the process of migrating to a new endpoint as the original is being deprecated. |
-| **Sunspots** | Daily | `Obsdate`, `ssn` | — |
+| **Solar Wind Magnetometer** | Minute | `time_tag`, `bt`, `bz_gsm`, `by_gsm`, `bx_gsm` | — |
+| **Solar Wind Plasma** | Minute | `time_tag`, `speed`, `density`, `temperature` | — |
+| **Sunspots** | Daily | `Obsdate`, `swpc_ssn` | — |
 | **Predicted Solar Cycle** | Monthly | `time-tag`, `predicted_ssn` | `predicted_ssn` represents the predicted 13-month smoothed SSN, required as part of model input. Not used for visualisation. |
-
