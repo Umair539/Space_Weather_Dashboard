@@ -32,14 +32,8 @@ jobs:
       - name: Run lint
         run: run_tests lint
 
-      - name: Run unit tests
-        run: run_tests unit
-
-      - name: Run component tests
-        run: run_tests component
-
-      - name: Run integration tests
-        run: run_tests integration
+      - name: Run all tests
+        run: run_tests all
 
       - name: Configure AWS credentials (OIDC)
         uses: aws-actions/configure-aws-credentials@v4

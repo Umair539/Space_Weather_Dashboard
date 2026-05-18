@@ -53,7 +53,7 @@ def transform_data(saved_data):
         logger.info("Performing model inference...")
         dst_predictions = model_inference(model_inputs)
         del model_inputs
-        logger.info("Model inference completed.")
+        logger.info("Model inference complete.")
 
         logger.info("Data transformations completed.")
 
