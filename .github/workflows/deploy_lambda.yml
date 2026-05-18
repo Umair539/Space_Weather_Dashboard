@@ -21,6 +21,26 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: pip install -e ".[dev]"
+
+      - name: Run lint
+        run: run_tests lint
+
+      - name: Run unit tests
+        run: run_tests unit
+
+      - name: Run component tests
+        run: run_tests component
+
+      - name: Run integration tests
+        run: run_tests integration
+
       - name: Configure AWS credentials (OIDC)
         uses: aws-actions/configure-aws-credentials@v4
         with:

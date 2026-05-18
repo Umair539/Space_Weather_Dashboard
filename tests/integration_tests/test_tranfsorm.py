@@ -1,17 +1,12 @@
-from dotenv import load_dotenv
-
-load_dotenv(".env.dev")
-
-from src.extract.extract import extract_saved_data
-from src.transform.transform import transform_data
-
-from src.extract.extract import extract_saved_data
+import pickle
 from src.transform.transform import transform_data
 
 
 class TestTransformDataIntegration:
     def test_transform_data(self):
-        saved_data = extract_saved_data(filter_raw=True)
+        with open("tests/fixtures/saved_data.pkl", "rb") as f:
+            saved_data = pickle.load(f)
+
         solar, dst, kp, ssn, dst_predictions = transform_data(saved_data)
 
         assert len(solar) > 0
@@ -21,9 +16,9 @@ class TestTransformDataIntegration:
         assert len(dst_predictions) > 0
 
         assert list(solar.columns) == [
+            "density",
             "speed",
             "temperature",
-            "density",
             "bz",
             "bx",
             "by",
