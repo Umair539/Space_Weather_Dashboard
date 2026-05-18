@@ -55,7 +55,7 @@ def transform_data(saved_data):
         del model_inputs
         logger.info("Model inference complete.")
 
-        logger.info("Data transformations completed.")
+        logger.info("Data transformations complete.")
 
         return (solar, dst, kp, ssn, dst_predictions)
 
