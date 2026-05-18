@@ -12,10 +12,7 @@ def main():
             "dir": "tests/component_tests/transform",
             "cov": ["src/transform"],
         },
-        "integration": {
-            "dir": "tests/integration_tests",
-            "cov": ["src/transform", "src/extract"],
-        },
+        "integration": {"dir": "tests/integration_tests", "cov": ["src/transform"]},
         "all": {"dir": "tests", "cov": ["src/transform"]},
     }
 
@@ -37,7 +34,13 @@ def main():
         else:
             cov_command = f"pytest --verbose {test_dir}"
 
-        subprocess.run(cov_command, shell=True)
+        # Run lint for 'all' command
+        if command == "all":
+            run_lint()
+
+        result = subprocess.run(cov_command, shell=True)
+        sys.exit(result.returncode)
+
     elif command == "lint":
         run_lint()
     else:

@@ -44,4 +44,6 @@ terraform/*.tfvars
 terraform/.terraform.lock.hcl
 
 #tests
+.coverage
+htmlcov/
 tests/unit_tests/utils/*

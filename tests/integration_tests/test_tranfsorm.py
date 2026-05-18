@@ -39,3 +39,5 @@ class TestTransformDataIntegration:
         assert solar.isna().sum().sum() == 0
         assert dst.isna().sum().sum() == 0
         assert kp.isna().sum().sum() == 0
+        assert ssn.isna().sum().sum() == 0
+        assert dst_predictions.isna().sum().sum() == 1
