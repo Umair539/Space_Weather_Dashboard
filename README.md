@@ -72,7 +72,7 @@ This project is engineered as a decoupled system where data ingestion and visual
 * **Unit tests** cover all individual transform functions -- outlier filtering, missing data handling, source fallback logic, column filtering, pressure calculation, model inference helpers, and more.
 * **Component tests** cover all transform orchestrators end to end -- `process_rtsw`, `process_dst`, `process_kp`, `process_ssn`, `prepare_model_inputs`, `model_inference`, and others.
 * **Integration tests** run the full transform pipeline against a fixed fixture snapshot of real NOAA data, asserting schema, null counts and datetime index integrity.
-* **99% coverage** across the transform layer, enforced by a coverage gate in CI.
+* **Coverage** of 90% across the transform layer enforced in CI, currently at 99%.
 * **CI gate** runs lint, unit, component, and integration tests on every push to `main` before the Docker build, blocking deploy on any failure.
 
 ### 7. Development Environment
