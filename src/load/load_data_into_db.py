@@ -16,8 +16,7 @@ def load_data_into_db(transformed_data, upsert_hours=24 * 7):
         solar_upsert = solar[solar.index >= lookback]
 
         conn.execute(
-            text(
-                """
+            text("""
                 INSERT INTO solar (time, density, speed, temperature, bz, bx, by, bt, pressure)
                 VALUES (:time, :density, :speed, :temperature, :bz, :bx, :by, :bt, :pressure)
                 ON CONFLICT (time) DO UPDATE SET
@@ -29,8 +28,7 @@ def load_data_into_db(transformed_data, upsert_hours=24 * 7):
                     by = EXCLUDED.by,
                     bt = EXCLUDED.bt,
                     pressure = EXCLUDED.pressure
-            """
-            ),
+            """),
             solar_upsert.reset_index().to_dict(orient="records"),
         )
 
@@ -38,14 +36,12 @@ def load_data_into_db(transformed_data, upsert_hours=24 * 7):
         dst_upsert = dst[dst.index >= lookback]
 
         conn.execute(
-            text(
-                """
+            text("""
                 INSERT INTO dst (time, dst)
                 VALUES (:time, :dst)
                 ON CONFLICT (time) DO UPDATE SET
                     dst = EXCLUDED.dst
-            """
-            ),
+            """),
             dst_upsert.reset_index().to_dict(orient="records"),
         )
 
@@ -53,14 +49,12 @@ def load_data_into_db(transformed_data, upsert_hours=24 * 7):
         dst_predictions_upsert = dst_predictions[dst_predictions.index >= lookback]
 
         conn.execute(
-            text(
-                """
+            text("""
                 INSERT INTO dst_predictions (time, dst_predictions)
                 VALUES (:time, :dst_predictions)
                 ON CONFLICT (time) DO UPDATE SET
                     dst_predictions = EXCLUDED.dst_predictions
-            """
-            ),
+            """),
             dst_predictions_upsert.reset_index().to_dict(orient="records"),
         )
 
@@ -68,14 +62,12 @@ def load_data_into_db(transformed_data, upsert_hours=24 * 7):
         kp_upsert = kp[kp.index >= lookback]
 
         conn.execute(
-            text(
-                """
+            text("""
                 INSERT INTO kp (time, "Kp")
                 VALUES (:time, :Kp)
                 ON CONFLICT (time) DO UPDATE SET
                     "Kp" = EXCLUDED."Kp"
-            """
-            ),
+            """),
             kp_upsert.reset_index().to_dict(orient="records"),
         )
 
@@ -83,14 +75,12 @@ def load_data_into_db(transformed_data, upsert_hours=24 * 7):
         ssn_upsert = ssn[ssn.index >= lookback]
 
         conn.execute(
-            text(
-                """
+            text("""
                 INSERT INTO ssn (time, swpc_ssn)
                 VALUES (:time, :swpc_ssn)
                 ON CONFLICT (time) DO UPDATE SET
                     swpc_ssn = EXCLUDED.swpc_ssn
-            """
-            ),
+            """),
             ssn_upsert.reset_index().to_dict(orient="records"),
         )
 
@@ -112,7 +102,7 @@ def load_data_into_db(transformed_data, upsert_hours=24 * 7):
         )
         conn.execute(
             text(
-                "DELETE FROM ssn WHERE time < (SELECT MAX(time) FROM ssn) - INTERVAL '13 years'"
+                "DELETE FROM ssn WHERE time < (SELECT MAX(time) FROM ssn) - INTERVAL '12 years'"
             )
         )
         conn.execute(
@@ -122,11 +112,7 @@ def load_data_into_db(transformed_data, upsert_hours=24 * 7):
         )
 
         # Metadata
-        conn.execute(
-            text(
-                """
+        conn.execute(text("""
                 DELETE FROM metadata;
                 INSERT INTO metadata (last_synced) VALUES (NOW());
-            """
-            )
-        )
+            """))
