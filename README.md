@@ -1,5 +1,9 @@
 # Space Weather Dashboard
 
+## Summary
+
+End-to-end space weather data platform that ingests near real-time NOAA data, processes and stores it in AWS infrastructure, and runs machine learning-based Dst index predictions as part of an automated ETL pipeline. The system is orchestrated using AWS Lambda and EventBridge, with S3 for raw storage and Supabase for serving processed data, and is visualised through a live Streamlit dashboard. It includes handling for API schema changes, failure recovery across pipeline stages, and performance optimisation for serverless constraints.
+
 ## Motivation
 
 My [dissertation](https://github.com/Umair539/Dissertation) involved training and testing machine learning models with historical space weather data. After working with static data, I wanted to gain experience working with live, frequently updated data, building something that continuously ingests, transforms, and delivers data to a frontend application.
