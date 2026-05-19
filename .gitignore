@@ -14,8 +14,8 @@ __pycache__/
 # Python package metadata/build artifacts
 *.egg-info/
 
-# test notebook
-notebooks/test.ipynb
+# notebooks
+notebooks/
 
 # cloud db url + cloudflare keys
 .env.dev
