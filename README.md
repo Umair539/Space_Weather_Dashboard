@@ -90,3 +90,8 @@ The data used can be seen in the table below
 | **Solar Wind Plasma** | Minute | `time_tag`, `speed`, `density`, `temperature` | — |
 | **Sunspots** | Daily | `Obsdate`, `swpc_ssn` | — |
 | **Predicted Solar Cycle** | Monthly | `time-tag`, `predicted_ssn` | `predicted_ssn` represents the predicted 13-month smoothed SSN, required as part of model input. Not used for visualisation. |
+
+## Documentation
+
+- [Decisions & problems solved](docs/DECISIONS.md)
+- [Deployment guide](docs/DEPLOYMENT.md)
