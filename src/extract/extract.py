@@ -1,5 +1,6 @@
 from src.extract.fetch_json import fetch_json
 from src.extract.fetch_saved import fetch_saved
+from src.utils.validator import SchemaError
 from src.utils.logging_utils import setup_logger
 
 logger = setup_logger("extract_data", "extract_data.log")
@@ -33,9 +34,12 @@ def extract_live_data():
         if source["url"] is None:
             continue
         try:
-            results[name] = fetch_json(source["url"])
+            results[name] = fetch_json(source["url"], name)
+        except SchemaError as e:
+            logger.error(f"Schema drift in {name}: {e}")
+            results[name] = None
         except Exception as e:
-            logger.error(f"Failed to fetch {name}: {e}")
+            logger.warning(f"Failed to fetch {name}: {e}")
             results[name] = None
 
     logger.info("Live data extraction complete.")
