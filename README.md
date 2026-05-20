@@ -30,11 +30,12 @@ Space weather was a natural fit. Having studied it through my dissertation, and 
 This project is engineered as a decoupled system where data ingestion and visualisation operate independently to ensure high availability and UI responsiveness.
 
 ### 1. Automated ETL Pipeline
-* **Extract:** Pulls near-real-time JSON data from NOAA API endpoints.
+* **Extract:** Pulls near-real-time JSON data from NOAA API endpoints, with automatic retries and exponential backoff on transient failures.
 * **Transform:** Uses Pandas to clean, align, and transform datasets.
 * **Load:** Saves raw extracted JSON to AWS S3, then upserts transformed data into a serverless PostgreSQL database hosted on Supabase, replacing the previous 24 hours of data to account for any updates at source.
 * **Graceful Degradation:** Each stage failing independently means the next layer continues to serve data. Extraction failures do not affect the transform step, which falls back to the latest raw data in S3. Transform failures do not affect the dashboard, which reads from the cloud database. In the event of database failure, raw data persisted in S3 ensures the database can be fully reproduced. A parallel dev pipeline running on GitHub Actions with a Cloudflare R2 bucket provides an additional layer of redundancy - if prod raw storage is lost, the dev pipeline's R2 bucket can serve as a backup source.
 * **Schema Flexible:** Handles format changes in NOAA API responses. After observing the Dst and Kp Index endpoints switching from a list of lists to a list of dictionaries format, format detection was introduced at extraction time to parse either structure correctly. The pipeline is also forward-compatible with future switches between the two formats.
+* **Schema Validation:** Required columns are validated at extraction time for each NOAA endpoint. If expected fields are missing, a schema drift error is raised and logged, making column changes immediately visible and actionable.
 
 ### 2. ML Inference
 
