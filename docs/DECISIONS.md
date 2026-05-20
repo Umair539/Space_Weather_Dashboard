@@ -32,6 +32,12 @@ With raw data now in R2, every background thread ETL run had ~30 seconds of late
 **5. Lambda + EventBridge**
 The obvious solution was a dedicated scheduler. Moved the ETL pipeline to AWS Lambda with EventBridge running every 15 minutes, guaranteed scheduling, independent of repo activity or app state. Chose AWS as the most familiar cloud provider. Migrated R2 to S3 at the same time to keep everything under one roof. At the data scale (low MBs), the cost difference was negligible, and it meant fewer environment variables and simpler infrastructure.
 
+***Why 15 Minutes***
+ 
+The 15-minute schedule was a tradeoff - frequent enough to keep the dashboard feeling live and useful, while keeping Lambda compute and data transfer costs across the full pipeline within free tier.
+
+Part of this came from knowing how the data actually works. Despite being called Real-Time Solar Wind, each update already contains data that's 2-3 minutes old by the time it's published, due to transmission time from the spacecraft at L1 and ground station processing. Since some latency is already baked into the source, adding a little more through a 15-minute polling interval felt reasonable - users are always looking at near-recent data regardless.
+
 **6. Streamlit Community Cloud > EC2**
 Moved the app to a self-hosted EC2 instance to eliminate cold starts and allow for always-on availability. Co-locating app and DB in the same EU region had the additional benefit of reduced database latency.
 
