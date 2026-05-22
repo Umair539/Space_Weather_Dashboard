@@ -98,4 +98,4 @@ The data used can be seen in the table below
 ## Documentation
 
 - [Decisions & problems solved](docs/DECISIONS.md)
-- [Deployment guide](docs/DEPLOYMENT.md)
+- [Deployment guide](docs/DEPLOY.md)
