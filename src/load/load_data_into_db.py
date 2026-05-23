@@ -7,8 +7,8 @@ from datetime import timedelta
 def load_data_into_db(transformed_data, upsert_hours=24 * 7):
     solar, dst, kp, ssn, dst_predictions = transformed_data
 
-    neon_db_url = os.environ.get("DATABASE_URL")
-    engine = create_engine(neon_db_url, connect_args={"prepare_threshold": None})
+    db_url = os.environ.get("DATABASE_URL")
+    engine = create_engine(db_url, connect_args={"prepare_threshold": None})
 
     with engine.begin() as conn:
 
