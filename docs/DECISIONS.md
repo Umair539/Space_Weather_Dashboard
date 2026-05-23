@@ -100,6 +100,18 @@ Load writes to storage, transform reads from storage. No data threading between 
 fetch_live → load_raw → fetch_saved → transform → load_transformed
 ```
 
+### ETL coupling: decoupled → coupled → decoupled
+
+The pipeline has been through two architecture reversals on this.
+
+Originally decoupled: `fetch_live` extracted from NOAA endpoints and wrote to storage, then separately `fetch_saved` read from storage to pass data into transform. Clean separation.
+
+On the AWS migration, with no partitioning yet, `load_raw` was fetching the entire dataset from S3 just to append a few new rows, then `extract_saved_data` would immediately re-fetch the same full dataset to pass into transform. The data was already in memory. Coupled the stages to skip the redundant GET operation to reduce costs: pass the in-memory dataset straight into transform, only falling back to `extract_saved_data` if no new data came from the endpoint.
+
+After monthly partitioning was introduced, this broke down. The model used for inference requires weeks of data minimum (168 full hourly aggregations). To handle a new month starting with only a day's worth of data, transform always fetches the last 2 partitions from storage. Since the partitioning logic is in `extract_saved_data` and not in the `extract_live_data` stage, there was no clean way to replicate that in-memory, therefore decoupled again.
+
+The original coupling was a reasonable micro-optimisation at the time. Partitioning made it unworkable.
+
 ### Terraform for EC2 provisioning
 Deliberate learning choice to gain IaC experience. Managing EC2, ECR, IAM, security groups, and networking in production via Terraform.
 
@@ -107,8 +119,10 @@ Deliberate learning choice to gain IaC experience. Managing EC2, ECR, IAM, secur
 
 ## Cost & Performance Optimisations
 
-- **ECR lifecycle policy** - only retain last image, old images auto-deleted
+- **EC2 over ECS** - avoids the cost of an Application Load Balancer; a single `t3.micro` runs Docker/nginx/Certbot directly
+- **ECR lifecycle policy** - retain only the latest image, old images auto-deleted to prevent silent storage accumulation
 - **CloudWatch log retention** - 30 days, not indefinite
+- **AWS Budgets alerts** - spend visibility and early warning on free tier
+- **24hr upsert window** (`upsert_hours`) - minimises data transferred to Supabase each run; doubles as a full-DB recovery lever
 - **Streamlit caching** - reduces repeated DB queries, important on free tier
-- **`del` after use in ETL** - explicit memory management within Lambda after datasets no longer needed
-- **24hr upsert window** - minimises data transferred to Supabase each run, reduces egress
+- **`del` after large datasets in ETL** - explicit cleanup after datasets are no longer needed; minor contribution to peak memory reduction
