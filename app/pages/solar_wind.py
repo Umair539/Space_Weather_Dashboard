@@ -1,6 +1,6 @@
 import streamlit as st
 import altair as alt
-from app_utils import data_last_synced, init_db, get_latest_timestamp, cached_query
+from app_utils import data_last_synced, init_db, get_latest_timestamp, cached_query, github_link
 
 conn = init_db()
 
@@ -150,3 +150,4 @@ def solar_wind_section():
 
 
 solar_wind_section()
+github_link()

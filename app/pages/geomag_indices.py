@@ -1,7 +1,13 @@
 import streamlit as st
 import altair as alt
 import pandas as pd
-from app_utils import data_last_synced, init_db, get_latest_timestamp, cached_query
+from app_utils import (
+    data_last_synced,
+    init_db,
+    get_latest_timestamp,
+    cached_query,
+    github_link,
+)
 
 conn = init_db()
 
@@ -96,8 +102,7 @@ def dst_section():
     st.altair_chart(chart, width="stretch")
 
     with st.expander("More information on Dst index", expanded=True):
-        st.markdown(
-            """
+        st.markdown("""
             The Disturbance Storm Time (Dst) index is a measure of geomagnetic
             activity used to assess the severity of geomagnetic storms. It is
             expressed in nanoTeslas and is based on the average value of the
@@ -109,8 +114,7 @@ def dst_section():
             indicates a moderate storm is taking place, and below -100 nT
             indicates a severe storm taking place. The chart compares these
             observed measurements with the corresponding predicted values.
-        """
-        )
+        """)
 
 
 @st.fragment(run_every=120)
@@ -172,8 +176,7 @@ def kp_section():
     st.altair_chart(chart_kp, width="stretch")
 
     with st.expander("More information on Kp index", expanded=True):
-        st.markdown(
-            """
+        st.markdown("""
             The Kp-index is a geomagnetic activity index based on data from
             magnetometers around the world measured every 3 hours. The graph
             above displays the observed Kp-value from the Planetary K-index
@@ -182,9 +185,9 @@ def kp_section():
             index from 0 to 9 where a value of 5 indicates that a moderate storm is
             occuring, a value of 7 indicate a severe storm is occuring, and
             a value of 9 indicates an extreme storm is occuring.
-        """
-        )
+        """)
 
 
 dst_section()
 kp_section()
+github_link()
