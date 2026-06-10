@@ -7,6 +7,8 @@ logger = setup_logger(__name__, "transform_data.log", level=logging.DEBUG)
 
 MAG_DATA_COLS = ["bz_gsm", "bx_gsm", "by_gsm", "bt"]
 PLASMA_DATA_COLS = ["proton_speed", "proton_temperature", "proton_density"]
+SOURCE_PRIORITY = {"SOLAR1": 0, "IMAP": 1, "ACE": 2, "DSCOVR": 3}
+EXTRA_COLS = ["active", "source"]
 
 
 def process_rtsw(mag, plasma, old_mag, old_plasma):
@@ -14,16 +16,20 @@ def process_rtsw(mag, plasma, old_mag, old_plasma):
     logger.info(f"Input mag shape: {mag.shape}, plasma shape: {plasma.shape}")
 
     logger.info("Filtering columns...")
-    mag = filter_columns(mag, MAG_DATA_COLS, extra_cols=["active"])
-    plasma = filter_columns(plasma, PLASMA_DATA_COLS, extra_cols=["active"])
+    mag = filter_columns(mag, MAG_DATA_COLS, extra_cols=EXTRA_COLS)
+    plasma = filter_columns(plasma, PLASMA_DATA_COLS, extra_cols=EXTRA_COLS)
+
+    logger.info("Filter to minute boundary...")
+    mag = filter_to_minute(mag)
+    plasma = filter_to_minute(plasma)
 
     logger.info("Filtering source...")
     mag = filter_source(mag, MAG_DATA_COLS)
     plasma = filter_source(plasma, PLASMA_DATA_COLS)
 
     logger.info("Dropping active column, formatting names, deduplicating...")
-    mag = drop_active_column(mag)
-    plasma = drop_active_column(plasma)
+    mag = drop_extra_cols(mag)
+    plasma = drop_extra_cols(plasma)
 
     mag = format_column_names(
         mag, columns={"bz_gsm": "bz", "bx_gsm": "bx", "by_gsm": "by"}
@@ -90,12 +96,26 @@ def filter_columns(df, data_cols, extra_cols=None, time_col="time_tag"):
     return df[[time_col] + extra_cols + data_cols]
 
 
+def filter_to_minute(df, time_col="time_tag"):
+    return df[pd.to_datetime(df[time_col]).dt.second == 0]
+
+
 def filter_source(df, data_cols):
     df = df.sort_values(["time_tag", "active"], ascending=[True, False])
 
     # Split into active and inactive rows, indexed by timestamp
     active = df[df["active"]].set_index("time_tag")
     inactive = df[~df["active"]].set_index("time_tag")
+
+    # Apply source priority to deduplicate within each group
+    active = df[df["active"]].set_index("time_tag")
+    inactive = df[~df["active"]].set_index("time_tag")
+
+    # Deduplicate active only by source priority
+    active["priority"] = active["source"].map(SOURCE_PRIORITY).fillna(999)
+    active = (
+        active.sort_values("priority").groupby(level=0).first().drop(columns="priority")
+    )
 
     # Find timestamps where active row is entirely NaN
     active_all_nan = active[data_cols].isna().all(axis=1)
@@ -115,7 +135,24 @@ def filter_source(df, data_cols):
     # Add timestamps that only exist in inactive (no active row at all)
     inactive_only = inactive.index.difference(active.index)
     if len(inactive_only) > 0:
-        result = pd.concat([result, inactive.loc[inactive_only]])
+        # Get all inactive rows for timestamps with no active row at all
+        inactive_candidates = inactive.loc[inactive_only].copy()
+
+        # Assign numeric priority per source so we can pick one when multiple sources exist for same timestamp
+        inactive_candidates["priority"] = (
+            inactive_candidates["source"].map(SOURCE_PRIORITY).fillna(999)
+        )
+
+        # Sort by priority then take first row per timestamp - gives highest priority source per timestamp
+        inactive_candidates = (
+            inactive_candidates.sort_values("priority")
+            .groupby(level=0)
+            .first()
+            .drop(columns="priority")
+        )
+
+        # Append single-source-per-timestamp inactive rows to result
+        result = pd.concat([result, inactive_candidates])
 
     return result.reset_index()
 
@@ -125,8 +162,8 @@ def format_column_names(df, columns):
     return df
 
 
-def drop_active_column(df):
-    return df.drop(columns=["active"])
+def drop_extra_cols(df):
+    return df.drop(columns=EXTRA_COLS)
 
 
 def drop_duplicates(df):
