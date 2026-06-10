@@ -1,6 +1,5 @@
 from src.transform.process_rtsw import process_rtsw
 import pandas as pd
-import numpy as np
 
 
 def make_mag(timestamps, active=True):
@@ -9,6 +8,7 @@ def make_mag(timestamps, active=True):
             {
                 "time_tag": t,
                 "active": active,
+                "source": "SOLAR1",
                 "bz_gsm": 1.5,
                 "bx_gsm": 0.5,
                 "by_gsm": 0.3,
@@ -25,6 +25,7 @@ def make_plasma(timestamps, active=True):
             {
                 "time_tag": t,
                 "active": active,
+                "source": "SOLAR1",
                 "proton_speed": 400.0,
                 "proton_temperature": 50000.0,
                 "proton_density": 3.0,
@@ -112,6 +113,7 @@ class TestProcessRtsw:
                 {
                     "time_tag": "2026-01-01T00:00:00",
                     "active": True,
+                    "source": "SOLAR1",
                     "bz_gsm": None,
                     "bx_gsm": None,
                     "by_gsm": None,
@@ -120,6 +122,7 @@ class TestProcessRtsw:
                 {
                     "time_tag": "2026-01-01T00:00:00",
                     "active": False,
+                    "source": "SOLAR1",
                     "bz_gsm": 9.9,
                     "bx_gsm": 9.9,
                     "by_gsm": 9.9,
@@ -140,6 +143,7 @@ class TestProcessRtsw:
                 {
                     "time_tag": "2026-01-01T00:00:00",
                     "active": True,
+                    "source": "SOLAR1",
                     "proton_speed": -999.0,
                     "proton_temperature": 50000.0,
                     "proton_density": 3.0,
@@ -147,6 +151,7 @@ class TestProcessRtsw:
                 {
                     "time_tag": "2026-01-01T00:01:00",
                     "active": True,
+                    "source": "SOLAR1",
                     "proton_speed": 400.0,
                     "proton_temperature": 50000.0,
                     "proton_density": 3.0,
@@ -154,6 +159,7 @@ class TestProcessRtsw:
                 {
                     "time_tag": "2026-01-01T00:02:00",
                     "active": True,
+                    "source": "SOLAR1",
                     "proton_speed": 410.0,
                     "proton_temperature": 50000.0,
                     "proton_density": 3.0,
@@ -175,6 +181,7 @@ class TestProcessRtsw:
                 {
                     "time_tag": t,
                     "active": True,
+                    "source": "SOLAR1",
                     "proton_speed": 400.0 if i != 100 else 99999.0,
                     "proton_temperature": 50000.0,
                     "proton_density": 3.0,
@@ -194,6 +201,7 @@ class TestProcessRtsw:
                 {
                     "time_tag": "2026-01-01T00:00:00",
                     "active": True,
+                    "source": "SOLAR1",
                     "proton_speed": 400.0,
                     "proton_temperature": 50000.0,
                     "proton_density": 5.0,

@@ -1,8 +1,9 @@
 from src.transform.process_rtsw import (
     filter_columns,
+    filter_to_minute,
     filter_source,
     format_column_names,
-    drop_active_column,
+    drop_extra_cols,
     drop_duplicates,
     set_time_index,
     combine_dataframes,
@@ -15,6 +16,7 @@ from src.transform.process_rtsw import (
     add_pressure_column,
     round_values,
     set_index_name,
+    EXTRA_COLS,
 )
 
 import pandas as pd
@@ -52,11 +54,12 @@ class TestFilterColumns:
             ]
         )
         result = filter_columns(
-            df, ["bz_gsm", "bx_gsm", "by_gsm", "bt"], extra_cols=["active"]
+            df, ["bz_gsm", "bx_gsm", "by_gsm", "bt"], extra_cols=EXTRA_COLS
         )
         assert list(result.columns) == [
             "time_tag",
             "active",
+            "source",
             "bz_gsm",
             "bx_gsm",
             "by_gsm",
@@ -104,11 +107,12 @@ class TestFilterColumns:
         result = filter_columns(
             df,
             ["proton_speed", "proton_temperature", "proton_density"],
-            extra_cols=["active"],
+            extra_cols=EXTRA_COLS,
         )
         assert list(result.columns) == [
             "time_tag",
             "active",
+            "source",
             "proton_speed",
             "proton_temperature",
             "proton_density",
@@ -129,6 +133,69 @@ class TestFilterColumns:
         assert list(result.columns) == ["time_tag", "bz_gsm", "bt"]
 
 
+class TestFilterToMinute:
+    def test_drops_rows_with_nonzero_seconds(self):
+        df = pd.DataFrame(
+            [
+                {
+                    "time_tag": "2026-01-01T00:00:02",
+                    "active": False,
+                    "source": "IMAP",
+                    "bz_gsm": 1.0,
+                },
+                {
+                    "time_tag": "2026-01-01T00:00:00",
+                    "active": False,
+                    "source": "SOLAR1",
+                    "bz_gsm": 2.0,
+                },
+            ]
+        )
+        result = filter_to_minute(df)
+        assert len(result) == 1
+        assert result["time_tag"].iloc[0] == "2026-01-01T00:00:00"
+
+    def test_keeps_rows_with_zero_seconds(self):
+        df = pd.DataFrame(
+            [
+                {
+                    "time_tag": "2026-01-01T00:00:00",
+                    "active": False,
+                    "source": "SOLAR1",
+                    "bz_gsm": 1.0,
+                },
+                {
+                    "time_tag": "2026-01-01T00:01:00",
+                    "active": False,
+                    "source": "ACE",
+                    "bz_gsm": 2.0,
+                },
+            ]
+        )
+        result = filter_to_minute(df)
+        assert len(result) == 2
+
+    def test_empty_when_all_nonzero_seconds(self):
+        df = pd.DataFrame(
+            [
+                {
+                    "time_tag": "2026-01-01T00:00:02",
+                    "active": False,
+                    "source": "IMAP",
+                    "bz_gsm": 1.0,
+                },
+                {
+                    "time_tag": "2026-01-01T00:01:02",
+                    "active": False,
+                    "source": "IMAP",
+                    "bz_gsm": 2.0,
+                },
+            ]
+        )
+        result = filter_to_minute(df)
+        assert len(result) == 0
+
+
 class TestFilterSource:
     def test_keeps_active_row_when_valid(self):
         df = pd.DataFrame(
@@ -136,6 +203,7 @@ class TestFilterSource:
                 {
                     "time_tag": "2026-01-01T00:00:00",
                     "active": True,
+                    "source": "SOLAR1",
                     "bz_gsm": 1.5,
                     "bt": 2.0,
                     "bx_gsm": 0.5,
@@ -144,6 +212,7 @@ class TestFilterSource:
                 {
                     "time_tag": "2026-01-01T00:00:00",
                     "active": False,
+                    "source": "SOLAR1",
                     "bz_gsm": 9.9,
                     "bt": 9.9,
                     "bx_gsm": 9.9,
@@ -163,6 +232,7 @@ class TestFilterSource:
                 {
                     "time_tag": "2026-01-01T00:00:00",
                     "active": True,
+                    "source": "SOLAR1",
                     "bz_gsm": None,
                     "bt": None,
                     "bx_gsm": None,
@@ -171,6 +241,7 @@ class TestFilterSource:
                 {
                     "time_tag": "2026-01-01T00:00:00",
                     "active": False,
+                    "source": "SOLAR1",
                     "bz_gsm": 9.9,
                     "bt": 9.9,
                     "bx_gsm": 9.9,
@@ -190,6 +261,7 @@ class TestFilterSource:
                 {
                     "time_tag": "2026-01-01T00:00:00",
                     "active": True,
+                    "source": "SOLAR1",
                     "bz_gsm": None,
                     "bt": None,
                     "bx_gsm": None,
@@ -198,6 +270,7 @@ class TestFilterSource:
                 {
                     "time_tag": "2026-01-01T00:00:00",
                     "active": False,
+                    "source": "SOLAR1",
                     "bz_gsm": None,
                     "bt": None,
                     "bx_gsm": None,
@@ -214,6 +287,7 @@ class TestFilterSource:
                 {
                     "time_tag": "2026-01-01T00:01:00",
                     "active": False,
+                    "source": "SOLAR1",
                     "bz_gsm": 3.0,
                     "bt": 3.0,
                     "bx_gsm": 3.0,
@@ -223,6 +297,135 @@ class TestFilterSource:
         )
         result = filter_source(df, ["bz_gsm", "bt", "bx_gsm", "by_gsm"])
         assert len(result[result["time_tag"] == "2026-01-01T00:01:00"]) == 1
+
+    def test_two_active_rows_picks_higher_priority(self):
+        df = pd.DataFrame(
+            [
+                {
+                    "time_tag": "2026-01-01T00:00:00",
+                    "active": True,
+                    "source": "ACE",
+                    "bz_gsm": 9.9,
+                    "bt": 9.9,
+                    "bx_gsm": 9.9,
+                    "by_gsm": 9.9,
+                },
+                {
+                    "time_tag": "2026-01-01T00:00:00",
+                    "active": True,
+                    "source": "SOLAR1",
+                    "bz_gsm": 1.5,
+                    "bt": 2.0,
+                    "bx_gsm": 0.5,
+                    "by_gsm": 0.3,
+                },
+            ]
+        )
+        result = filter_source(df, ["bz_gsm", "bt", "bx_gsm", "by_gsm"])
+        assert len(result[result["time_tag"] == "2026-01-01T00:00:00"]) == 1
+        assert (
+            result.loc[result["time_tag"] == "2026-01-01T00:00:00", "bz_gsm"].iloc[0]
+            == 1.5
+        )
+
+    def test_two_inactive_rows_no_active_picks_higher_priority(self):
+        df = pd.DataFrame(
+            [
+                {
+                    "time_tag": "2026-01-01T00:00:00",
+                    "active": False,
+                    "source": "ACE",
+                    "bz_gsm": 9.9,
+                    "bt": 9.9,
+                    "bx_gsm": 9.9,
+                    "by_gsm": 9.9,
+                },
+                {
+                    "time_tag": "2026-01-01T00:00:00",
+                    "active": False,
+                    "source": "SOLAR1",
+                    "bz_gsm": 1.5,
+                    "bt": 2.0,
+                    "bx_gsm": 0.5,
+                    "by_gsm": 0.3,
+                },
+            ]
+        )
+        result = filter_source(df, ["bz_gsm", "bt", "bx_gsm", "by_gsm"])
+        assert len(result[result["time_tag"] == "2026-01-01T00:00:00"]) == 1
+        assert (
+            result.loc[result["time_tag"] == "2026-01-01T00:00:00", "bz_gsm"].iloc[0]
+            == 1.5
+        )
+
+    def test_active_nan_multiple_inactive_picks_highest_priority_valid(self):
+        df = pd.DataFrame(
+            [
+                {
+                    "time_tag": "2026-01-01T00:00:00",
+                    "active": True,
+                    "source": "SOLAR1",
+                    "bz_gsm": None,
+                    "bt": None,
+                    "bx_gsm": None,
+                    "by_gsm": None,
+                },
+                {
+                    "time_tag": "2026-01-01T00:00:00",
+                    "active": False,
+                    "source": "ACE",
+                    "bz_gsm": 9.9,
+                    "bt": 9.9,
+                    "bx_gsm": 9.9,
+                    "by_gsm": 9.9,
+                },
+                {
+                    "time_tag": "2026-01-01T00:00:00",
+                    "active": False,
+                    "source": "DSCOVR",
+                    "bz_gsm": 5.5,
+                    "bt": 5.5,
+                    "bx_gsm": 5.5,
+                    "by_gsm": 5.5,
+                },
+            ]
+        )
+        result = filter_source(df, ["bz_gsm", "bt", "bx_gsm", "by_gsm"])
+        assert len(result[result["time_tag"] == "2026-01-01T00:00:00"]) == 1
+        assert (
+            result.loc[result["time_tag"] == "2026-01-01T00:00:00", "bz_gsm"].iloc[0]
+            == 9.9
+        )
+
+    def test_higher_priority_inactive_nan_falls_back_to_lower_priority_valid(self):
+        df = pd.DataFrame(
+            [
+                {
+                    "time_tag": "2026-01-01T00:00:00",
+                    "active": False,
+                    "source": "SOLAR1",
+                    "bz_gsm": None,
+                    "bt": None,
+                    "bx_gsm": None,
+                    "by_gsm": None,
+                },
+                {
+                    "time_tag": "2026-01-01T00:00:00",
+                    "active": False,
+                    "source": "ACE",
+                    "bz_gsm": 9.9,
+                    "bt": 9.9,
+                    "bx_gsm": 9.9,
+                    "by_gsm": 9.9,
+                },
+            ]
+        )
+        result = filter_source(df, ["bz_gsm", "bt", "bx_gsm", "by_gsm"])
+        assert len(result[result["time_tag"] == "2026-01-01T00:00:00"]) == 1
+        assert (
+            result.loc[result["time_tag"] == "2026-01-01T00:00:00", "bz_gsm"].iloc[0]
+            == 9.9
+        )
 
 
 class TestFormatColumnNames:
@@ -262,19 +465,21 @@ class TestFormatColumnNames:
         assert list(result.columns) == ["speed", "temperature", "density"]
 
 
-class TestDropActiveColumn:
-    def test_drop_active_column(self):
+class TestDropExtraCols:
+    def test_drop_extra_cols(self):
         df = pd.DataFrame(
             [
                 {
                     "time_tag": "2026-01-01T00:00:00",
                     "active": True,
+                    "source": "SOLAR1",
                     "bz_gsm": 1.5,
                 }
             ]
         )
-        result = drop_active_column(df)
+        result = drop_extra_cols(df)
         assert "active" not in result.columns
+        assert "source" not in result.columns
 
 
 class TestDropDuplicates:

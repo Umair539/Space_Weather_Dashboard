@@ -27,7 +27,7 @@ def process_rtsw(mag, plasma, old_mag, old_plasma):
     mag = filter_source(mag, MAG_DATA_COLS)
     plasma = filter_source(plasma, PLASMA_DATA_COLS)
 
-    logger.info("Dropping active column, formatting names, deduplicating...")
+    logger.info("Dropping extra columns, formatting names, deduplicating...")
     mag = drop_extra_cols(mag)
     plasma = drop_extra_cols(plasma)
 
@@ -107,11 +107,7 @@ def filter_source(df, data_cols):
     active = df[df["active"]].set_index("time_tag")
     inactive = df[~df["active"]].set_index("time_tag")
 
-    # Apply source priority to deduplicate within each group
-    active = df[df["active"]].set_index("time_tag")
-    inactive = df[~df["active"]].set_index("time_tag")
-
-    # Deduplicate active only by source priority
+    # Deduplicate active by source priority
     active["priority"] = active["source"].map(SOURCE_PRIORITY).fillna(999)
     active = (
         active.sort_values("priority").groupby(level=0).first().drop(columns="priority")
@@ -128,9 +124,20 @@ def filter_source(df, data_cols):
     # Only replace where active is bad AND inactive is fully valid
     replaceable = fallback_timestamps.intersection(valid_inactive_timestamps)
 
-    # Start with active rows, replace bad ones with valid inactive
+    # Start with active rows, replace bad ones with highest priority valid inactive
     result = active.copy()
-    result.loc[replaceable] = inactive.loc[replaceable]
+    if len(replaceable) > 0:
+        inactive_replaceable = inactive.loc[replaceable].copy()
+        inactive_replaceable["priority"] = (
+            inactive_replaceable["source"].map(SOURCE_PRIORITY).fillna(999)
+        )
+        inactive_replaceable = (
+            inactive_replaceable.sort_values("priority")
+            .groupby(level=0)
+            .first()
+            .drop(columns="priority")
+        )
+        result.loc[replaceable] = inactive_replaceable
 
     # Add timestamps that only exist in inactive (no active row at all)
     inactive_only = inactive.index.difference(active.index)
