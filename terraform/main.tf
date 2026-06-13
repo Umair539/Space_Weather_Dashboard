@@ -247,3 +247,18 @@ resource "aws_iam_role_policy" "github_actions_app" {
   role   = aws_iam_role.github_actions_app.id
   policy = data.aws_iam_policy_document.github_actions_app_policy.json
 }
+
+# Auto-recover the instance if AWS detects an underlying hardware/hypervisor failure
+resource "aws_cloudwatch_metric_alarm" "ec2_recovery" {
+  alarm_name          = "space-weather-ec2-recovery"
+  alarm_description   = "Recover EC2 instance on system status check failure"
+  namespace           = "AWS/EC2"
+  metric_name         = "StatusCheckFailed_System"
+  dimensions          = { InstanceId = aws_instance.app.id }
+  statistic           = "Maximum"
+  period              = 60
+  evaluation_periods  = 2
+  threshold           = 1
+  comparison_operator = "GreaterThanOrEqualToThreshold"
+  alarm_actions       = ["arn:aws:automate:${var.aws_region}:ec2:recover"]
+}
