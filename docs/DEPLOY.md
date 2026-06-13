@@ -1,25 +1,29 @@
 ## Deploy Runbook
 
-### Terminal
+### Terraform
 ```bash
-cd terraform
-terraform apply -target=aws_ecr_repository.app -target=aws_ecr_lifecycle_policy.app -auto-approve
-cd ..
-aws ecr get-login-password --region eu-west-2 | docker login --username AWS --password-stdin 494487213442.dkr.ecr.eu-west-2.amazonaws.com
-docker build --provenance=false -t space-weather-app -f docker/app/Dockerfile .
-docker tag space-weather-app:latest 494487213442.dkr.ecr.eu-west-2.amazonaws.com/space-weather-app:latest
-docker push 494487213442.dkr.ecr.eu-west-2.amazonaws.com/space-weather-app:latest
 cd terraform
 terraform apply -auto-approve
 ```
 
+### Verify instance is ready
+```bash
+aws ssm start-session --target $(terraform output -raw instance_id)
+cloud-init status  # wait until: status: done
+exit
+```
+
+### GitHub Actions
+- Update `ROLE_ARN_APP` in the GitHub `prod` environment: `terraform output -raw github_actions_role_arn`
+- Push to `main` (or manually trigger **Build & Deploy Streamlit App Container**)
+
 ### Cloudflare
-- Update A record to new elastic IP from terraform output
+- Update A record to `terraform output -raw elastic_ip`
 - Set SSL to **Flexible**
 
-### SSH
+### SSM (Certbot)
 ```bash
-ssh -i ~/space-weather-key.pem ec2-user@<output-ip>
+aws ssm start-session --target $(terraform output -raw instance_id)
 sudo certbot --nginx -d spaceweatherdashboard.com --non-interactive --agree-tos -m <email>
 ```
 

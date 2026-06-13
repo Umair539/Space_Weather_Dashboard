@@ -13,13 +13,12 @@ variable "ecr_repo_app" {
 # EC2 instance type
 variable "instance_type" {
   description = "EC2 instance type"
-  default     = "t3.micro"
+  default     = "t4g.micro"
 }
 
-# EC2 ssh key pair
-variable "key_pair_name" {
-  description = "Name of EC2 key pair for SSH access"
-  type        = string
+variable "github_repo" {
+  description = "GitHub repo allowed to assume the Actions role (owner/repo)"
+  default     = "Umair539/Space_Weather_Dashboard"
 }
 
 variable "database_read_url" {

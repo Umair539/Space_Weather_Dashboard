@@ -14,24 +14,8 @@ runcmd:
   - systemctl start docker
   - usermod -aG docker ec2-user
 
-  # Get temp ECR credentials and log Docker in
-  - aws ecr get-login-password --region ${aws_region} |
-    docker login --username AWS --password-stdin
-    $(echo ${image_uri} | cut -d/ -f1)
-
-  # Pull the Streamlit app image from ECR
-  - docker pull ${image_uri}
-
-  # Write database URL to env file
+  # Write database URL to env file for docker run --env-file
   - echo "DATABASE_READ_URL=${db_url}" > /home/ec2-user/.env
-
-  # Run Streamlit container - restart on crash or reboot, pass in db url, expose port 8501
-  - docker run -d
-    --name space-weather-app
-    --restart unless-stopped
-    --env-file /home/ec2-user/.env
-    -p 8501:8501
-    ${image_uri}
 
   # Write nginx config - forward port 80 to Streamlit on 8501, with WebSocket headers
   - |

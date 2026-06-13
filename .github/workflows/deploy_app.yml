@@ -43,25 +43,31 @@ jobs:
           docker push $IMAGE_URI:latest
           echo "image=$IMAGE_URI:$SHORT_SHA" >> $GITHUB_OUTPUT
 
-      - name: Get EC2 IP
+      - name: Get EC2 instance ID
         id: ec2
         run: |
-          EC2_IP=$(aws ec2 describe-instances \
+          INSTANCE_ID=$(aws ec2 describe-instances \
             --filters "Name=tag:Name,Values=space-weather-app" "Name=instance-state-name,Values=running" \
-            --query "Reservations[0].Instances[0].PublicIpAddress" \
+            --query "Reservations[0].Instances[0].InstanceId" \
             --output text)
-          echo "ip=$EC2_IP" >> $GITHUB_OUTPUT
+          echo "instance_id=$INSTANCE_ID" >> $GITHUB_OUTPUT
 
-      - name: Deploy to EC2
+      - name: Deploy to EC2 via SSM
         env:
           IMAGE_URI: ${{ steps.login-ecr.outputs.registry }}/${{ vars.ECR_REPOSITORY_APP }}
         run: |
-          echo "${{ secrets.EC2_SSH_KEY }}" > key.pem
-          chmod 600 key.pem
-          ssh -i key.pem -o StrictHostKeyChecking=no ec2-user@${{ steps.ec2.outputs.ip }} "
-            aws ecr get-login-password --region eu-west-2 | docker login --username AWS --password-stdin 494487213442.dkr.ecr.eu-west-2.amazonaws.com
-            docker pull $IMAGE_URI:latest
-            docker stop space-weather-app
-            docker rm space-weather-app
-            docker run -d --name space-weather-app --restart unless-stopped --env-file /home/ec2-user/.env -p 8501:8501 $IMAGE_URI:latest
-          "
+          COMMAND_ID=$(aws ssm send-command \
+            --instance-ids "${{ steps.ec2.outputs.instance_id }}" \
+            --document-name "AWS-RunShellScript" \
+            --parameters "commands=[
+              'aws ecr get-login-password --region ${{ vars.AWS_REGION }} | docker login --username AWS --password-stdin ${{ steps.login-ecr.outputs.registry }}',
+              'docker pull $IMAGE_URI:latest',
+              'docker stop space-weather-app || true',
+              'docker rm space-weather-app || true',
+              'docker run -d --name space-weather-app --restart unless-stopped --env-file /home/ec2-user/.env -p 8501:8501 $IMAGE_URI:latest'
+            ]" \
+            --query "Command.CommandId" \
+            --output text)
+          aws ssm wait command-executed \
+            --command-id "$COMMAND_ID" \
+            --instance-id "${{ steps.ec2.outputs.instance_id }}"
