@@ -16,13 +16,18 @@ Space weather was a natural fit. Having studied it through my dissertation, and 
 
 ## Tech Stack
 
-**AWS** (Lambda · ECR · EventBridge · S3 · CloudWatch · SNS · IAM · EC2) · **Streamlit** · **Supabase** (PostgreSQL database) · **Pandas** · **Keras / TensorFlow** · **GitHub Actions** · **Python** · **Docker** · **Terraform** · **Nginx** · **Cloudflare**
+**AWS** (Lambda · ECR · EventBridge · S3 · CloudWatch · SNS · IAM · EC2 · SSM) · **Streamlit** · **Supabase** (PostgreSQL database) · **Pandas** · **Keras / TensorFlow** · **GitHub Actions** · **Python** · **Docker** · **Terraform** · **Nginx** · **Cloudflare**
 
 ---
 
 ## Architecture
 
 ![Architecture](docs/architecture.svg)
+
+---
+## Engineering Decisions
+
+For a full record of architecture decisions and problems solved, see [DECISIONS.md](docs/DECISIONS.md).
 
 ---
 ## Core Logic
@@ -61,12 +66,13 @@ This project is engineered as a decoupled system where data ingestion and visual
 ### 5. App Hosting
 
 * The Streamlit frontend is containerised and self-hosted on an **AWS EC2 instance**, provisioned with **Terraform** and served over HTTPS via Nginx and Certbot.
-* **Infrastructure as Code:** Terraform provisions the EC2 instance (`t3.micro`), ECR repository, IAM role, security group, and Elastic IP.
+* **Infrastructure as Code:** Terraform provisions the EC2 instance (`t4g.micro`), ECR repository, IAM role, security group, and Elastic IP.
 * **Automated Setup:** A `user_data.yaml` cloud-init config runs on first boot. It installs Docker and Nginx, authenticates with ECR via IAM role, pulls the app image, and starts the container.
 * **Reverse Proxy:** Nginx forwards traffic from port 80/443 to the Streamlit container on port 8501.
 * **TLS:** HTTPS provided by Certbot (Let's Encrypt). DNS managed via Cloudflare, pointed at the Elastic IP, serving the dashboard at https://spaceweatherdashboard.com
-* **SSH Access:** Port 22 open on the security group for direct access to the instance.
-* **CD:** GitHub Actions builds and pushes a new app image to ECR on every relevant push to `main`, then SSHs into the EC2 instance to pull the latest image and restart the container automatically.
+* **Instance Access:** Port 22 is closed. Instance access uses AWS Systems Manager Session Manager, with no open inbound ports required.
+* **Auto-Recovery:** A CloudWatch alarm on `StatusCheckFailed_System` automatically recovers the EC2 instance on underlying hardware failure.
+* **CD:** GitHub Actions builds and pushes a new app image to ECR on every relevant push to `main`, then connects to the EC2 instance via SSM to pull the latest image and restart the container automatically.
 
 ### 6. Testing
 * **Unit tests** cover all individual transform functions -- outlier filtering, missing data handling, source fallback logic, column filtering, pressure calculation, model inference helpers, and more.
@@ -94,8 +100,3 @@ The data used can be seen in the table below
 | **Solar Wind Plasma** | Minute | `time_tag`, `speed`, `density`, `temperature` | — |
 | **Sunspots** | Daily | `Obsdate`, `swpc_ssn` | — |
 | **Predicted Solar Cycle** | Monthly | `time-tag`, `predicted_ssn` | `predicted_ssn` represents the predicted 13-month smoothed SSN, required as part of model input. Not used for visualisation. |
-
-## Documentation
-
-- [Decisions & problems solved](docs/DECISIONS.md)
-- [Deployment guide](docs/DEPLOY.md)

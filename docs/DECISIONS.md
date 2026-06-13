@@ -84,12 +84,13 @@ Lambda duration and memory are now stable, no longer growing with time.
 
 ### Security
 - **AWS credentials** - GitHub Actions uses OIDC to assume an IAM role at runtime, no long-lived AWS keys stored
-- **SSH access** - PEM key stored locally and as a GitHub secret for EC2 access
+- **Instance access** - SSH removed. Port 22 closed on the security group. Access via AWS Systems Manager Session Manager; no inbound ports required. GitHub Actions deploy uses `ssm send-command`
 - **DB read connection string** - stored on the EC2 instance, only accessible to the app
 - **DB write connection string** - stored as a Lambda environment variable
 - **Streamlit read-only DB role** - Streamlit only has SELECT permissions, no write access to the database
 - **R2 credentials** - dev only, stored as GitHub Actions secrets for the dev ETL workflow
 - **AWS root account** - IAM user with admin access used for day-to-day operations, root account not used
+- **EC2 auto-recovery** - CloudWatch alarm on `StatusCheckFailed_System` triggers `ec2:recover` automatically on hardware failure. Provisioned in Terraform
 
 ### Cloudflare R2 as dev/backup
 Dev ETL runs on GitHub Actions with R2 as raw storage. If prod S3 is ever lost, R2 serves as a backup source, which was an unpredicted benefit of having a separate ETL pipeline.
@@ -119,7 +120,7 @@ Deliberate learning choice to gain IaC experience. Managing EC2, ECR, IAM, secur
 
 ## Cost & Performance Optimisations
 
-- **EC2 over ECS** - avoids the cost of an Application Load Balancer; a single `t3.micro` runs Docker/nginx/Certbot directly
+- **EC2 over ECS** - avoids the cost of an Application Load Balancer; a single `t4g.micro` runs Docker/nginx/Certbot directly
 - **ECR lifecycle policy** - retain only the latest image, old images auto-deleted to prevent silent storage accumulation
 - **CloudWatch log retention** - 30 days, not indefinite
 - **AWS Budgets alerts** - spend visibility and early warning on free tier
