@@ -7,6 +7,7 @@ on:
       - "src/**"
       - "model/**"
       - "docker/etl/**"
+  workflow_dispatch:
 
 permissions:
   id-token: write

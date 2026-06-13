@@ -8,6 +8,7 @@ on:
       - ".streamlit/**"
       - "docker/app/**"
       - "src/utils/logging_utils.py"
+  workflow_dispatch:
 
 permissions:
   id-token: write
