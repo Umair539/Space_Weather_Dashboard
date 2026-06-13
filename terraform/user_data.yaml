@@ -7,8 +7,13 @@ packages:
   - docker
   - nginx
   - python3-certbot-nginx
+  - amazon-ssm-agent
 
 runcmd:
+  # Start SSM agent and enable on reboot
+  - systemctl enable amazon-ssm-agent
+  - systemctl start amazon-ssm-agent
+
   # Start Docker and enable on reboot
   - systemctl enable docker
   - systemctl start docker
