@@ -1,6 +1,12 @@
 import streamlit as st
 import altair as alt
-from app_utils import data_last_synced, init_db, get_latest_timestamp, cached_query, github_link
+from app_utils import (
+    data_last_synced,
+    init_db,
+    get_latest_timestamp,
+    cached_query,
+    github_link,
+)
 
 conn = init_db()
 
@@ -22,20 +28,12 @@ st.title("Solar Wind Properties 🛰️")
 def solar_wind_section():
     latest_ts = get_latest_timestamp(conn, "solar")
 
-    col1, col2 = st.columns(2)
-
-    with col1:
-        resolution = st.selectbox(
-            label="Select time resolution", options=["Minutely", "Hourly"], index=0
-        )
-
     df = cached_query(conn, "SELECT * FROM solar LIMIT 0", latest_ts)
     columns = [c.capitalize() for c in df.columns][1:]
 
-    with col2:
-        features = st.multiselect(
-            label="Select features", options=columns, default=["Speed", "Bz"]
-        )
+    features = st.multiselect(
+        label="Select features", options=columns, default=["Speed", "Bz"]
+    )
 
     cl1, cl2 = st.columns([1, 1])
     with cl1:
@@ -53,7 +51,7 @@ def solar_wind_section():
     }
     interval = intervals[time_range]
 
-    if resolution == "Hourly":
+    if time_range == "Last Month":
         cols_agg = "".join(
             f", round(avg({col})::numeric, 2) AS {col.lower()}" for col in features
         )
@@ -132,8 +130,7 @@ def solar_wind_section():
         st.altair_chart(chart, width="stretch")
 
     with st.expander("More information on Solar Wind", expanded=True):
-        st.markdown(
-            """
+        st.markdown("""
             The solar wind is a continuous stream of charged particles
             (plasma) emitted by the Sun's atmosphere. When this stream
             of particles reaches Earth, it transfers energy into the Earth's
@@ -145,8 +142,7 @@ def solar_wind_section():
             combined with a strong IMF in the southward direction
             (Z-component). Storm intensity increases as the Bz value
             becomes more negative.
-        """
-        )
+        """)
 
 
 solar_wind_section()
