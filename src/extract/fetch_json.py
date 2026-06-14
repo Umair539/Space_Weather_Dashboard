@@ -1,5 +1,7 @@
 import logging
+import os
 
+import boto3
 import requests
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
@@ -9,6 +11,8 @@ from src.utils.logging_utils import setup_logger
 
 # Configure the logger
 logger = setup_logger(__name__, "extract_data.log", level=logging.DEBUG)
+
+cw = boto3.client("cloudwatch")
 
 
 def _make_session():
@@ -27,11 +31,29 @@ def _make_session():
 _session = _make_session()
 
 
+def _put_fetch_metric(name):
+    if os.environ.get("ENV", "dev") != "prod":
+        return
+    try:
+        cw.put_metric_data(
+            Namespace="SpaceWeather",
+            MetricData=[{
+                "MetricName": "SuccessfulFetch",
+                "Dimensions": [{"Name": "Source", "Value": name}],
+                "Value": 1,
+                "Unit": "Count",
+            }],
+        )
+    except Exception:
+        logger.warning("Failed to emit CloudWatch metric")
+
+
 def fetch_json(url, name):
     response = get_response(url)
     json_data = extract_json(response)
     validate_schema(name, json_data)
     logger.info(f"Successfully retrieved data from {url}")
+    _put_fetch_metric(name)
     return json_data
 
 
