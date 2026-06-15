@@ -12,8 +12,6 @@ from src.utils.logging_utils import setup_logger
 # Configure the logger
 logger = setup_logger(__name__, "extract_data.log", level=logging.DEBUG)
 
-cw = boto3.client("cloudwatch")
-
 
 def _make_session():
     retry = Retry(
@@ -35,14 +33,18 @@ def _put_fetch_metric(name):
     if os.environ.get("ENV", "dev") != "prod":
         return
     try:
+        # Instantiate inside function to avoid NoRegionError on import in dev
+        cw = boto3.client("cloudwatch", region_name="eu-west-2")
         cw.put_metric_data(
             Namespace="SpaceWeather",
-            MetricData=[{
-                "MetricName": "SuccessfulFetch",
-                "Dimensions": [{"Name": "Source", "Value": name}],
-                "Value": 1,
-                "Unit": "Count",
-            }],
+            MetricData=[
+                {
+                    "MetricName": "SuccessfulFetch",
+                    "Dimensions": [{"Name": "Source", "Value": name}],
+                    "Value": 1,
+                    "Unit": "Count",
+                }
+            ],
         )
     except Exception:
         logger.warning("Failed to emit CloudWatch metric")
