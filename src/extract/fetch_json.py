@@ -1,7 +1,5 @@
 import logging
 import os
-
-import boto3
 import requests
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
@@ -34,6 +32,8 @@ def _put_fetch_metric(name):
         return
     try:
         # Instantiate inside function to avoid NoRegionError on import in dev
+        import boto3
+
         cw = boto3.client("cloudwatch", region_name="eu-west-2")
         cw.put_metric_data(
             Namespace="SpaceWeather",
