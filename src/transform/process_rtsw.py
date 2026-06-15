@@ -100,6 +100,14 @@ def filter_to_minute(df, time_col="time_tag"):
     return df[pd.to_datetime(df[time_col]).dt.second == 0]
 
 
+def _pick_by_priority(df):
+    # Assign numeric priority per source so we can pick one when multiple sources exist for same timestamp
+    df = df.copy()
+    df["priority"] = df["source"].map(SOURCE_PRIORITY).fillna(999)
+    # Sort by priority then take first row per timestamp - gives highest priority source per timestamp
+    return df.sort_values("priority").groupby(level=0).first().drop(columns="priority")
+
+
 def filter_source(df, data_cols):
     df = df.sort_values(["time_tag", "active"], ascending=[True, False])
 
@@ -108,10 +116,7 @@ def filter_source(df, data_cols):
     inactive = df[~df["active"]].set_index("time_tag")
 
     # Deduplicate active by source priority
-    active["priority"] = active["source"].map(SOURCE_PRIORITY).fillna(999)
-    active = (
-        active.sort_values("priority").groupby(level=0).first().drop(columns="priority")
-    )
+    active = _pick_by_priority(active)
 
     # Find timestamps where active row is entirely NaN
     active_all_nan = active[data_cols].isna().all(axis=1)
@@ -127,39 +132,17 @@ def filter_source(df, data_cols):
     # Start with active rows, replace bad ones with highest priority valid inactive
     result = active.copy()
     if len(replaceable) > 0:
-        inactive_replaceable = inactive.loc[replaceable].copy()
-        inactive_replaceable["priority"] = (
-            inactive_replaceable["source"].map(SOURCE_PRIORITY).fillna(999)
-        )
-        inactive_replaceable = (
-            inactive_replaceable.sort_values("priority")
-            .groupby(level=0)
-            .first()
-            .drop(columns="priority")
-        )
+        inactive_replaceable = _pick_by_priority(inactive.loc[replaceable])
         result.loc[replaceable] = inactive_replaceable
 
     # Add timestamps that only exist in inactive (no active row at all)
     inactive_only = inactive.index.difference(active.index)
     if len(inactive_only) > 0:
         # Get all inactive rows for timestamps with no active row at all
-        inactive_candidates = inactive.loc[inactive_only].copy()
-
-        # Assign numeric priority per source so we can pick one when multiple sources exist for same timestamp
-        inactive_candidates["priority"] = (
-            inactive_candidates["source"].map(SOURCE_PRIORITY).fillna(999)
-        )
-
-        # Sort by priority then take first row per timestamp - gives highest priority source per timestamp
-        inactive_candidates = (
-            inactive_candidates.sort_values("priority")
-            .groupby(level=0)
-            .first()
-            .drop(columns="priority")
-        )
+        inactive_candidates = inactive.loc[inactive_only]
 
         # Append single-source-per-timestamp inactive rows to result
-        result = pd.concat([result, inactive_candidates])
+        result = pd.concat([result, _pick_by_priority(inactive_candidates)])
 
     return result.reset_index()
 
