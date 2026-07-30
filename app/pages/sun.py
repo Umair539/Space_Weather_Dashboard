@@ -1,10 +1,38 @@
+import datetime
+
 import streamlit as st
 import altair as alt
-from app_utils import data_last_synced, init_db, get_latest_timestamp, cached_query, github_link
+from app_utils import (
+    data_last_synced,
+    init_db,
+    get_latest_timestamp,
+    cached_query,
+    github_link,
+)
 
 conn = init_db()
 
 st.title("Solar Activity ☀️")
+
+# services.swpc.noaa.gov's image feed sits behind an AWS WAF challenge that
+# blocks non-browser clients - and since these load as <img> sub-resources
+# (not full page navigations), even real browsers can't solve that challenge
+# for them. Helioviewer.org (NASA/ESA-affiliated) mirrors the same GOES SUVI
+# and SDO HMI imagery with no such block.
+HELIOVIEWER_SOURCE_IDS = {
+    "Sunspots (Visible/HMI)": 18,  # SDO/HMI continuum
+    "Solar Eruptions (Red/304Å)": 2005,  # GOES SUVI 304
+    "Solar Flares (Teal/131Å)": 2001,  # GOES SUVI 131
+}
+
+
+def _helioviewer_url(source_id):
+    now = datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+    return (
+        "https://api.helioviewer.org/v2/takeScreenshot/"
+        f"?date={now}&layers=[{source_id},1,100]"
+        "&imageScale=2.5&x1=-1200&y1=-1200&x2=1200&y2=1200&display=true"
+    )
 
 
 @st.fragment(run_every=120)
@@ -14,9 +42,8 @@ def sun_section():
     st.subheader("Latest Solar View")
 
     solar_flavors = {
-        "Sunspots (Visible/HMI)": "https://services.swpc.noaa.gov/images/animations/sdo-hmii/latest.jpg",
-        "Solar Eruptions (Red/304Å)": "https://services.swpc.noaa.gov/images/animations/suvi/primary/304/latest.png",
-        "Solar Flares (Teal/131Å)": "https://services.swpc.noaa.gov/images/animations/suvi/primary/131/latest.png",
+        key: _helioviewer_url(source_id)
+        for key, source_id in HELIOVIEWER_SOURCE_IDS.items()
     }
 
     image_meta = [
@@ -32,7 +59,7 @@ def sun_section():
             "badge": "GOES SUVI · 304Å",
             "color": "#e05d0b",
             "subtitle": "He II · Chromosphere / Transition Region",
-            "description": "Filaments, prominences and coronal holes (75,000 K)",
+            "description": "Filaments, prominences and coronal holes (75 MK)",
         },
         {
             "key": "Solar Flares (Teal/131Å)",
@@ -123,8 +150,7 @@ def sun_section():
     st.altair_chart(chart, width="stretch")
 
     with st.expander("More information on Solar Activity", expanded=True):
-        st.markdown(
-            """
+        st.markdown("""
             The Sun follows a periodic 11-year cycle of activity driven by its
             internal magnetic field, which completely flips its orientation once
             per decade. This progression is most visibly tracked by the number
@@ -136,8 +162,7 @@ def sun_section():
             active Sun releases a more turbulent stream of particles that can
             impact Earth's magnetic field. The chart displays these counts to show
             where the current solar activity falls within the broader 11-year cycle.
-        """
-        )
+        """)
 
 
 sun_section()
