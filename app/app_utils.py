@@ -80,6 +80,8 @@ def get_noaa_advisory():
         if "**** SPACE WEATHER OUTLOOK ****" in full_text:
             content = full_text.split("**** SPACE WEATHER OUTLOOK ****")[-1]
             return content.strip()
+        if not full_text.strip():
+            return "Advisory temporarily unavailable."
         return full_text
-    except Exception as e:
-        return f"Error fetching advisory: {e}"
+    except Exception:
+        return "Advisory temporarily unavailable."
