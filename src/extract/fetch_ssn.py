@@ -1,6 +1,6 @@
 from datetime import datetime, timedelta, timezone
 
-from src.extract.fetch_json import get_response
+from src.utils.fetch_utils import get_response
 
 # LISIRD mirrors SILSO's official daily international sunspot number.
 # SILSO finalizes daily values on roughly a month's delay, so the window
@@ -16,7 +16,7 @@ def fetch_ssn():
     samples = response.json()["international_sunspot_number"]["samples"]
     return [
         {
-            "Obsdate": sample["time"].replace(" ", "-"),
+            "Obsdate": sample["time"].replace(" ", "-") + "T00:00:00",
             "swpc_ssn": sample["ssn"],
         }
         for sample in samples

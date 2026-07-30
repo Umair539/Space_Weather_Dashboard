@@ -1,6 +1,6 @@
-from src.extract.fetch_json import put_fetch_metric
+from src.utils.fetch_utils import put_fetch_metric
 from src.extract.fetch_saved import fetch_saved
-from src.extract.fetch_s3 import fetch_s3_json
+from src.extract.fetch_rtsw import fetch_mag, fetch_plasma
 from src.extract.fetch_kp import fetch_kp
 from src.extract.fetch_dst import fetch_dst
 from src.extract.fetch_ssn import fetch_ssn
@@ -11,25 +11,12 @@ logger = setup_logger("extract_data", "extract_data.log")
 
 # services.swpc.noaa.gov now sits behind an AWS WAF challenge that blocks
 # non-browser clients, so live data comes from alternative official sources.
-MAG_S3_KEY = "json/rtsw/rtsw_mag_1m.json"
-PLASMA_S3_KEY = "json/rtsw/rtsw_wind_1m.json"
+# smoothed_ssn has a working fetcher too (fetch_smoothed_ssn.py) but isn't
+# wired in here - see that file for why.
 
-
-def _fetch_mag():
-    return fetch_s3_json(MAG_S3_KEY)
-
-
-def _fetch_plasma():
-    return fetch_s3_json(PLASMA_S3_KEY)
-
-
-# smoothed_ssn (the solar cycle prediction panel) isn't live-fetched: it
-# changes on a monthly/yearly cadence at most and the existing stored
-# forecast already runs out into the 2030s, so extract_saved_data's
-# storage read is sufficient - no replacement live source needed for it.
 LIVE_FETCHERS = {
-    "mag": _fetch_mag,
-    "plasma": _fetch_plasma,
+    "mag": fetch_mag,
+    "plasma": fetch_plasma,
     "dst": fetch_dst,
     "kp": fetch_kp,
     "ssn": fetch_ssn,

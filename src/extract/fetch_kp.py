@@ -1,6 +1,6 @@
 from datetime import datetime, timedelta, timezone
 
-from src.extract.fetch_json import get_response
+from src.utils.fetch_utils import get_response
 
 GFZ_KP_URL = "https://kp.gfz.de/app/json/"
 LOOKBACK_DAYS = 7
@@ -17,6 +17,6 @@ def fetch_kp():
     response = get_response(GFZ_KP_URL, params=params)
     payload = response.json()
     return [
-        {"time_tag": time_tag, "Kp": kp}
+        {"time_tag": time_tag.rstrip("Z"), "Kp": kp}
         for time_tag, kp in zip(payload["datetime"], payload["Kp"])
     ]

@@ -4,7 +4,6 @@ import requests
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 
-from src.utils.validator import validate_schema
 from src.utils.logging_utils import setup_logger
 
 # Configure the logger
@@ -50,18 +49,5 @@ def put_fetch_metric(name):
         logger.warning("Failed to emit CloudWatch metric")
 
 
-def fetch_json(url, name):
-    response = get_response(url)
-    json_data = extract_json(response)
-    validate_schema(name, json_data)
-    logger.info(f"Successfully retrieved data from {url}")
-    put_fetch_metric(name)
-    return json_data
-
-
 def get_response(url, **kwargs):
     return _session.get(url, timeout=10, **kwargs)
-
-
-def extract_json(response):
-    return response.json()

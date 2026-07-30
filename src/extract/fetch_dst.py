@@ -1,6 +1,6 @@
 from datetime import datetime, timezone
 
-from src.extract.fetch_json import get_response
+from src.utils.fetch_utils import get_response
 
 DST_URL_TEMPLATE = (
     "https://wdc.kugi.kyoto-u.ac.jp/dst_realtime/presentmonth/dst{yy:02d}{mm:02d}.for.request"
@@ -44,7 +44,7 @@ def _parse_dst(text):
                 continue
             records.append(
                 {
-                    "time_tag": f"{year:04d}-{month:02d}-{day:02d}T{hour:02d}:00:00Z",
+                    "time_tag": f"{year:04d}-{month:02d}-{day:02d}T{hour:02d}:00:00",
                     "dst": float(value),
                 }
             )
