@@ -3,6 +3,7 @@ from src.extract.fetch_saved import fetch_saved
 from src.extract.fetch_s3 import fetch_s3_json
 from src.extract.fetch_kp import fetch_kp
 from src.extract.fetch_dst import fetch_dst
+from src.extract.fetch_ssn import fetch_ssn
 from src.utils.validator import SchemaError, validate_schema
 from src.utils.logging_utils import setup_logger
 
@@ -12,8 +13,6 @@ logger = setup_logger("extract_data", "extract_data.log")
 # non-browser clients, so live data comes from alternative official sources.
 MAG_S3_KEY = "json/rtsw/rtsw_mag_1m.json"
 PLASMA_S3_KEY = "json/rtsw/rtsw_wind_1m.json"
-SSN_S3_KEY = "json/solar-cycle/sunspots.json"
-SMOOTHED_SSN_S3_KEY = "json/solar-cycle/sunspots-smoothed.json"
 
 
 def _fetch_mag():
@@ -24,27 +23,16 @@ def _fetch_plasma():
     return fetch_s3_json(PLASMA_S3_KEY)
 
 
-def _fetch_ssn():
-    return [
-        {"Obsdate": row["time-tag"], "swpc_ssn": row["ssn"]}
-        for row in fetch_s3_json(SSN_S3_KEY)
-    ]
-
-
-def _fetch_smoothed_ssn():
-    return [
-        {"time-tag": row["time-tag"], "predicted_ssn": row["smoothed_ssn"]}
-        for row in fetch_s3_json(SMOOTHED_SSN_S3_KEY)
-    ]
-
-
+# smoothed_ssn (the solar cycle prediction panel) isn't live-fetched: it
+# changes on a monthly/yearly cadence at most and the existing stored
+# forecast already runs out into the 2030s, so extract_saved_data's
+# storage read is sufficient - no replacement live source needed for it.
 LIVE_FETCHERS = {
     "mag": _fetch_mag,
     "plasma": _fetch_plasma,
     "dst": fetch_dst,
     "kp": fetch_kp,
-    "ssn": _fetch_ssn,
-    "smoothed_ssn": _fetch_smoothed_ssn,
+    "ssn": fetch_ssn,
 }
 
 DATA_FOLDERS = {
