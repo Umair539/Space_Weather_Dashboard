@@ -27,7 +27,7 @@ def _make_session():
 _session = _make_session()
 
 
-def _put_fetch_metric(name):
+def put_fetch_metric(name):
     if os.environ.get("ENV", "dev") != "prod":
         return
     try:
@@ -55,12 +55,12 @@ def fetch_json(url, name):
     json_data = extract_json(response)
     validate_schema(name, json_data)
     logger.info(f"Successfully retrieved data from {url}")
-    _put_fetch_metric(name)
+    put_fetch_metric(name)
     return json_data
 
 
-def get_response(url):
-    return _session.get(url, timeout=10)
+def get_response(url, **kwargs):
+    return _session.get(url, timeout=10, **kwargs)
 
 
 def extract_json(response):
