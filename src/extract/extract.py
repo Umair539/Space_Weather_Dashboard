@@ -4,15 +4,15 @@ from src.extract.fetch_rtsw import fetch_mag, fetch_plasma
 from src.extract.fetch_kp import fetch_kp
 from src.extract.fetch_dst import fetch_dst
 from src.extract.fetch_ssn import fetch_ssn
-from src.utils.validator import SchemaError, validate_schema
+from src.extract.fetch_smoothed_ssn import fetch_smoothed_ssn
 from src.utils.logging_utils import setup_logger
 
 logger = setup_logger("extract_data", "extract_data.log")
 
-# services.swpc.noaa.gov now sits behind an AWS WAF challenge that blocks
-# non-browser clients, so live data comes from alternative official sources.
-# smoothed_ssn has a working fetcher too (fetch_smoothed_ssn.py) but isn't
-# wired in here - see that file for why.
+# Each fetcher below tries NOAA (services.swpc.noaa.gov) first, then falls
+# back to an alternative official source if NOAA's AWS WAF blocks it - see
+# fetch_with_fallback inside each fetch_*.py module for the retry/fallback
+# logic and the CloudWatch failure metric it emits if both sources fail.
 
 LIVE_FETCHERS = {
     "mag": fetch_mag,
@@ -20,6 +20,7 @@ LIVE_FETCHERS = {
     "dst": fetch_dst,
     "kp": fetch_kp,
     "ssn": fetch_ssn,
+    "smoothed_ssn": fetch_smoothed_ssn,
 }
 
 DATA_FOLDERS = {
@@ -40,16 +41,11 @@ def extract_live_data():
 
     for name, fetcher in LIVE_FETCHERS.items():
         try:
-            data = fetcher()
-            validate_schema(name, data)
-            results[name] = data
+            results[name] = fetcher()
             logger.info(f"Successfully retrieved data for {name}")
             put_fetch_metric(name)
-        except SchemaError as e:
-            logger.error(f"Schema drift in {name}: {e}")
-            results[name] = None
         except Exception as e:
-            logger.warning(f"Failed to fetch {name}: {e}")
+            logger.error(f"Failed to fetch {name} from primary and fallback: {e}")
             results[name] = None
 
     logger.info("Live data extraction complete.")

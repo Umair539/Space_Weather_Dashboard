@@ -148,7 +148,7 @@ def home_section():
         .encode(
             x=alt.X(
                 "time:T",
-                axis=alt.Axis(labelAngle=0, tickCount=6, format="%d %b", title="Time"),
+                axis=alt.Axis(labelAngle=0, tickCount=6, format="%d %b", title="Date"),
             ),
             y=alt.Y(
                 "Value:Q",

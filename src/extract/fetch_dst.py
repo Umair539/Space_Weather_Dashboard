@@ -1,7 +1,8 @@
 from datetime import datetime, timezone
 
-from src.utils.fetch_utils import get_response
+from src.utils.fetch_utils import get_response, fetch_with_fallback
 
+NOAA_DST_URL = "https://services.swpc.noaa.gov/products/kyoto-dst.json"
 DST_URL_TEMPLATE = (
     "https://wdc.kugi.kyoto-u.ac.jp/dst_realtime/presentmonth/dst{yy:02d}{mm:02d}.for.request"
 )
@@ -15,11 +16,19 @@ FIELD_COUNT = 26
 MISSING = "9999"
 
 
-def fetch_dst():
+def _fetch_dst_noaa():
+    return get_response(NOAA_DST_URL).json()
+
+
+def _fetch_dst_kyoto():
     now = datetime.now(timezone.utc)
     url = DST_URL_TEMPLATE.format(yy=now.year % 100, mm=now.month)
     response = get_response(url)
     return _parse_dst(response.text)
+
+
+def fetch_dst():
+    return fetch_with_fallback("dst", _fetch_dst_noaa, _fetch_dst_kyoto)
 
 
 def _parse_dst(text):

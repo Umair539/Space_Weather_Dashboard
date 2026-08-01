@@ -29,6 +29,7 @@ def dst_section():
         dst_range = st.radio(
             "Dst time range",
             options=list(intervals.keys()),
+            index=2,
             horizontal=True,
             key="dst_range",
             label_visibility="collapsed",
@@ -126,6 +127,7 @@ def kp_section():
         kp_range = st.radio(
             "Kp time range",
             options=list(intervals.keys()),
+            index=2,
             horizontal=True,
             key="kp_range",
             label_visibility="collapsed",
