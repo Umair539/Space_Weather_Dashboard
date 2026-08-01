@@ -10,12 +10,18 @@ def main():
         initial_sidebar_state="expanded",
     )
 
-    home_page = st.Page("pages/home.py", title="Home")
-    solar_wind_page = st.Page("pages/solar_wind.py", title="Solar Wind")
-    geomag_indices_page = st.Page(
-        "pages/geomag_indices.py", title="Geomagnetic Indices"
+    home_page = st.Page("views/home.py", title="Home", default=True)
+    solar_wind_page = st.Page(
+        "views/solar_wind.py", title="Solar Wind", url_path="solar-wind"
     )
-    sun_page = st.Page("pages/sun.py", title="Solar Activity")
+    geomag_indices_page = st.Page(
+        "views/geomag_indices.py",
+        title="Geomagnetic Indices",
+        url_path="geomagnetic-indices",
+    )
+    sun_page = st.Page(
+        "views/sun.py", title="Solar Activity", url_path="solar-activity"
+    )
 
     pg = st.navigation([home_page, solar_wind_page, geomag_indices_page, sun_page])
 

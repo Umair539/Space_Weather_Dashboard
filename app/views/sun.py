@@ -1,5 +1,3 @@
-import datetime
-
 import streamlit as st
 import altair as alt
 from app_utils import (
@@ -17,61 +15,62 @@ st.title("Solar Activity ☀️")
 # services.swpc.noaa.gov's image feed sits behind an AWS WAF challenge that
 # blocks non-browser clients - and since these load as <img> sub-resources
 # (not full page navigations), even real browsers can't solve that challenge
-# for them. Helioviewer.org (NASA/ESA-affiliated) mirrors the same GOES SUVI
-# and SDO HMI imagery with no such block.
-HELIOVIEWER_SOURCE_IDS = {
-    "Sunspots (Visible/HMI)": 18,  # SDO/HMI continuum
-    "Solar Eruptions (Red/304Å)": 2005,  # GOES SUVI 304
-    "Solar Flares (Teal/131Å)": 2001,  # GOES SUVI 131
+# for them. NASA SDO publishes pre-rendered rolling animations (updated
+# continuously, no on-demand render wait like Helioviewer's queueMovie,
+# which takes minutes) with no such block. 512px keeps the total payload
+# to ~21MB across all three instead of ~130MB at full 1024px resolution.
+SDO_ANIMATION_URLS = {
+    "Sunspots (Visible/HMI)": "https://sdo.gsfc.nasa.gov/assets/img/latest/mpeg/latest_512_HMIIC.mp4",
+    "Solar Eruptions (Red/304Å)": "https://sdo.gsfc.nasa.gov/assets/img/latest/mpeg/latest_512_0304.mp4",
+    "Solar Flares (Teal/131Å)": "https://sdo.gsfc.nasa.gov/assets/img/latest/mpeg/latest_512_0131.mp4",
+}
+
+# Animations are ~21MB total; stills are ~0.6MB. Default to stills and let
+# users opt into the heavier animated view.
+SDO_STILL_URLS = {
+    "Sunspots (Visible/HMI)": "https://sdo.gsfc.nasa.gov/assets/img/latest/latest_512_HMIIC.jpg",
+    "Solar Eruptions (Red/304Å)": "https://sdo.gsfc.nasa.gov/assets/img/latest/latest_512_0304.jpg",
+    "Solar Flares (Teal/131Å)": "https://sdo.gsfc.nasa.gov/assets/img/latest/latest_512_0131.jpg",
 }
 
 
-def _helioviewer_url(source_id):
-    now = datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
-    return (
-        "https://api.helioviewer.org/v2/takeScreenshot/"
-        f"?date={now}&layers=[{source_id},1,100]"
-        "&imageScale=2.5&x1=-1200&y1=-1200&x2=1200&y2=1200&display=true"
-    )
+IMAGE_META = [
+    {
+        "key": "Sunspots (Visible/HMI)",
+        "badge": "SDO / HMI",
+        "color": "#e05d0b",
+        "subtitle": "Continuum · Visible Light",
+        "description": "Active regions and sunspots on the photosphere",
+    },
+    {
+        "key": "Solar Eruptions (Red/304Å)",
+        "badge": "GOES SUVI · 304Å",
+        "color": "#f82f0c",
+        "subtitle": "He II · Chromosphere / Transition Region",
+        "description": "Filaments, prominences and coronal holes (75 MK)",
+    },
+    {
+        "key": "Solar Flares (Teal/131Å)",
+        "badge": "GOES SUVI · 131Å",
+        "color": "#2dd4bf",
+        "subtitle": "Fe VIII/XXI · Flare Plasma",
+        "description": "High-energy flare and eruptive plasma (10 MK)",
+    },
+]
 
 
-@st.fragment(run_every=120)
-def sun_section():
-    latest_ts = get_latest_timestamp(conn, "ssn")
-
-    st.subheader("Latest Solar View")
-
-    solar_flavors = {
-        key: _helioviewer_url(source_id)
-        for key, source_id in HELIOVIEWER_SOURCE_IDS.items()
-    }
-
-    image_meta = [
-        {
-            "key": "Sunspots (Visible/HMI)",
-            "badge": "SDO / HMI",
-            "color": "#00bcd4",
-            "subtitle": "Continuum · Visible Light",
-            "description": "Active regions and sunspots on the photosphere",
-        },
-        {
-            "key": "Solar Eruptions (Red/304Å)",
-            "badge": "GOES SUVI · 304Å",
-            "color": "#e05d0b",
-            "subtitle": "He II · Chromosphere / Transition Region",
-            "description": "Filaments, prominences and coronal holes (75 MK)",
-        },
-        {
-            "key": "Solar Flares (Teal/131Å)",
-            "badge": "GOES SUVI · 131Å",
-            "color": "#2dd4bf",
-            "subtitle": "Fe VIII/XXI · Flare Plasma",
-            "description": "High-energy flare and eruptive plasma (10 MK)",
-        },
-    ]
+@st.fragment(run_every=300)
+def solar_images_section():
+    header_col, toggle_col = st.columns([3, 1])
+    with header_col:
+        st.subheader("Latest Solar View")
+    with toggle_col:
+        show_animations = st.toggle(
+            "Animate (~21MB)", value=False, key="show_solar_animations"
+        )
 
     cols = st.columns(3)
-    for col, meta in zip(cols, image_meta):
+    for col, meta in zip(cols, IMAGE_META):
         with col:
             st.markdown(
                 f"""<div style="border:1px solid {meta['color']}55; border-radius:8px; padding:12px 14px; margin-bottom:8px;">
@@ -82,15 +81,28 @@ def sun_section():
                 </div>""",
                 unsafe_allow_html=True,
             )
-            st.image(solar_flavors[meta["key"]], width="stretch")
+            if show_animations:
+                st.markdown(
+                    f"""<video autoplay loop muted playsinline
+                        style="width:100%; aspect-ratio:1/1; border-radius:8px; display:block;">
+                        <source src="{SDO_ANIMATION_URLS[meta['key']]}" type="video/mp4">
+                    </video>""",
+                    unsafe_allow_html=True,
+                )
+            else:
+                st.image(SDO_STILL_URLS[meta["key"]], width="stretch")
 
-    st.markdown("<br>", unsafe_allow_html=True)
+
+@st.fragment
+def sunspot_plot_section():
+    latest_ts = get_latest_timestamp(conn, "ssn")
 
     cl1, cl2, cl3 = st.columns([1, 1, 1])
     with cl1:
         ssn_range = st.radio(
             "Time range",
             options=["Last Month", "Last Year", "Last Full Cycle"],
+            index=2,
             horizontal=True,
             label_visibility="collapsed",
         )
@@ -139,7 +151,7 @@ def sun_section():
                     labelAngle=0,
                     tickCount=6,
                     format=fmt,
-                    title="Time",
+                    title="Date",
                 ),
             ),
             y=alt.Y("swpc_ssn:Q", title="Sunspot Count"),
@@ -165,5 +177,7 @@ def sun_section():
         """)
 
 
-sun_section()
+solar_images_section()
+st.markdown("<br>", unsafe_allow_html=True)
+sunspot_plot_section()
 github_link()

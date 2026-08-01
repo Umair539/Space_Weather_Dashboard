@@ -48,13 +48,13 @@ def cached_query(_conn, query, latest_ts):
 
 
 def init_db():
-    neon_db_url = os.environ.get("DATABASE_READ_URL") or st.secrets.get(
+    supabase_db_url = os.environ.get("DATABASE_READ_URL") or st.secrets.get(
         "DATABASE_READ_URL"
     )
     return st.connection(
-        "neon_db",
+        "supabase_db",
         type="sql",
-        url=neon_db_url,
+        url=supabase_db_url,
     )
 
 
