@@ -88,15 +88,15 @@ This project is engineered as a decoupled system where data ingestion and visual
 
 ---
 ## Data Source and Description
-The data used in this project is retrieved from the [NOAA Space Weather Prediction Center](https://www.swpc.noaa.gov) which is the most reliable source of space weather data available. Each successful extraction retrieves the latest data from NOAA, which is appended to the database to build a continuously growing historical record.
+The data used in this project is retrieved from the [NOAA Space Weather Prediction Center](https://www.swpc.noaa.gov) which is the most reliable source of space weather data available. Each successful extraction retrieves the latest data from NOAA, which is appended to the database to build a continuously growing historical record. If NOAA fails after 3 retries, extraction automatically falls back to an alternative official source (see table) for 3 more retries before the dataset is marked failed for that run.
 
 The data used can be seen in the table below
 
-| Dataset | Resolution | Primary Features Used | Notes |
-| :--- | :--- | :--- | :--- |
-| **Dst Index** | Hourly | `time_tag`, `dst` | Quicklook (provisional) values. |
-| **Kp Index** | 3-Hourly | `time_tag`, `Kp` | — |
-| **Solar Wind Magnetometer** | Minute | `time_tag`, `bt`, `bz_gsm`, `by_gsm`, `bx_gsm` | — |
-| **Solar Wind Plasma** | Minute | `time_tag`, `speed`, `density`, `temperature` | — |
-| **Sunspots** | Daily | `Obsdate`, `swpc_ssn` | — |
-| **Predicted Solar Cycle** | Monthly | `time-tag`, `predicted_ssn` | `predicted_ssn` represents the predicted 13-month smoothed SSN, required as part of model input. Not used for visualisation. |
+| Dataset | Resolution | Primary Features Used | Fallback Source | Notes |
+| :--- | :--- | :--- | :--- | :--- |
+| **Dst Index** | Hourly | `time_tag`, `dst` | Kyoto WDC | Quicklook (provisional) values. |
+| **Kp Index** | 3-Hourly | `time_tag`, `Kp` | GFZ Potsdam | — |
+| **Solar Wind Magnetometer** | Minute | `time_tag`, `bt`, `bz_gsm`, `by_gsm`, `bx_gsm` | AWS Open Data (S3) | — |
+| **Solar Wind Plasma** | Minute | `time_tag`, `speed`, `density`, `temperature` | AWS Open Data (S3) | — |
+| **Sunspots** | Daily | `Obsdate`, `swpc_ssn` | LISIRD | — |
+| **Predicted Solar Cycle** | Monthly | `time-tag`, `predicted_ssn` | AWS Open Data (S3) | `predicted_ssn` represents the predicted 13-month smoothed SSN, required as part of model input. Not used for visualisation. |
