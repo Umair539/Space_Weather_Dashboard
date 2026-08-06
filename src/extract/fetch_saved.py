@@ -1,3 +1,5 @@
+from concurrent.futures import ThreadPoolExecutor
+
 import pandas as pd
 
 from src.utils.storage import get_storage_client
@@ -59,10 +61,19 @@ def _get_metadata(storage, folder):
 
 
 def _download_partitions(storage, folder, months):
+    if not months:
+        return pd.DataFrame()
+
+    # Each month is its own object in storage - independent downloads, so
+    # fetch them concurrently instead of one at a time. This is what made
+    # mag/plasma (5 months each) the slowest part of extraction.
+    with ThreadPoolExecutor(max_workers=len(months)) as executor:
+        results = executor.map(
+            lambda month: storage.download_json(f"{folder}/dicts/{month}.json"), months
+        )
+
     records = []
-    for month in months:
-        path = f"{folder}/dicts/{month}.json"
-        data = storage.download_json(path)
+    for data in results:
         if data:
             records.extend(data)
 

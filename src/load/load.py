@@ -1,3 +1,5 @@
+from concurrent.futures import ThreadPoolExecutor
+
 from src.utils.logging_utils import setup_logger
 from src.load.load_raw_json import load_raw_json
 from src.load.load_raw_rtsw import load_raw_rtsw
@@ -15,20 +17,29 @@ LOADERS = {
 }
 
 
+def _load_one(name, loader, data):
+    try:
+        logger.info(f"Loading {name}...")
+        loader(name, data)
+        logger.info(f"Loaded {name}.")
+    except Exception as e:
+        logger.error(f"Failed to load {name}: {e}")
+
+
 def load_raw_data(extracted_data):
     logger.info("Loading raw data to cloud...")
 
-    for name, loader in LOADERS.items():
-        data = extracted_data.get(name)
-        if data is None:
-            logger.warning(f"No data for {name}, skipping.")
-            continue
-        try:
-            logger.info(f"Loading {name}...")
-            loader(name, data)
-            logger.info(f"Loaded {name}.")
-        except Exception as e:
-            logger.error(f"Failed to load {name}: {e}")
+    # Each source writes to its own S3/R2 keys with no shared state, so these
+    # are independent I/O-bound calls - running them on a thread pool instead
+    # of sequentially collapses total wall time to roughly the slowest single
+    # loader instead of the sum of all of them. boto3 clients are thread-safe.
+    with ThreadPoolExecutor(max_workers=len(LOADERS)) as executor:
+        for name, loader in LOADERS.items():
+            data = extracted_data.get(name)
+            if data is None:
+                logger.warning(f"No data for {name}, skipping.")
+                continue
+            executor.submit(_load_one, name, loader, data)
 
     logger.info("Raw data loading complete.")
 

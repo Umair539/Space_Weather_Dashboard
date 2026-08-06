@@ -1,3 +1,5 @@
+from concurrent.futures import ThreadPoolExecutor
+
 from src.utils.fetch_utils import put_fetch_metric
 from src.extract.fetch_saved import fetch_saved
 from src.extract.fetch_rtsw import fetch_mag, fetch_plasma
@@ -52,16 +54,26 @@ def extract_live_data():
     return results
 
 
+def _fetch_saved_one(name, folder, filter_raw):
+    try:
+        return name, fetch_saved(folder, filter_raw=filter_raw)
+    except Exception as e:
+        logger.error(f"Failed to fetch saved {name}: {e}")
+        return name, None
+
+
 def extract_saved_data(filter_raw=True):
     logger.info(f"Starting saved data extraction [filter_raw={filter_raw}]...")
-    results = {}
 
-    for name, folder in DATA_FOLDERS.items():
-        try:
-            results[name] = fetch_saved(folder, filter_raw=filter_raw)
-        except Exception as e:
-            logger.error(f"Failed to fetch saved {name}: {e}")
-            results[name] = None
+    # Each source reads its own storage keys with no shared state - same
+    # independent-I/O shape as the raw load phase, so fetch them concurrently
+    # instead of sequentially.
+    with ThreadPoolExecutor(max_workers=len(DATA_FOLDERS)) as executor:
+        futures = [
+            executor.submit(_fetch_saved_one, name, folder, filter_raw)
+            for name, folder in DATA_FOLDERS.items()
+        ]
+        results = dict(future.result() for future in futures)
 
     logger.info("Saved data extraction complete.")
     return results
