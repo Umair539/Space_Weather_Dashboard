@@ -70,10 +70,11 @@ def github_link():
     )
 
 
+@st.cache_data(ttl=3600)
 def get_noaa_advisory():
     url = "https://services.swpc.noaa.gov/text/advisory-outlook.txt"
     try:
-        response = requests.get(url)
+        response = requests.get(url, timeout=5)
         response.raise_for_status()
         full_text = response.text
 

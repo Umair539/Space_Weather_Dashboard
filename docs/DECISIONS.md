@@ -80,6 +80,12 @@ Lambda duration and memory are now stable, no longer growing with time.
 
 ---
 
+## NOAA WAF Blocking
+
+`services.swpc.noaa.gov` started failing, caught by a CloudWatch alarm built to detect endpoint downtime. Set up an alternative official source for each dataset: NOAA's S3 bucket on AWS Data Exchange (mag/plasma/predicted-solar-cycle), GFZ Potsdam (Kp, the index's official source), Kyoto WDC (Dst, the index's official source), LISIRD (sunspot number, mirrors SILSO, the authoritative source). Solar imagery moved to NASA SDO's pre-rendered animations.
+
+---
+
 ## Other Architecture Decisions
 
 ### Security
