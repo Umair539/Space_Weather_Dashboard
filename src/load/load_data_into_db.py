@@ -1,7 +1,46 @@
 from sqlalchemy import create_engine
 from sqlalchemy import text
+from sqlalchemy import MetaData, Table, or_
+from sqlalchemy.dialects.postgresql import insert as pg_insert
 import os
 from datetime import timedelta
+
+# Reflected once per warm container and reused across invocations, so repeated
+# Lambda calls don't re-query information_schema for table structure every run.
+_metadata = MetaData()
+
+
+def _get_table(engine, name):
+    table = _metadata.tables.get(name)
+    if table is None:
+        table = Table(name, _metadata, autoload_with=engine)
+    return table
+
+
+def _diff_upsert(conn, table, index_col, df):
+    """Batched upsert that only writes rows that are new or actually changed.
+
+    Uses SQLAlchemy's insertmanyvalues to batch the INSERT into a handful of
+    multi-row statements, and ON CONFLICT ... WHERE ... IS DISTINCT FROM to
+    make Postgres skip the write entirely for unchanged rows.
+    """
+    records = df.reset_index().to_dict(orient="records")
+    if not records:
+        return
+
+    update_cols = [c.name for c in table.columns if c.name != index_col]
+
+    # No .values() here - passing records as execute() params (not baked into
+    # the statement) is what lets SQLAlchemy's insertmanyvalues page the batch
+    # itself, instead of compiling every row into one giant multi-VALUES
+    # statement that can blow past Postgres's 65535 bind-parameter limit.
+    stmt = pg_insert(table)
+    stmt = stmt.on_conflict_do_update(
+        index_elements=[index_col],
+        set_={col: stmt.excluded[col] for col in update_cols},
+        where=or_(*[table.c[col].is_distinct_from(stmt.excluded[col]) for col in update_cols]),
+    )
+    conn.execute(stmt, records)
 
 
 def load_data_into_db(transformed_data, upsert_hours=24 * 7):
@@ -11,78 +50,31 @@ def load_data_into_db(transformed_data, upsert_hours=24 * 7):
     engine = create_engine(db_url, connect_args={"prepare_threshold": None})
 
     with engine.begin() as conn:
+        solar_table = _get_table(engine, "solar")
+        dst_table = _get_table(engine, "dst")
+        dst_predictions_table = _get_table(engine, "dst_predictions")
+        kp_table = _get_table(engine, "kp")
+        ssn_table = _get_table(engine, "ssn")
 
         lookback = solar.index[-1] - timedelta(hours=upsert_hours)
         solar_upsert = solar[solar.index >= lookback]
-
-        conn.execute(
-            text("""
-                INSERT INTO solar (time, density, speed, temperature, bz, bx, by, bt, pressure)
-                VALUES (:time, :density, :speed, :temperature, :bz, :bx, :by, :bt, :pressure)
-                ON CONFLICT (time) DO UPDATE SET
-                    density = EXCLUDED.density,
-                    speed = EXCLUDED.speed,
-                    temperature = EXCLUDED.temperature,
-                    bz = EXCLUDED.bz,
-                    bx = EXCLUDED.bx,
-                    by = EXCLUDED.by,
-                    bt = EXCLUDED.bt,
-                    pressure = EXCLUDED.pressure
-            """),
-            solar_upsert.reset_index().to_dict(orient="records"),
-        )
+        _diff_upsert(conn, solar_table, "time", solar_upsert)
 
         lookback = dst.index[-1] - timedelta(hours=upsert_hours)
         dst_upsert = dst[dst.index >= lookback]
-
-        conn.execute(
-            text("""
-                INSERT INTO dst (time, dst)
-                VALUES (:time, :dst)
-                ON CONFLICT (time) DO UPDATE SET
-                    dst = EXCLUDED.dst
-            """),
-            dst_upsert.reset_index().to_dict(orient="records"),
-        )
+        _diff_upsert(conn, dst_table, "time", dst_upsert)
 
         lookback = dst_predictions.index[-1] - timedelta(hours=upsert_hours)
         dst_predictions_upsert = dst_predictions[dst_predictions.index >= lookback]
-
-        conn.execute(
-            text("""
-                INSERT INTO dst_predictions (time, dst_predictions)
-                VALUES (:time, :dst_predictions)
-                ON CONFLICT (time) DO UPDATE SET
-                    dst_predictions = EXCLUDED.dst_predictions
-            """),
-            dst_predictions_upsert.reset_index().to_dict(orient="records"),
-        )
+        _diff_upsert(conn, dst_predictions_table, "time", dst_predictions_upsert)
 
         lookback = kp.index[-1] - timedelta(hours=upsert_hours)
         kp_upsert = kp[kp.index >= lookback]
-
-        conn.execute(
-            text("""
-                INSERT INTO kp (time, "Kp")
-                VALUES (:time, :Kp)
-                ON CONFLICT (time) DO UPDATE SET
-                    "Kp" = EXCLUDED."Kp"
-            """),
-            kp_upsert.reset_index().to_dict(orient="records"),
-        )
+        _diff_upsert(conn, kp_table, "time", kp_upsert)
 
         lookback = ssn.index[-1] - timedelta(hours=upsert_hours)
         ssn_upsert = ssn[ssn.index >= lookback]
-
-        conn.execute(
-            text("""
-                INSERT INTO ssn (time, swpc_ssn)
-                VALUES (:time, :swpc_ssn)
-                ON CONFLICT (time) DO UPDATE SET
-                    swpc_ssn = EXCLUDED.swpc_ssn
-            """),
-            ssn_upsert.reset_index().to_dict(orient="records"),
-        )
+        _diff_upsert(conn, ssn_table, "time", ssn_upsert)
 
         # Trim old data relative to the last timestamp in each table
         conn.execute(
