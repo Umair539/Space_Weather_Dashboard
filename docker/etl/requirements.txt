@@ -5,3 +5,4 @@ psycopg[binary]==3.1.18
 onnxruntime==1.16.3
 numpy<2.0.0
 boto3==1.42.89
+orjson==3.11.9

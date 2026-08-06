@@ -1,5 +1,6 @@
-import json
+import gzip
 import boto3
+import orjson
 import os
 
 
@@ -15,16 +16,18 @@ class R2Client:
         )
 
     def download_json(self, key):
+        # See s3.py - same reasoning, no legacy plain-JSON fallback needed.
         try:
-            response = self.client.get_object(Bucket=self.bucket, Key=key)
-            return json.loads(response["Body"].read())
+            response = self.client.get_object(Bucket=self.bucket, Key=f"{key}.gz")
+            return orjson.loads(gzip.decompress(response["Body"].read()))
         except self.client.exceptions.NoSuchKey:
             return None
 
     def upload_json(self, key, data):
         self.client.put_object(
             Bucket=self.bucket,
-            Key=key,
-            Body=json.dumps(data, indent=2).encode("utf-8"),
+            Key=f"{key}.gz",
+            Body=gzip.compress(orjson.dumps(data)),
             ContentType="application/json",
+            ContentEncoding="gzip",
         )
