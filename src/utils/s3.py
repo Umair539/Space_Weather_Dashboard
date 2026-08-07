@@ -2,6 +2,11 @@ import gzip
 import boto3
 import orjson
 import os
+from botocore.config import Config
+
+# See r2.py - shared across thread pools, so raise the pool size beyond the
+# default of 10.
+_CONFIG = Config(max_pool_connections=50)
 
 
 class S3Client:
@@ -10,6 +15,7 @@ class S3Client:
         self.client = boto3.client(
             "s3",
             region_name="eu-west-2",
+            config=_CONFIG,
         )
 
     def download_json(self, key):
