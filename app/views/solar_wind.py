@@ -21,6 +21,12 @@ PARAM_COLORS = {
     "Pressure": "#fb923c",
 }
 
+# Plottable solar wind measurements. Listed explicitly (rather than
+# introspected via "SELECT *") so non-feature columns in the "solar" table -
+# e.g. "time" and "updated_at" (added for cache-invalidation purposes) -
+# never leak into the "Select features" multiselect.
+FEATURE_COLUMNS = ["density", "speed", "temperature", "bz", "bx", "by", "bt", "pressure"]
+
 st.title("Solar Wind Properties 🛰️")
 
 
@@ -28,8 +34,7 @@ st.title("Solar Wind Properties 🛰️")
 def solar_wind_section():
     latest_ts = get_latest_timestamp(conn, "solar")
 
-    df = cached_query(conn, "SELECT * FROM solar LIMIT 0", latest_ts)
-    columns = [c.capitalize() for c in df.columns][1:]
+    columns = [c.capitalize() for c in FEATURE_COLUMNS]
 
     features = st.multiselect(
         label="Select features", options=columns, default=["Speed", "Bz"]
