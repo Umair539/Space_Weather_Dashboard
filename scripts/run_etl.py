@@ -1,4 +1,5 @@
 import argparse
+import time
 import tracemalloc
 from dotenv import load_dotenv
 
@@ -37,6 +38,7 @@ def run_etl_pipeline():
     logger = setup_logger("etl_pipeline", "etl_pipeline.log")
 
     tracemalloc.start()
+    t0 = time.perf_counter()
 
     try:
         logger.info(
@@ -65,6 +67,7 @@ def run_etl_pipeline():
 
         current, peak = tracemalloc.get_traced_memory()
         logger.info(f"Peak memory usage: {peak / 1024 / 1024:.1f} MB")
+        logger.info(f"Total runtime: {time.perf_counter() - t0:.1f}s")
 
         logger.info("ETL pipeline successful.")
 
