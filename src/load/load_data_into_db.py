@@ -47,13 +47,22 @@ def load_data_into_db(transformed_data, upsert_hours=None):
             columns_sql = ", ".join(sql_col for _, sql_col in columns)
             values_sql = ", ".join(f":{bind}" for bind, _ in columns)
             set_sql = ", ".join(f"{sql_col} = EXCLUDED.{sql_col}" for _, sql_col in columns)
+            # Only touch updated_at (and actually write the row) when the
+            # data genuinely changed - an unconditional update would make
+            # updated_at meaningless for cache-invalidation purposes, since
+            # it'd bump on every upsert regardless of real change.
+            diff_sql = " OR ".join(
+                f"{table}.{sql_col} IS DISTINCT FROM EXCLUDED.{sql_col}" for _, sql_col in columns
+            )
 
             conn.execute(
                 text(f"""
-                    INSERT INTO {table} (time, {columns_sql})
-                    VALUES (:time, {values_sql})
+                    INSERT INTO {table} (time, {columns_sql}, updated_at)
+                    VALUES (:time, {values_sql}, NOW())
                     ON CONFLICT (time) DO UPDATE SET
-                        {set_sql}
+                        {set_sql},
+                        updated_at = NOW()
+                    WHERE {diff_sql}
                 """),
                 upsert_df.reset_index().to_dict(orient="records"),
             )
