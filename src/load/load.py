@@ -44,7 +44,7 @@ def load_raw_data(extracted_data):
     logger.info("Raw data loading complete.")
 
 
-def load_transformed_data(transformed_data, upsert_hours=24 * 7):
+def load_transformed_data(transformed_data, upsert_hours=None):
     try:
         logger.info("Saving transformed data to Supabase SQL database...")
         load_data_into_db(transformed_data, upsert_hours=upsert_hours)

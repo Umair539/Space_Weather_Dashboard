@@ -17,8 +17,20 @@ _SPEC = {
     "ssn": ([("swpc_ssn", "swpc_ssn")], "12 years"),
 }
 
+# Used only when upsert_hours isn't explicitly passed in - solar's source
+# only provides a 24h window normally, the rest need a week to catch
+# corrections. An explicit upsert_hours (e.g. a full backfill/migration)
+# overrides this for every table, including solar.
+_DEFAULT_LOOKBACK_HOURS = {
+    "solar": 24,
+    "dst": 24 * 7,
+    "dst_predictions": 24 * 7,
+    "kp": 24 * 7,
+    "ssn": 24 * 7,
+}
 
-def load_data_into_db(transformed_data, upsert_hours=24 * 7):
+
+def load_data_into_db(transformed_data, upsert_hours=None):
     solar, dst, kp, ssn, dst_predictions = transformed_data
     dataframes = {"solar": solar, "dst": dst, "kp": kp, "ssn": ssn, "dst_predictions": dst_predictions}
 
@@ -28,7 +40,8 @@ def load_data_into_db(transformed_data, upsert_hours=24 * 7):
     with engine.begin() as conn:
         for table, (columns, _) in _SPEC.items():
             df = dataframes[table]
-            lookback = df.index[-1] - timedelta(hours=upsert_hours)
+            hours = upsert_hours if upsert_hours is not None else _DEFAULT_LOOKBACK_HOURS[table]
+            lookback = df.index[-1] - timedelta(hours=hours)
             upsert_df = df[df.index >= lookback]
 
             columns_sql = ", ".join(sql_col for _, sql_col in columns)

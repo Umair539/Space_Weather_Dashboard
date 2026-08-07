@@ -22,8 +22,10 @@ def run_etl_pipeline():
         "--upsert-hours",
         type=int,
         required=False,
-        help="Hours of data to upsert (default: 168 = 1 week)",
-        default=24 * 7,
+        help="Hours of data to upsert. Default: solar=24h, everything else=1 "
+        "week. Passing a value overrides every table, e.g. for a full "
+        "backfill/migration.",
+        default=None,
     )
     parser.add_argument(
         "--filter-raw",
