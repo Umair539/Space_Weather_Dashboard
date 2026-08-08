@@ -22,10 +22,18 @@ logger = setup_logger("app", "app.log")
 # intended for production deployment, since running both services costs
 # roughly double for a UI the React app replaces.
 def api_base_url():
-    return (
-        os.environ.get("API_BASE_URL")
-        or st.secrets.get("API_BASE_URL", "http://localhost:8000")
-    ).rstrip("/")
+    url = os.environ.get("API_BASE_URL")
+    if not url:
+        # st.secrets raises when there's no secrets.toml rather than
+        # returning the default, and this repo doesn't ship one - so the
+        # localhost fallback is unreachable without catching that. Kept as
+        # a lookup at all because Streamlit Cloud has no other way to set
+        # config; locally, .env.{env} or the default covers it.
+        try:
+            url = st.secrets.get("API_BASE_URL")
+        except Exception:
+            url = None
+    return (url or "http://localhost:8000").rstrip("/")
 
 
 # 60s is deliberately shorter than every poll interval in api/db.py (30-300s)
