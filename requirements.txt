@@ -10,6 +10,8 @@ onnxruntime==1.21.0
 numpy<2.0.0
 boto3==1.42.89
 orjson==3.11.9
+fastapi==0.141.1
+uvicorn[standard]==0.52.1
 flake8==7.3.0
 pytest==9.0.3
 coverage==7.13.5
