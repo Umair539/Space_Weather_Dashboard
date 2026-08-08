@@ -3,15 +3,12 @@ import altair as alt
 import pandas as pd
 import plotly.graph_objects as go
 from app_utils import (
+    api_get,
+    api_dataframe,
     data_last_synced,
-    init_db,
-    get_latest_timestamp,
-    cached_query,
     get_noaa_advisory,
     github_link,
 )
-
-conn = init_db()
 
 st.title("Space Weather Dashboard 🪐")
 
@@ -86,46 +83,29 @@ def _metric_card(label, value, unit, status, color):
 
 @st.fragment(run_every=120)
 def home_section():
-    latest_ts_dst = get_latest_timestamp(conn, "dst_predictions")
-    latest_ts_kp = get_latest_timestamp(conn, "kp")
-    latest_ts_solar = get_latest_timestamp(conn, "solar")
-
     st.markdown(
         f"<div style='text-align: right; font-style: italic; color: gray;'>"
-        f"{data_last_synced(conn)}"
+        f"{data_last_synced()}"
         f"</div>",
         unsafe_allow_html=True,
     )
 
-    dst_query = """
-        SELECT p.time, d.dst, p.dst_predictions
-        FROM dst_predictions p
-        LEFT JOIN dst d ON p.time = d.time
-        WHERE p.time >= (SELECT MAX(time) FROM dst_predictions) - INTERVAL '1 month'
-        ORDER BY p.time DESC
-    """
-    dst = cached_query(conn, dst_query, latest_ts_dst)
-    kp = cached_query(conn, "SELECT * FROM kp ORDER BY time DESC LIMIT 1", latest_ts_kp)
-    dst_now = cached_query(
-        conn,
-        "SELECT dst FROM dst WHERE dst IS NOT NULL ORDER BY time DESC LIMIT 1",
-        latest_ts_dst,
-    )
-    solar_latest = cached_query(
-        conn,
-        "SELECT speed, bz FROM solar ORDER BY time DESC LIMIT 1",
-        latest_ts_solar,
-    )
+    # The API serves the same LEFT JOIN (predictions driving) this page used
+    # to build in SQL, already merged and time-ascending - so no sort here.
+    dst = api_dataframe("/dst", {"interval": "1mo"})
+    next_prediction = api_get("/dst/next-prediction")
+    kp_val = float(api_get("/kp/latest")["Kp"])
+    dst_val = float(api_get("/dst/latest")["dst"])
+    solar_latest = api_get("/solar-wind/latest", {"columns": ["speed", "bz"]})
 
-    kp_val = float(kp["Kp"].iloc[0])
-    dst_val = float(dst_now["dst"].iloc[0])
-    sw_speed = float(solar_latest["speed"].iloc[0])
-    imf_bz = float(solar_latest["bz"].iloc[0])
+    sw_speed = float(solar_latest["speed"])
+    imf_bz = float(solar_latest["bz"])
 
-    # Grab values needed for titles before sorting
-    start_time = dst["time"].iloc[0]
-    next_pred = dst["dst_predictions"].iloc[0].round(2)
-    dst = dst.sort_values("time")
+    # The forward-looking prediction shown in the chart subtitle. It comes
+    # from its own endpoint rather than the merged frame because it's
+    # exactly the row that has no observed dst yet.
+    start_time = pd.Timestamp(next_prediction["time"])
+    next_pred = round(next_prediction["dst_predictions"], 2)
     kp_status, kp_color = _kp_severity(kp_val)
 
     # Dst chart

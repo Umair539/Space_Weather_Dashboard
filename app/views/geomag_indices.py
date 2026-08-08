@@ -2,28 +2,22 @@ import streamlit as st
 import altair as alt
 import pandas as pd
 from app_utils import (
+    api_dataframe,
     data_last_synced,
-    init_db,
-    get_latest_timestamp,
-    cached_query,
     github_link,
 )
-
-conn = init_db()
 
 st.title("Geomagnetic Indices 📡")
 
 intervals = {
-    "Last 24 Hours": "24 hours",
-    "Last Week": "7 days",
-    "Last Month": "1 month",
+    "Last 24 Hours": "24h",
+    "Last Week": "7d",
+    "Last Month": "1mo",
 }
 
 
 @st.fragment(run_every=120)
 def dst_section():
-    latest_ts = get_latest_timestamp(conn, "dst_predictions")
-
     cl1, cl2, cl3 = st.columns([1, 1, 1])
     with cl1:
         dst_range = st.radio(
@@ -35,16 +29,7 @@ def dst_section():
             label_visibility="collapsed",
         )
 
-    dst_interval = intervals[dst_range]
-
-    dst_query = f"""
-        SELECT p.time, d.dst, p.dst_predictions
-        FROM dst_predictions p
-        LEFT JOIN dst d ON p.time = d.time
-        WHERE p.time >= (SELECT MAX(time) FROM dst_predictions) - INTERVAL '{dst_interval}'
-        ORDER BY p.time ASC
-    """
-    plot_data = cached_query(conn, dst_query, latest_ts)
+    plot_data = api_dataframe("/dst", {"interval": intervals[dst_range]})
 
     start_str = plot_data["time"].iloc[0].strftime("%b %d, %H:%M")
     end_str = plot_data["time"].iloc[-1].strftime("%b %d, %H:%M")
@@ -59,7 +44,7 @@ def dst_section():
             unsafe_allow_html=True,
         )
         st.markdown(
-            f"<div style='text-align:right; font-style:italic; color:gray;'>{data_last_synced(conn)}</div>",
+            f"<div style='text-align:right; font-style:italic; color:gray;'>{data_last_synced()}</div>",
             unsafe_allow_html=True,
         )
 
@@ -120,8 +105,6 @@ def dst_section():
 
 @st.fragment(run_every=120)
 def kp_section():
-    latest_ts = get_latest_timestamp(conn, "kp")
-
     cl1, cl2, cl3 = st.columns([1, 1, 1])
     with cl1:
         kp_range = st.radio(
@@ -133,15 +116,7 @@ def kp_section():
             label_visibility="collapsed",
         )
 
-    kp_interval = intervals[kp_range]
-
-    query_kp = f"""
-        SELECT time, kp."Kp"
-        FROM kp
-        WHERE time >= (SELECT MAX(time) FROM kp) - INTERVAL '{kp_interval}'
-        ORDER BY time ASC
-    """
-    plot_data_kp = cached_query(conn, query_kp, latest_ts)
+    plot_data_kp = api_dataframe("/kp", {"interval": intervals[kp_range]})
 
     start_str_kp = plot_data_kp["time"].iloc[0].strftime("%b %d, %H:%M")
     end_str_kp = plot_data_kp["time"].iloc[-1].strftime("%b %d, %H:%M")
@@ -156,7 +131,7 @@ def kp_section():
             unsafe_allow_html=True,
         )
         st.markdown(
-            f"<div style='text-align:right; font-style:italic; color:gray;'>{data_last_synced(conn)}</div>",
+            f"<div style='text-align:right; font-style:italic; color:gray;'>{data_last_synced()}</div>",
             unsafe_allow_html=True,
         )
 

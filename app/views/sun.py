@@ -1,14 +1,10 @@
 import streamlit as st
 import altair as alt
 from app_utils import (
+    api_dataframe,
     data_last_synced,
-    init_db,
-    get_latest_timestamp,
-    cached_query,
     github_link,
 )
-
-conn = init_db()
 
 st.title("Solar Activity ☀️")
 
@@ -95,8 +91,6 @@ def solar_images_section():
 
 @st.fragment
 def sunspot_plot_section():
-    latest_ts = get_latest_timestamp(conn, "ssn")
-
     cl1, cl2, cl3 = st.columns([1, 1, 1])
     with cl1:
         ssn_range = st.radio(
@@ -108,21 +102,16 @@ def sunspot_plot_section():
         )
 
     if ssn_range == "Last Month":
-        query = "SELECT time, swpc_ssn FROM ssn WHERE time >= (SELECT MAX(time) FROM ssn) - INTERVAL '1 month' ORDER BY time ASC"
+        plot_data = api_dataframe("/ssn/raw", {"interval": "1mo"})
         fmt = "%b %d %Y"
     elif ssn_range == "Last Year":
-        query = "SELECT time, swpc_ssn FROM ssn WHERE time >= (SELECT MAX(time) FROM ssn) - INTERVAL '1 year' ORDER BY time ASC"
+        plot_data = api_dataframe("/ssn/raw", {"interval": "1y"})
         fmt = "%b %Y"
     else:
-        query = """
-        SELECT DATE_TRUNC('month', time) AS time, AVG(swpc_ssn) AS swpc_ssn
-        FROM ssn
-        GROUP BY DATE_TRUNC('month', time)
-        ORDER BY time ASC
-        """
+        # Monthly means, pre-aggregated by the API in place of the old
+        # DATE_TRUNC('month', ...) GROUP BY.
+        plot_data = api_dataframe("/ssn/full-cycle")
         fmt = "%Y"
-
-    plot_data = cached_query(conn, query, latest_ts)
 
     start_str = plot_data["time"].iloc[0].strftime("%b %d %Y")
     end_str = plot_data["time"].iloc[-1].strftime("%b %d %Y")
@@ -137,7 +126,7 @@ def sunspot_plot_section():
             unsafe_allow_html=True,
         )
         st.markdown(
-            f"<div style='text-align:right; font-style:italic; color:gray;'>{data_last_synced(conn)}</div>",
+            f"<div style='text-align:right; font-style:italic; color:gray;'>{data_last_synced()}</div>",
             unsafe_allow_html=True,
         )
 

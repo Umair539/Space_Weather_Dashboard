@@ -84,7 +84,7 @@ This project is engineered as a decoupled system where data ingestion and visual
 ### 7. Development Environment
 * A parallel dev environment mirrors the production pipeline for testing purposes.
 * The dev branch runs the pipeline on GitHub Actions (in contrast to AWS Lambda/EventBridge in prod), stores raw data in a Cloudflare R2 bucket, and writes to a separate dev Supabase instance, keeping test runs fully isolated from production data.
-* The Streamlit frontend can also be run locally against the dev database for UI testing without affecting the live dashboard.
+* The Streamlit frontend can also be run locally for UI testing without affecting the live dashboard. It reads exclusively from the FastAPI caching layer (`run_api`, `API_BASE_URL`), holding no database connection of its own -- so running it end to end doubles as a live check that every API endpoint the planned React frontend will use returns what the charts expect.
 
 ---
 ## Data Source and Description

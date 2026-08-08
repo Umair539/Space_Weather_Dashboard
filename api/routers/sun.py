@@ -17,6 +17,7 @@ def get_ssn_raw(interval: Literal["1mo", "1y"] = "1mo"):
 @router.get("/full-cycle")
 def get_ssn_full_cycle():
     """app/views/sun.py "Last Full Cycle" - monthly means over all retained
-    history. Only complete months are published, so the in-progress month
-    doesn't appear as an artificially low partial average."""
+    history. The in-progress month is withheld so it can't show up as an
+    artificially low partial average; past months publish over whatever
+    days exist, since their gaps are permanent (see recompute_months)."""
     return store.get_derived("ssn_monthly")

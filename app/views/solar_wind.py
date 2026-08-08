@@ -1,14 +1,10 @@
 import streamlit as st
 import altair as alt
 from app_utils import (
+    api_dataframe,
     data_last_synced,
-    init_db,
-    get_latest_timestamp,
-    cached_query,
     github_link,
 )
-
-conn = init_db()
 
 PARAM_COLORS = {
     "Speed": "#00bcd4",
@@ -32,8 +28,6 @@ st.title("Solar Wind Properties 🛰️")
 
 @st.fragment(run_every=120)
 def solar_wind_section():
-    latest_ts = get_latest_timestamp(conn, "solar")
-
     columns = [c.capitalize() for c in FEATURE_COLUMNS]
 
     features = st.multiselect(
@@ -49,48 +43,26 @@ def solar_wind_section():
             label_visibility="collapsed",
         )
 
-    intervals = {
-        "Last 24 Hours": "24 hours",
-        "Last Week": "7 days",
-        "Last Month": "1 month",
-    }
-    interval = intervals[time_range]
-
+    # "Last Month" is served pre-aggregated to hourly means by the API (the
+    # same complete-hours-only rule the old HAVING COUNT(*) = 60 enforced),
+    # so both branches now differ only by endpoint - and both label the
+    # timestamp column "time", unlike the old "hourly_bucket" alias.
+    params = {"columns": [f.lower() for f in features]}
     if time_range == "Last Month":
-        cols_agg = "".join(
-            f", round(avg({col})::numeric, 2) AS {col.lower()}" for col in features
-        )
-        data_query = (
-            f"SELECT date_trunc('hour', time) AS hourly_bucket"
-            f"{cols_agg}"
-            f" FROM solar"
-            f" WHERE time >= (SELECT MAX(time) FROM solar) - INTERVAL '{interval}'"
-            f" GROUP BY hourly_bucket"
-            f" HAVING COUNT(*) = 60"
-            f" ORDER BY hourly_bucket ASC;"
-        )
-        time_col = "hourly_bucket"
+        plot_data = api_dataframe("/solar-wind/monthly", params)
     else:
-        cols_str = ", ".join(["time"] + features)
-        data_query = (
-            f"SELECT {cols_str}"
-            f" FROM solar"
-            f" WHERE time >= (SELECT MAX(time) FROM solar) - INTERVAL '{interval}'"
-            f" ORDER BY time ASC;"
-        )
-        time_col = "time"
+        params["interval"] = {"Last 24 Hours": "24h", "Last Week": "7d"}[time_range]
+        plot_data = api_dataframe("/solar-wind/raw", params)
 
-    plot_data = cached_query(conn, data_query, latest_ts)
-
-    start_str = plot_data[time_col].iloc[0].strftime("%b %d, %H:%M")
-    end_str = plot_data[time_col].iloc[-1].strftime("%b %d, %H:%M")
+    start_str = plot_data["time"].iloc[0].strftime("%b %d, %H:%M")
+    end_str = plot_data["time"].iloc[-1].strftime("%b %d, %H:%M")
     with cl2:
         st.markdown(
             f"<div style='text-align:right;'>Displaying data from {start_str} to {end_str}</div>",
             unsafe_allow_html=True,
         )
         st.markdown(
-            f"<div style='text-align:right; font-style:italic; color:gray;'>{data_last_synced(conn)}</div>",
+            f"<div style='text-align:right; font-style:italic; color:gray;'>{data_last_synced()}</div>",
             unsafe_allow_html=True,
         )
 
@@ -116,7 +88,7 @@ def solar_wind_section():
             .mark_line(color=PARAM_COLORS.get(feature, "#00bcd4"))
             .encode(
                 x=alt.X(
-                    f"{time_col}:T",
+                    "time:T",
                     axis=alt.Axis(
                         labelAngle=0,
                         tickCount=6,

@@ -1,5 +1,6 @@
 import streamlit as st
 import os
+import pandas as pd
 import requests
 import sys
 from pathlib import Path
@@ -14,48 +15,61 @@ from src.utils.logging_utils import setup_logger
 logger = setup_logger("app", "app.log")
 
 
-@st.cache_data(ttl=120)
-def data_last_synced(_conn):
-    # cached for 120s
-    # ttl=0 on conn.query so @st.cache_data is the only caching layer
+# This dashboard reads exclusively from the FastAPI layer (api/) - it holds
+# no database connection at all. That is the point of this version: it
+# exercises every endpoint the React frontend will use, so the API can be
+# verified against a real client before that frontend is built. It isn't
+# intended for production deployment, since running both services costs
+# roughly double for a UI the React app replaces.
+def api_base_url():
+    return (
+        os.environ.get("API_BASE_URL")
+        or st.secrets.get("API_BASE_URL", "http://localhost:8000")
+    ).rstrip("/")
+
+
+# 60s is deliberately shorter than every poll interval in api/db.py (30-300s)
+# so this layer never becomes the reason data looks stale - the API's own
+# cache is the real one, this just avoids re-requesting on every rerun and
+# on every 120s fragment refresh.
+@st.cache_data(ttl=60, show_spinner=False)
+def api_get(path, params=None):
     try:
-        result = _conn.query("SELECT last_synced FROM metadata", ttl=0)
-        last_synced = result.iloc[0].iloc[0].strftime("%d %b, %H:%M")
-        return f"Data last synced at {last_synced} UTC"
-    except Exception:
-        return "Error fetching last synced"
-
-
-@st.cache_data(ttl=120)
-def get_latest_timestamp(_conn, table):
-    # cheap MAX(time) check cached for 120s
-    # ttl=0 so conn.query doesn't add a second caching layer on top
-    result = _conn.query(f"SELECT MAX(time) FROM {table}", ttl=0)
-    return result.iloc[0, 0]
-
-
-@st.cache_data
-def cached_query(_conn, query, latest_ts):
-    # cached forever until version MAX(time) changes
-    # conn.query ttl=0 because @st.cache_data already guarantees this only
-    # runs on a cache miss, so there's nothing for conn.query to cache
-    try:
-        return _conn.query(query, ttl=0)
+        response = requests.get(f"{api_base_url()}{path}", params=params, timeout=10)
+        response.raise_for_status()
+        return response.json()
     except Exception as e:
-        st.info("Connecting to database. Please wait...")
-        logger.error(f"Database query failed: {e}")
+        logger.error(f"API request failed for {path}: {e}")
+        st.error(
+            f"Could not reach the API at {api_base_url()}. "
+            "Start it with `run_api` or set API_BASE_URL."
+        )
         st.stop()
 
 
-def init_db():
-    supabase_db_url = os.environ.get("DATABASE_READ_URL") or st.secrets.get(
-        "DATABASE_READ_URL"
-    )
-    return st.connection(
-        "supabase_db",
-        type="sql",
-        url=supabase_db_url,
-    )
+def api_dataframe(path, params=None):
+    # Every endpoint returns "time" as an ISO string; the charts and the
+    # date formatting in the views both need real timestamps.
+    frame = pd.DataFrame(api_get(path, params))
+    if not frame.empty:
+        frame["time"] = pd.to_datetime(frame["time"])
+    return frame
+
+
+@st.cache_data(ttl=120, show_spinner=False)
+def data_last_synced():
+    # /health reports each table's true last-changed time: the ETL's upsert
+    # only bumps updated_at when a value actually differs, so this moves
+    # only on real changes. The old metadata.last_synced was rewritten on
+    # every ETL run whether anything changed or not, and is deliberately
+    # not exposed by the API.
+    try:
+        tables = api_get("/health")["tables"]
+        stamps = [t["last_updated_at"] for t in tables.values() if t["last_updated_at"]]
+        latest = max(pd.to_datetime(stamps))
+        return f"Data last updated at {latest.strftime('%d %b, %H:%M')} UTC"
+    except Exception:
+        return "Error fetching last updated"
 
 
 def github_link():
