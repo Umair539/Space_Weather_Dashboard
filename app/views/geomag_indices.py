@@ -40,7 +40,7 @@ def dst_section():
     dst_query = f"""
         SELECT p.time, d.dst, p.dst_predictions
         FROM dst_predictions p
-        INNER JOIN dst d ON p.time = d.time
+        LEFT JOIN dst d ON p.time = d.time
         WHERE p.time >= (SELECT MAX(time) FROM dst_predictions) - INTERVAL '{dst_interval}'
         ORDER BY p.time ASC
     """
