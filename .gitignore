@@ -51,3 +51,9 @@ tests/unit_tests/utils/*
 tests/unit_tests/api/*
 tests/component_tests/api/*
 tests/integration_tests/api/*
+
+# react frontend
+web/node_modules/
+web/dist/
+web/.env
+web/*.tsbuildinfo
