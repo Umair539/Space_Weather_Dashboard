@@ -1,82 +1,90 @@
 import { useMemo, useState } from "react";
 
 import { api, type DstRow, type GeomagInterval, type KpRow } from "../api";
-import { Expander, RangeCaption, RangeSelector } from "../components/Controls";
+import { About, Segmented, Span } from "../components/Controls";
+import { PageHeader, Panel } from "../components/Panel";
 import { Async, ErrorPanel } from "../components/States";
 import { TimeSeriesChart, toPoints } from "../components/TimeSeriesChart";
 import { formatUtc, parseApiTime, useApi, useLastUpdated } from "../hooks";
 import { dstColors, singleSeries } from "../theme";
 
 const RANGES = [
-  { value: "24h", label: "Last 24 Hours" },
-  { value: "7d", label: "Last Week" },
-  { value: "1mo", label: "Last Month" },
+  { value: "24h", label: "24 hours" },
+  { value: "7d", label: "7 days" },
+  { value: "1mo", label: "30 days" },
 ] as const;
 
 export function GeomagIndices() {
+  const lastUpdated = useLastUpdated();
+
   return (
     <>
-      <h1>Geomagnetic Indices 📡</h1>
-      <DstSection />
-      <KpSection />
+      <PageHeader
+        title="Geomagnetic Indices"
+        subtitle="How strongly Earth's magnetic field is currently being disturbed."
+        meta={lastUpdated}
+      />
+      <div className="stack">
+        <DstPanel />
+        <KpPanel />
+      </div>
+      <div style={{ marginTop: 16 }} className="stack">
+        <About title="About the Dst index">
+          The Disturbance Storm Time index measures geomagnetic storm severity in
+          nanoTeslas, from the average horizontal magnetic field at four
+          near-equatorial observatories, hourly. It tracks the growth and recovery of
+          the ring current in Earth's magnetosphere — the lower the value, the more
+          energy is stored there. Below −50 nT indicates a moderate storm, below
+          −100 nT a severe one. The chart compares observations against the model's
+          predictions.
+        </About>
+        <About title="About the Kp index">
+          The Kp index is a geomagnetic activity index derived from magnetometers
+          around the world, measured every three hours. It is quasi-logarithmic from
+          0 to 9, where 5 indicates a moderate storm, 7 a severe storm, and 9 an
+          extreme storm.
+        </About>
+      </div>
     </>
   );
 }
 
-function DstSection() {
-  const lastUpdated = useLastUpdated();
-  // Defaults to "Last Month", matching the Streamlit radio's index=2.
+function DstPanel() {
+  // Defaults to 30 days, matching the Streamlit radio's index=2.
   const [range, setRange] = useState<GeomagInterval>("1mo");
   const state = useApi((s) => api.dst(range, s), [range], 120_000);
 
   return (
-    <section aria-labelledby="dst-heading" style={{ marginTop: 8 }}>
-      <div className="controls-row">
-        <RangeSelector
-          options={RANGES}
-          value={range}
-          onChange={setRange}
-          legend="Dst time range"
-        />
-        <h2 id="dst-heading" style={{ fontSize: 20, textAlign: "center", margin: 0 }}>
-          Dst Index
-        </h2>
-        <Async state={state} height={20}>
-          {(rows) => (
-            <RangeCaption
-              from={caption(rows.at(0)?.time)}
-              to={caption(rows.at(-1)?.time)}
-              lastUpdated={lastUpdated}
+    <Panel
+      title="Dst Index"
+      right={
+        <>
+          {state.data?.length ? (
+            <Span
+              from={caption(state.data.at(0)?.time)}
+              to={caption(state.data.at(-1)?.time)}
             />
-          )}
-        </Async>
-      </div>
-
+          ) : null}
+          <Segmented
+            options={RANGES}
+            value={range}
+            onChange={setRange}
+            legend="Dst time range"
+          />
+        </>
+      }
+    >
       <Async state={state}>{(rows) => <DstChart rows={rows} />}</Async>
-
-      <Expander title="More information on Dst index">
-        The Disturbance Storm Time (Dst) index is a measure of geomagnetic
-        activity used to assess the severity of geomagnetic storms. It is
-        expressed in nanoTeslas and is based on the average value of the
-        horizontal component of the Earth's magnetic field measured at four
-        near-equatorial geomagnetic observatories at hourly intervals. It
-        measures the growth and recovery of the ring current in the Earth's
-        magnetosphere. The lower these values get, the more energy is stored in
-        Earth's magnetosphere. If the Dst index drops below -50 nT, this
-        indicates a moderate storm is taking place, and below -100 nT indicates
-        a severe storm taking place. The chart compares these observed
-        measurements with the corresponding predicted values.
-      </Expander>
-    </section>
+    </Panel>
   );
 }
 
 function DstChart({ rows }: { rows: DstRow[] }) {
   const series = useMemo(
     () => [
-      { name: "Observed Dst", color: dstColors.observed, points: toPoints(rows, "dst") },
+      { name: "Observed", color: dstColors.observed, points: toPoints(rows, "dst") },
       {
-        name: "Model Prediction",
+        name: "Model prediction",
         color: dstColors.predicted,
         points: toPoints(rows, "dst_predictions"),
       },
@@ -96,52 +104,38 @@ function DstChart({ rows }: { rows: DstRow[] }) {
       tickFormat="%b %d, %H:%M"
       yMin={Math.min(...values) - 5}
       yMax={Math.max(...values) + 5}
+      height={340}
       ariaLabel="Observed and predicted Dst index"
     />
   );
 }
 
-function KpSection() {
-  const lastUpdated = useLastUpdated();
+function KpPanel() {
   const [range, setRange] = useState<GeomagInterval>("1mo");
   const state = useApi((s) => api.kp(range, s), [range], 120_000);
 
   return (
-    <section aria-labelledby="kp-heading" style={{ marginTop: 32 }}>
-      <div className="controls-row">
-        <RangeSelector
-          options={RANGES}
-          value={range}
-          onChange={setRange}
-          legend="Kp time range"
-        />
-        <h2 id="kp-heading" style={{ fontSize: 20, textAlign: "center", margin: 0 }}>
-          Kp Index
-        </h2>
-        <Async state={state} height={20}>
-          {(rows) => (
-            <RangeCaption
-              from={caption(rows.at(0)?.time)}
-              to={caption(rows.at(-1)?.time)}
-              lastUpdated={lastUpdated}
+    <Panel
+      title="Kp Index"
+      right={
+        <>
+          {state.data?.length ? (
+            <Span
+              from={caption(state.data.at(0)?.time)}
+              to={caption(state.data.at(-1)?.time)}
             />
-          )}
-        </Async>
-      </div>
-
+          ) : null}
+          <Segmented
+            options={RANGES}
+            value={range}
+            onChange={setRange}
+            legend="Kp time range"
+          />
+        </>
+      }
+    >
       <Async state={state}>{(rows) => <KpChart rows={rows} />}</Async>
-
-      <Expander title="More information on Kp index">
-        The Kp-index is a geomagnetic activity index based on data from
-        magnetometers around the world measured every 3 hours. The graph above
-        displays the observed Kp-value from the Planetary K-index of the NOAA
-        SWPC and can be used to make a rough estimate of the current global
-        geomagnetic conditions. It is a quasi-logarithmic index from 0 to 9
-        where a value of 5 indicates that a moderate storm is occuring, a value
-        of 7 indicates a severe storm is occuring, and a value of 9 indicates an
-        extreme storm is occuring.
-      </Expander>
-    </section>
+    </Panel>
   );
 }
 
@@ -157,6 +151,7 @@ function KpChart({ rows }: { rows: KpRow[] }) {
       tickFormat="%b %d, %H:%M"
       yMin={0}
       yMax={9}
+      height={340}
       ariaLabel="Kp index over time"
     />
   );

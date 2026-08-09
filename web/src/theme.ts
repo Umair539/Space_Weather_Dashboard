@@ -8,13 +8,20 @@
  * pairs.
  */
 
+/**
+ * Mirrors the custom properties in index.css. Canvas charts can't read CSS
+ * variables, so ECharts needs the literal values - these two must be kept
+ * in step.
+ */
 export const surface = {
-  bg: "#0d1117", // config.toml backgroundColor
-  panel: "#161b22", // config.toml secondaryBackgroundColor
-  border: "#30363d",
+  bg: "#0b0e14",
+  panel: "#12161f",
+  raised: "#1b212c",
+  border: "#232a36",
   text: "#e6edf3",
   muted: "#8b949e",
-  accent: "#ff6f00", // config.toml primaryColor
+  faint: "#6b7280",
+  accent: "#ff6f00",
 } as const;
 
 /**
@@ -63,11 +70,11 @@ export const dstColors = {
 /** Single-series charts (Kp, sunspot number) keep the original red. */
 export const singleSeries = "#ff0000";
 
-/** Kp gauge band fills - deep, desaturated so the needle stays dominant. */
+/** Kp gauge band fills - deep and desaturated so the value arc stays dominant. */
 export const gaugeBands: [number, number, string][] = [
-  [0, 4, "#0d2b0d"],
-  [4, 5, "#2d2200"],
-  [5, 7, "#2d1500"],
-  [7, 8, "#2d0000"],
-  [8, 9, "#200020"],
+  [0, 4, "#16281a"],
+  [4, 5, "#2d2408"],
+  [5, 7, "#2f1a08"],
+  [7, 8, "#2e1013"],
+  [8, 9, "#25102a"],
 ];

@@ -123,6 +123,11 @@ export function TimeSeriesChart({
         nameTextStyle: { color: surface.muted, fontSize: 12 },
         min: yMin,
         max: yMax,
+        // Fit the data instead of forcing a zero baseline. Solar wind speed
+        // lives around 300-500 km/s and never approaches zero, so anchoring
+        // at zero spent most of the plot on empty space. Series where zero
+        // is meaningful (Kp, Dst) pass explicit bounds instead.
+        scale: yMin === undefined && yMax === undefined,
         axisLabel: { color: surface.muted, fontSize: 11 },
         axisLine: { show: false },
         // Recessive grid: present enough to read a value against, quiet

@@ -37,39 +37,39 @@ export function KpGauge({ value }: { value: number }) {
           startAngle: 180,
           endAngle: 0,
           // A half-circle only fills the top of its box, so the centre sits
-          // low and the radius is generous - otherwise the dial floats in a
-          // block of dead space.
-          center: ["50%", "82%"],
-          radius: "96%",
+          // low. The radius leaves headroom for the tick labels, which are
+          // drawn inside the band but still need clearance at 0 and 9.
+          center: ["50%", "78%"],
+          radius: "82%",
           splitNumber: MAX,
-          axisLine: { lineStyle: { width: 30, color: stops } },
-          // The value arc. Sits inside the band ring so both stay legible.
+          axisLine: { lineStyle: { width: 24, color: stops } },
+          // The value arc. Sits over the band ring so both stay legible.
           progress: {
             show: true,
-            width: 30,
+            width: 24,
             itemStyle: { color, opacity: 0.95 },
           },
           pointer: { show: false },
           axisTick: {
-            distance: -30,
-            length: 5,
+            distance: -24,
+            length: 4,
             lineStyle: { color: surface.border, width: 1 },
           },
           splitLine: {
-            distance: -30,
-            length: 10,
+            distance: -24,
+            length: 8,
             lineStyle: { color: surface.border, width: 1 },
           },
           axisLabel: {
-            distance: -22,
-            color: surface.muted,
-            fontSize: 11,
+            distance: -18,
+            color: surface.faint,
+            fontSize: 10,
             formatter: (v: number) => String(Math.round(v)),
           },
           detail: {
             valueAnimation: false,
-            offsetCenter: [0, "-8%"],
-            fontSize: 52,
+            offsetCenter: [0, "-6%"],
+            fontSize: 44,
             fontWeight: 700,
             color,
             formatter: (v: number) => v.toFixed(2),

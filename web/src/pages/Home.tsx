@@ -1,13 +1,14 @@
 import { useMemo } from "react";
 
-import { api } from "../api";
-import { KpGauge } from "../components/KpGauge";
+import { api, type DstRow } from "../api";
 import { MetricCard } from "../components/MetricCard";
+import { PageHeader, Panel } from "../components/Panel";
 import { Async, ChartSkeleton, ErrorPanel } from "../components/States";
+import { KpGauge } from "../components/KpGauge";
 import { TimeSeriesChart, toPoints } from "../components/TimeSeriesChart";
 import { formatUtc, parseApiTime, useApi, useLastUpdated } from "../hooks";
 import { bzSeverity, dstSeverity, kpSeverity, speedSeverity } from "../severity";
-import { dstColors, surface } from "../theme";
+import { dstColors } from "../theme";
 
 // Matches the 120s st.fragment(run_every=...) on the Streamlit home page.
 const REFRESH_MS = 120_000;
@@ -19,81 +20,19 @@ export function Home() {
   const prediction = useApi((s) => api.dstNextPrediction(s), [], REFRESH_MS);
   const dstNow = useApi((s) => api.dstLatest(s), [], REFRESH_MS);
   const kpNow = useApi((s) => api.kpLatest(s), [], REFRESH_MS);
-  const solarNow = useApi(
-    (s) => api.solarWindLatest(["speed", "bz"], s),
-    [],
-    REFRESH_MS,
-  );
+  const solarNow = useApi((s) => api.solarWindLatest(["speed", "bz"], s), [], REFRESH_MS);
 
   return (
     <>
-      <h1>Space Weather Dashboard 🪐</h1>
-      <p style={{ color: surface.text, maxWidth: "68ch" }}>
-        This Space Weather Dashboard provides frequently updated data on key
-        space environment properties, including solar wind parameters and
-        geomagnetic indices, collected from the{" "}
-        <a
-          href="https://www.swpc.noaa.gov"
-          target="_blank"
-          rel="noreferrer"
-          style={{ color: surface.accent }}
-        >
-          NOAA Space Weather Prediction Center
-        </a>
-        .
-      </p>
+      <PageHeader
+        title="Current Conditions"
+        subtitle="Solar wind parameters and geomagnetic indices, updated continuously from the NOAA Space Weather Prediction Center."
+        meta={lastUpdated}
+      />
 
-      <div
-        style={{
-          textAlign: "right",
-          fontStyle: "italic",
-          color: surface.muted,
-          fontSize: 13,
-        }}
-      >
-        {lastUpdated}
-      </div>
-
-      <section aria-labelledby="dst-heading" style={{ marginTop: 8 }}>
-        <div style={{ textAlign: "center" }}>
-          <h2 id="dst-heading" style={{ fontSize: 24, marginBottom: 4 }}>
-            Dst Index — Last Month
-          </h2>
-          <div style={{ fontSize: 14, color: surface.muted }}>
-            {prediction.data
-              ? `Predicted: ${prediction.data.dst_predictions.toFixed(2)} nT | ${predictionWindow(
-                  prediction.data.time,
-                )} UTC`
-              : " "}
-          </div>
-        </div>
-        <Async state={dst}>{(rows) => <DstChart rows={rows} />}</Async>
-      </section>
-
-      <section aria-labelledby="kp-heading" style={{ marginTop: 24 }}>
-        <div style={{ textAlign: "center" }}>
-          <h2 id="kp-heading" style={{ fontSize: 24, marginBottom: 4 }}>
-            Kp Index
-          </h2>
-          <div
-            style={{
-              fontSize: 14,
-              textTransform: "uppercase",
-              letterSpacing: 1,
-              color: kpNow.data ? kpSeverity(kpNow.data.Kp).color : surface.muted,
-            }}
-          >
-            {kpNow.data ? kpSeverity(kpNow.data.Kp).label : " "}
-          </div>
-        </div>
-        <Async state={kpNow} height={350}>
-          {(row) =>
-            row ? <KpGauge value={row.Kp} /> : <ErrorPanel message="No Kp data." />
-          }
-        </Async>
-      </section>
-
-      <div className="metric-grid" style={{ marginTop: 12 }}>
+      {/* The four readings lead, before any chart - they answer "what is it
+          doing right now", which the charts then put in context. */}
+      <div className="metric-grid">
         {kpNow.data && (
           <MetricCard
             label="Kp Index"
@@ -127,17 +66,46 @@ export function Home() {
         )}
       </div>
 
-      <Advisory />
+      <div className="stack" style={{ marginTop: 16 }}>
+        <Panel
+          title="Dst Index"
+          subtitle="last 30 days"
+          right={
+            prediction.data ? (
+              <span>
+                next hour{" "}
+                <strong style={{ color: "var(--text)", fontVariantNumeric: "tabular-nums" }}>
+                  {prediction.data.dst_predictions.toFixed(2)} nT
+                </strong>{" "}
+                · {predictionWindow(prediction.data.time)} UTC
+              </span>
+            ) : null
+          }
+        >
+          <Async state={dst}>{(rows) => <DstChart rows={rows} />}</Async>
+        </Panel>
+
+        <div className="split">
+          <Panel title="Planetary K-index" subtitle="now">
+            <Async state={kpNow} height={290}>
+              {(row) =>
+                row ? <KpGauge value={row.Kp} /> : <ErrorPanel message="No Kp data." />
+              }
+            </Async>
+          </Panel>
+          <Advisory />
+        </div>
+      </div>
     </>
   );
 }
 
-function DstChart({ rows }: { rows: import("../api").DstRow[] }) {
+function DstChart({ rows }: { rows: DstRow[] }) {
   const series = useMemo(
     () => [
-      { name: "Observed Dst", color: dstColors.observed, points: toPoints(rows, "dst") },
+      { name: "Observed", color: dstColors.observed, points: toPoints(rows, "dst") },
       {
-        name: "Model Prediction",
+        name: "Model prediction",
         color: dstColors.predicted,
         points: toPoints(rows, "dst_predictions"),
       },
@@ -145,8 +113,8 @@ function DstChart({ rows }: { rows: import("../api").DstRow[] }) {
     [rows],
   );
 
-  // Padded 5 either side, matching the Altair scale domain - and computed
-  // across both series so neither can leave the frame.
+  // Padded 5 either side and computed across both series, so neither can
+  // leave the frame.
   const values = rows
     .flatMap((r) => [r.dst, r.dst_predictions])
     .filter((v): v is number => v !== null);
@@ -164,7 +132,7 @@ function DstChart({ rows }: { rows: import("../api").DstRow[] }) {
   );
 }
 
-/** "08 Aug 19:00 - 20:00" - predictions are for the hour they open. */
+/** "09 Aug 19:00 – 20:00" - predictions are for the hour they open. */
 function predictionWindow(iso: string): string {
   const start = parseApiTime(iso);
   const end = new Date(start.getTime() + 3_600_000);
@@ -173,7 +141,7 @@ function predictionWindow(iso: string): string {
     month: "short",
     hour: "2-digit",
     minute: "2-digit",
-  })} – ${formatUtc(end, { hour: "2-digit", minute: "2-digit" })}`;
+  })}–${formatUtc(end, { hour: "2-digit", minute: "2-digit" })}`;
 }
 
 function signed(value: number, digits: number): string {
@@ -202,33 +170,14 @@ function Advisory() {
   );
 
   return (
-    <section aria-labelledby="advisory-heading" style={{ marginTop: 32 }}>
-      <h2 id="advisory-heading" style={{ fontSize: 20 }}>
-        Official SWPC Advisory
-      </h2>
+    <Panel title="SWPC Advisory Outlook" right={<span>NOAA / SWPC</span>}>
       {state.data === undefined && !state.error ? (
-        <ChartSkeleton height={120} />
+        <ChartSkeleton height={140} />
       ) : (
-        <pre
-          style={{
-            border: `1px solid ${surface.border}`,
-            borderRadius: 8,
-            padding: 16,
-            background: `${surface.panel}80`,
-            color: surface.text,
-            fontSize: 12.5,
-            lineHeight: 1.5,
-            overflowX: "auto",
-            whiteSpace: "pre-wrap",
-            margin: 0,
-          }}
-        >
+        <pre className="advisory">
           {state.error ? "Advisory temporarily unavailable." : state.data}
         </pre>
       )}
-      <p style={{ fontSize: 12, color: surface.muted, marginTop: 6 }}>
-        Source: NOAA/SWPC Advisory Outlook
-      </p>
-    </section>
+    </Panel>
   );
 }
