@@ -1,12 +1,20 @@
 import { useMemo, useState } from "react";
 
-import { SOLAR_COLUMNS, api, type SolarColumn, type SolarRow } from "../api";
+import {
+  SOLAR_COLUMNS,
+  api,
+  formatUtc,
+  paramColors,
+  parseApiTime,
+  useApi,
+  useLastUpdated,
+  type SolarColumn,
+  type SolarRow,
+} from "../app_utils";
 import { About, Chips, Segmented, Span } from "../components/Controls";
 import { PageHeader, Panel } from "../components/Panel";
 import { Async } from "../components/States";
 import { TimeSeriesChart, toPoints } from "../components/TimeSeriesChart";
-import { formatUtc, parseApiTime, useApi, useLastUpdated } from "../hooks";
-import { paramColors } from "../theme";
 
 const RANGES = [
   { value: "24h", label: "24 hours" },

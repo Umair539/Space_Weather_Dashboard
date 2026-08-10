@@ -1,8 +1,7 @@
 import type { EChartsCoreOption } from "echarts/core";
 import { useMemo } from "react";
 
-import { formatUtc, parseApiTime } from "../hooks";
-import { surface } from "../theme";
+import { formatUtc, parseApiTime, surface } from "../app_utils";
 import { EChart } from "./EChart";
 
 export interface Series {

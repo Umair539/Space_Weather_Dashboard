@@ -1,14 +1,23 @@
 import { useMemo } from "react";
 
-import { api, type DstRow } from "../api";
+import {
+  api,
+  bzSeverity,
+  dstColors,
+  dstSeverity,
+  formatUtc,
+  kpSeverity,
+  parseApiTime,
+  speedSeverity,
+  useApi,
+  useLastUpdated,
+  type DstRow,
+} from "../app_utils";
+import { KpGauge } from "../components/KpGauge";
 import { MetricCard } from "../components/MetricCard";
 import { PageHeader, Panel } from "../components/Panel";
 import { Async, ChartSkeleton, ErrorPanel } from "../components/States";
-import { KpGauge } from "../components/KpGauge";
 import { TimeSeriesChart, toPoints } from "../components/TimeSeriesChart";
-import { formatUtc, parseApiTime, useApi, useLastUpdated } from "../hooks";
-import { bzSeverity, dstSeverity, kpSeverity, speedSeverity } from "../severity";
-import { dstColors } from "../theme";
 
 // Matches the 120s st.fragment(run_every=...) on the Streamlit home page.
 const REFRESH_MS = 120_000;

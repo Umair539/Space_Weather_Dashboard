@@ -1,8 +1,7 @@
 import type { EChartsCoreOption } from "echarts/core";
 import { useMemo } from "react";
 
-import { kpSeverity } from "../severity";
-import { gaugeBands, surface } from "../theme";
+import { gaugeBands, kpSeverity, surface } from "../app_utils";
 import { EChart } from "./EChart";
 
 const MIN = 0;
@@ -21,7 +20,7 @@ export function KpGauge({ value }: { value: number }) {
 
   const option = useMemo<EChartsCoreOption>(() => {
     // ECharts wants cumulative fractions of the axis, Plotly wanted absolute
-    // ranges - convert so the band table stays readable in theme.ts.
+    // ranges - convert so the band table stays readable in app_utils.ts.
     const stops = gaugeBands.map(
       ([, end, fill]) => [(end - MIN) / (MAX - MIN), fill] as [number, string],
     );

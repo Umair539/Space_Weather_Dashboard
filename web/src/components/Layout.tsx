@@ -1,9 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Link, NavLink, Outlet, useLocation } from "react-router-dom";
 
-import { api } from "../api";
-import { useApi } from "../hooks";
-import { kpSeverity } from "../severity";
+import { api, kpSeverity, useApi } from "../app_utils";
 
 // url_path values match app/run_app.py's st.Page registrations, so links
 // into either dashboard resolve the same way.

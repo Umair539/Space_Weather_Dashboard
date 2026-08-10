@@ -1,4 +1,4 @@
-import type { Severity } from "../severity";
+import type { Severity } from "../app_utils";
 
 interface Props {
   label: string;
