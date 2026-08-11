@@ -545,7 +545,10 @@ button {
   color: var(--muted);
   font-size: 13.5px;
   line-height: 1.7;
-  max-width: 84ch;
+  /* No extra cap here - .page already bounds the line at 1240px, which is
+   * a sane overall reading width on its own. A second, stricter cap on top
+   * of that just left a dead gap next to text, unlike every other panel
+   * on the page (charts, images, metric cards), which fill edge to edge. */
 }
 
 /* ---------------------------------------------------------------- states */
