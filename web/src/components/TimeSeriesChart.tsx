@@ -31,36 +31,27 @@ const TICK_OPTIONS: Record<Props["tickFormat"], Intl.DateTimeFormatOptions> = {
 };
 
 const HOUR_MS = 3_600_000;
-const DAY_MS = 86_400_000;
-
-// Hour-level rounding only for the format that shows a time of day - a
-// day-level chart rounding to the hour would be pointless precision, and
-// an hourly chart rounding to the day would be far too coarse.
-const ROUND_UNIT_MS: Record<Props["tickFormat"], number> = {
-  "%b %d, %H:%M": HOUR_MS,
-  "%b %d %Y": DAY_MS,
-  "%b %Y": DAY_MS,
-  "%Y": DAY_MS,
-  "%d %b": DAY_MS,
-};
+const TICK_COUNT = 6;
 
 /**
- * Rounds the visible axis span outward to the nearest whole hour/day -
- * never inward, so real data is never clipped, only ever given a sliver
- * of extra margin. A rolling window (always "newest minus N") can start
- * or end at any arbitrary minute, which otherwise leaves the auto-picked
- * ticks landing anywhere between "right at the edge" and "hours short of
- * it" - purely by chance, and different every time new data polls in.
- * Rounding outward first gives ECharts' own tick placement a boundary
- * that's already a clean number to divide, instead of an arbitrary one.
+ * Explicit tick positions, anchored to whole hours near each true edge of
+ * the data, evenly spread between - as opposed to leaving the axis's own
+ * bounds untouched (they still match the real data exactly, so the line
+ * always fills the full width) and separately controlling where labels
+ * land within that.
  *
- * A window whose true edge already sits exactly on the unit (e.g. an
- * exact top-of-the-hour timestamp) rounds to itself - Math.floor/ceil on
- * an already-exact multiple is a no-op, so nothing is padded unless the
- * edge genuinely falls mid-unit.
+ * A rolling window (always "newest minus N") can start or end at any
+ * arbitrary minute, and ECharts' automatic tick algorithm doesn't know or
+ * care where the window's real edges are - it picks round hours aligned
+ * to its own absolute clock grid, which can land anywhere from right at
+ * an edge to hours short of it, by chance, differently every time new
+ * data polls in. This computes the tick values directly instead: the
+ * nearest hour at-or-after the true start, the nearest hour at-or-before
+ * the true end, and evenly interpolated (then hour-snapped) points
+ * between the two - so the first and last labelled ticks are always close
+ * to the edges, not wherever the absolute clock grid happens to fall.
  */
-function roundedBounds(series: Series[], tickFormat: Props["tickFormat"]) {
-  const unit = ROUND_UNIT_MS[tickFormat];
+function hourAnchoredTicks(series: Series[]): number[] | undefined {
   let min = Infinity;
   let max = -Infinity;
   for (const s of series) {
@@ -69,8 +60,18 @@ function roundedBounds(series: Series[], tickFormat: Props["tickFormat"]) {
       if (t > max) max = t;
     }
   }
-  if (!Number.isFinite(min) || !Number.isFinite(max)) return {};
-  return { min: Math.floor(min / unit) * unit, max: Math.ceil(max / unit) * unit };
+  if (!Number.isFinite(min) || !Number.isFinite(max)) return undefined;
+
+  const first = Math.ceil(min / HOUR_MS) * HOUR_MS;
+  const last = Math.floor(max / HOUR_MS) * HOUR_MS;
+  if (last <= first) return [min, max];
+
+  const ticks = new Set<number>();
+  for (let i = 0; i < TICK_COUNT; i++) {
+    const raw = first + ((last - first) * i) / (TICK_COUNT - 1);
+    ticks.add(Math.round(raw / HOUR_MS) * HOUR_MS);
+  }
+  return [...ticks].sort((a, b) => a - b);
 }
 
 export function TimeSeriesChart({
@@ -85,7 +86,7 @@ export function TimeSeriesChart({
   const option = useMemo<EChartsCoreOption>(() => {
     const label = (value: number) =>
       formatUtc(new Date(value), TICK_OPTIONS[tickFormat]);
-    const bounds = roundedBounds(series, tickFormat);
+    const ticks = hourAnchoredTicks(series);
 
     return {
       backgroundColor: "transparent",
@@ -96,8 +97,13 @@ export function TimeSeriesChart({
       // its width sits past the plot area - too little room here clips
       // that label against the container edge rather than wrapping or
       // hiding it.
+      // left/right both carry two jobs: left fits the y-axis's own numbers
+      // and rotated title, right has no furniture to fit at all - but both
+      // also need to hold half of whichever x-axis label sits nearest that
+      // edge, since ECharts centres a label on its tick rather than
+      // clamping it inside the plot area.
       grid: {
-        left: 64,
+        left: 72,
         right: 44,
         top: series.length > 1 ? 48 : 16,
         bottom: 44,
@@ -157,11 +163,18 @@ export function TimeSeriesChart({
       },
       xAxis: {
         type: "time",
-        min: bounds.min,
-        max: bounds.max,
-        axisLabel: { color: surface.muted, fontSize: 11, formatter: label, hideOverlap: true },
+        // No min/max override - the axis matches the real data exactly,
+        // so the line always fills the full width. Only which ticks get
+        // labelled is controlled, via customValues below.
+        axisLabel: {
+          color: surface.muted,
+          fontSize: 11,
+          formatter: label,
+          hideOverlap: true,
+          customValues: ticks,
+        },
+        axisTick: { customValues: ticks, lineStyle: { color: surface.border } },
         axisLine: { lineStyle: { color: surface.border } },
-        axisTick: { lineStyle: { color: surface.border } },
         splitLine: { show: false },
       },
       yAxis: {
