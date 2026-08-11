@@ -58,10 +58,6 @@ export interface SsnRow {
   time: string;
   swpc_ssn: number;
 }
-export interface Health {
-  status: "ok" | "warming_up";
-  tables: Record<string, { rows: number; last_updated_at: string | null }>;
-}
 
 export class ApiError extends Error {
   constructor(
@@ -161,8 +157,6 @@ export const api = {
 
   ssnFullCycle: (signal?: AbortSignal) =>
     get<SsnRow[]>("/ssn/full-cycle", undefined, signal),
-
-  health: (signal?: AbortSignal) => get<Health>("/health", undefined, signal),
 };
 
 export const apiBaseUrl = BASE;
@@ -231,31 +225,6 @@ export function useApi<T>(
   }, [...deps, refreshMs]);
 
   return state;
-}
-
-/**
- * "Data last updated at ..." - /health reports each table's true
- * last-changed time, which only moves on a genuine value change (the ETL
- * bumps updated_at only on IS DISTINCT FROM). metadata.last_synced was
- * rewritten every run regardless, which is why the API doesn't expose it.
- */
-export function useLastUpdated(): string {
-  const { data, error } = useApi((signal) => api.health(signal), [], 120_000);
-  if (error) return "Error fetching last updated";
-  if (!data) return "";
-
-  const stamps = Object.values(data.tables)
-    .map((t) => t.last_updated_at)
-    .filter((s): s is string => Boolean(s))
-    .map((s) => new Date(s).getTime());
-  if (!stamps.length) return "";
-
-  return `Data last updated at ${formatUtc(new Date(Math.max(...stamps)), {
-    day: "2-digit",
-    month: "short",
-    hour: "2-digit",
-    minute: "2-digit",
-  })} UTC`;
 }
 
 /**

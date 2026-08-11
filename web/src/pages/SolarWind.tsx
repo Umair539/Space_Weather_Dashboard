@@ -7,7 +7,6 @@ import {
   paramColors,
   parseApiTime,
   useApi,
-  useLastUpdated,
   type SolarColumn,
   type SolarRow,
 } from "../app_utils";
@@ -57,7 +56,6 @@ const OPTIONS = SOLAR_COLUMNS.map((c) => ({
 }));
 
 export function SolarWind() {
-  const lastUpdated = useLastUpdated();
   const [range, setRange] = useState<Range>("24h");
   const [features, setFeatures] = useState<SolarColumn[]>(["speed", "bz"]);
 
@@ -78,7 +76,7 @@ export function SolarWind() {
 
   return (
     <>
-      <PageHeader title={title} subtitle={subtitle} meta={lastUpdated} />
+      <PageHeader title={title} subtitle={subtitle} />
 
       <div className="toolbar">
         <Segmented

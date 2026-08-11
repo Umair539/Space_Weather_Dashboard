@@ -33,20 +33,11 @@ export function Panel({
   );
 }
 
-export function PageHeader({
-  title,
-  subtitle,
-  meta,
-}: {
-  title: string;
-  subtitle?: string;
-  meta?: ReactNode;
-}) {
+export function PageHeader({ title, subtitle }: { title: string; subtitle?: string }) {
   return (
     <div className="page-header">
       <h1 className="page-title">{title}</h1>
       {subtitle && <p className="page-sub">{subtitle}</p>}
-      {meta && <div className="page-meta">{meta}</div>}
     </div>
   );
 }

@@ -6,7 +6,6 @@ import {
   parseApiTime,
   singleSeries,
   useApi,
-  useLastUpdated,
   type SsnRow,
 } from "../app_utils";
 import { About, Segmented, Span } from "../components/Controls";
@@ -35,11 +34,9 @@ const RANGES = [
 type Range = (typeof RANGES)[number]["value"];
 
 export function SolarActivity() {
-  const lastUpdated = useLastUpdated();
-
   return (
     <>
-      <PageHeader title={title} subtitle={subtitle} meta={lastUpdated} />
+      <PageHeader title={title} subtitle={subtitle} />
       <div className="stack">
         <SolarImages />
         <SunspotPanel />

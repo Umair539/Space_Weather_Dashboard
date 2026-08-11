@@ -250,12 +250,6 @@ button {
   max-width: 68ch;
 }
 
-.page-meta {
-  color: var(--faint);
-  font-size: 12px;
-  margin-top: 10px;
-}
-
 /* ---------------------------------------------------------------- panels */
 .panel {
   background: var(--panel);

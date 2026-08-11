@@ -7,7 +7,6 @@ import {
   parseApiTime,
   singleSeries,
   useApi,
-  useLastUpdated,
   type DstRow,
   type GeomagInterval,
   type KpRow,
@@ -27,11 +26,9 @@ const RANGES = [
 ] as const;
 
 export function GeomagIndices() {
-  const lastUpdated = useLastUpdated();
-
   return (
     <>
-      <PageHeader title={title} subtitle={subtitle} meta={lastUpdated} />
+      <PageHeader title={title} subtitle={subtitle} />
       <div className="stack">
         <DstPanel />
         <KpPanel />

@@ -10,7 +10,6 @@ import {
   parseApiTime,
   speedSeverity,
   useApi,
-  useLastUpdated,
   type DstRow,
 } from "../app_utils";
 import { KpGauge } from "../components/KpGauge";
@@ -26,8 +25,6 @@ const { title, subtitle } = content.pages.home;
 const REFRESH_MS = 120_000;
 
 export function Home() {
-  const lastUpdated = useLastUpdated();
-
   const dst = useApi((s) => api.dst("1mo", s), [], REFRESH_MS);
   const prediction = useApi((s) => api.dstNextPrediction(s), [], REFRESH_MS);
   const dstNow = useApi((s) => api.dstLatest(s), [], REFRESH_MS);
@@ -36,7 +33,7 @@ export function Home() {
 
   return (
     <>
-      <PageHeader title={title} subtitle={subtitle} meta={lastUpdated} />
+      <PageHeader title={title} subtitle={subtitle} />
 
       {/* The four readings lead, before any chart - they answer "what is it
           doing right now", which the charts then put in context. */}
