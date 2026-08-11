@@ -1,6 +1,6 @@
 {
   "site": {
-    "name": "Space Weather",
+    "name": "Space Weather Dashboard",
     "brandEmoji": "🪐",
     "nav": [
       { "path": "/", "label": "Home", "icon": "◆" },
