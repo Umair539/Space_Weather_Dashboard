@@ -31,27 +31,41 @@ const TICK_OPTIONS: Record<Props["tickFormat"], Intl.DateTimeFormatOptions> = {
 };
 
 const HOUR_MS = 3_600_000;
+const DAY_MS = 86_400_000;
 const TICK_COUNT = 6;
 
+// The unit ticks anchor to - whole hours for the chart that shows a time
+// of day, whole days (midnight) for every date-only chart, matching what
+// each format can actually display: a "%d %b" tick sitting at 14:00 would
+// still just print "04 Aug", so hour-precision there conveys nothing a
+// viewer can see - midnight is the round number that format can show.
+const ANCHOR_UNIT_MS: Record<Props["tickFormat"], number> = {
+  "%b %d, %H:%M": HOUR_MS,
+  "%b %d %Y": DAY_MS,
+  "%b %Y": DAY_MS,
+  "%Y": DAY_MS,
+  "%d %b": DAY_MS,
+};
+
 /**
- * Explicit tick positions, anchored to whole hours near each true edge of
- * the data, evenly spread between - as opposed to leaving the axis's own
- * bounds untouched (they still match the real data exactly, so the line
- * always fills the full width) and separately controlling where labels
- * land within that.
+ * Explicit tick positions, anchored near each true edge of the data on a
+ * round unit, evenly spread between - as opposed to leaving the axis's
+ * own bounds untouched (they still match the real data exactly, so the
+ * line always fills the full width) and separately controlling where
+ * labels land within that.
  *
  * A rolling window (always "newest minus N") can start or end at any
  * arbitrary minute, and ECharts' automatic tick algorithm doesn't know or
- * care where the window's real edges are - it picks round hours aligned
- * to its own absolute clock grid, which can land anywhere from right at
- * an edge to hours short of it, by chance, differently every time new
- * data polls in. This computes the tick values directly instead: the
- * nearest hour at-or-after the true start, the nearest hour at-or-before
- * the true end, and evenly interpolated (then hour-snapped) points
- * between the two - so the first and last labelled ticks are always close
- * to the edges, not wherever the absolute clock grid happens to fall.
+ * care where the window's real edges are - it picks ticks aligned to its
+ * own absolute clock grid, which can land anywhere from right at an edge
+ * to a full unit short of it, by chance, differently every time new data
+ * polls in. This computes the tick values directly instead: the nearest
+ * unit at-or-after the true start, the nearest unit at-or-before the true
+ * end, and evenly interpolated (then unit-snapped) points between the two
+ * - so the first and last labelled ticks are always close to the edges,
+ * not wherever the absolute clock grid happens to fall.
  */
-function hourAnchoredTicks(series: Series[]): number[] | undefined {
+function anchoredTicks(series: Series[], unit: number): number[] | undefined {
   let min = Infinity;
   let max = -Infinity;
   for (const s of series) {
@@ -62,14 +76,14 @@ function hourAnchoredTicks(series: Series[]): number[] | undefined {
   }
   if (!Number.isFinite(min) || !Number.isFinite(max)) return undefined;
 
-  const first = Math.ceil(min / HOUR_MS) * HOUR_MS;
-  const last = Math.floor(max / HOUR_MS) * HOUR_MS;
+  const first = Math.ceil(min / unit) * unit;
+  const last = Math.floor(max / unit) * unit;
   if (last <= first) return [min, max];
 
   const ticks = new Set<number>();
   for (let i = 0; i < TICK_COUNT; i++) {
     const raw = first + ((last - first) * i) / (TICK_COUNT - 1);
-    ticks.add(Math.round(raw / HOUR_MS) * HOUR_MS);
+    ticks.add(Math.round(raw / unit) * unit);
   }
   return [...ticks].sort((a, b) => a - b);
 }
@@ -86,7 +100,7 @@ export function TimeSeriesChart({
   const option = useMemo<EChartsCoreOption>(() => {
     const label = (value: number) =>
       formatUtc(new Date(value), TICK_OPTIONS[tickFormat]);
-    const ticks = hourAnchoredTicks(series);
+    const ticks = anchoredTicks(series, ANCHOR_UNIT_MS[tickFormat]);
 
     return {
       backgroundColor: "transparent",
