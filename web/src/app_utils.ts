@@ -178,8 +178,16 @@ export interface AsyncState<T> {
  * trigger a refetch - passed explicitly because `fetcher` is a fresh closure
  * on every render and can't be a dependency itself.
  *
- * Keeps the previous data visible while refetching so a poll doesn't blank
- * the chart out; only the very first load shows a loading state.
+ * A poll tick keeps the previous data visible while it refreshes, so a
+ * routine background update doesn't blank the chart out - but a `deps`
+ * change (the user picked a different range, a different set of feature
+ * columns) is a genuinely different query, not a refresh of the same one.
+ * The old rows can be actively wrong for it: they may be a different
+ * time span (mismatched against a tickFormat/axis already computed for
+ * the new range) or missing a newly-selected column entirely. So this
+ * resets to loading only when the effect (re)starts - mount or a deps
+ * change - and leaves it alone for ticks from the interval timer, which
+ * fire without the effect restarting.
  */
 export function useApi<T>(
   fetcher: (signal: AbortSignal) => Promise<T>,
@@ -199,6 +207,8 @@ export function useApi<T>(
   useEffect(() => {
     const controller = new AbortController();
     let cancelled = false;
+
+    setState({ data: undefined, error: undefined, loading: true });
 
     const load = async () => {
       try {
