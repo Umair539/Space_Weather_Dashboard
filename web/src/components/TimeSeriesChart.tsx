@@ -47,10 +47,14 @@ export function TimeSeriesChart({
       backgroundColor: "transparent",
       animation: false,
       // Room on the left for the axis title, and above only when a legend
-      // is actually drawn.
+      // is actually drawn. Right is wider than it looks like it needs to
+      // be: the rightmost tick's label is centred on its point, so half
+      // its width sits past the plot area - too little room here clips
+      // that label against the container edge rather than wrapping or
+      // hiding it.
       grid: {
         left: 64,
-        right: 24,
+        right: 44,
         top: series.length > 1 ? 48 : 16,
         bottom: 44,
       },

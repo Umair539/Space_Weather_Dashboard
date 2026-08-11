@@ -104,12 +104,7 @@ export function SolarWind() {
           {(rows) => (
             <div className="stack">
               {features.map((feature) => (
-                <FeatureChart
-                  key={feature}
-                  feature={feature}
-                  rows={rows}
-                  monthly={range === "1mo"}
-                />
+                <FeatureChart key={feature} feature={feature} rows={rows} range={range} />
               ))}
             </div>
           )}
@@ -130,12 +125,18 @@ export function SolarWind() {
 function FeatureChart({
   feature,
   rows,
-  monthly,
+  range,
 }: {
   feature: SolarColumn;
   rows: SolarRow[];
-  monthly: boolean;
+  range: Range;
 }) {
+  const monthly = range === "1mo";
+  // 24h needs time-of-day to be readable; 7d/30d span enough days that the
+  // date alone identifies each tick, and the extra "HH:MM" was mostly
+  // making the widest, most crop-prone label on the axis.
+  const tickFormat = range === "24h" ? "%b %d, %H:%M" : "%d %b";
+
   const series = useMemo(
     () => [
       {
@@ -173,7 +174,7 @@ function FeatureChart({
       <TimeSeriesChart
         series={series}
         yTitle={AXIS_TITLES[feature]}
-        tickFormat="%b %d, %H:%M"
+        tickFormat={tickFormat}
         height={320}
         ariaLabel={`${PANEL_TITLES[feature]} over time`}
       />
