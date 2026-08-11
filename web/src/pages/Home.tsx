@@ -18,6 +18,9 @@ import { MetricCard } from "../components/MetricCard";
 import { PageHeader, Panel } from "../components/Panel";
 import { Async, ChartSkeleton, ErrorPanel } from "../components/States";
 import { TimeSeriesChart, toPoints } from "../components/TimeSeriesChart";
+import content from "../content.json";
+
+const { title, subtitle } = content.pages.home;
 
 // Matches the 120s st.fragment(run_every=...) on the Streamlit home page.
 const REFRESH_MS = 120_000;
@@ -33,11 +36,7 @@ export function Home() {
 
   return (
     <>
-      <PageHeader
-        title="Current Conditions"
-        subtitle="Solar wind parameters and geomagnetic indices, updated continuously from the NOAA Space Weather Prediction Center."
-        meta={lastUpdated}
-      />
+      <PageHeader title={title} subtitle={subtitle} meta={lastUpdated} />
 
       {/* The four readings lead, before any chart - they answer "what is it
           doing right now", which the charts then put in context. */}

@@ -2,15 +2,14 @@ import { useEffect, useRef, useState } from "react";
 import { Link, NavLink, Outlet, useLocation } from "react-router-dom";
 
 import { api, kpSeverity, useApi } from "../app_utils";
+import content from "../content.json";
 
 // url_path values match app/run_app.py's st.Page registrations, so links
-// into either dashboard resolve the same way.
-const PAGES = [
-  { to: "/", label: "Home", icon: "◆", end: true },
-  { to: "/solar-wind", label: "Solar Wind", icon: "🛰", end: false },
-  { to: "/geomagnetic-indices", label: "Geomagnetic Indices", icon: "📡", end: false },
-  { to: "/solar-activity", label: "Solar Activity", icon: "☀", end: false },
-];
+// into either dashboard resolve the same way. Labels/icons come from
+// content.json - the same data the build-time prerender script reads, so
+// the nav can never drift between what's server-rendered and what React
+// mounts.
+const PAGES = content.site.nav.map((p) => ({ ...p, to: p.path, end: p.path === "/" }));
 
 export function Layout() {
   return (
@@ -18,9 +17,9 @@ export function Layout() {
       <header className="topbar">
         <Link to="/" className="brand">
           <span className="brand-mark" aria-hidden>
-            🪐
+            {content.site.brandEmoji}
           </span>
-          Space Weather
+          {content.site.name}
         </Link>
         <div className="topbar-spacer" />
         <LiveConditions />
@@ -131,7 +130,7 @@ function Footer() {
   return (
     <footer className="footer">
       <a
-        href="https://github.com/Umair539/Space_Weather_Dashboard"
+        href={content.site.githubLink}
         target="_blank"
         rel="noreferrer"
         aria-label="View this project on GitHub"
@@ -141,9 +140,9 @@ function Footer() {
         </svg>
       </a>
       <span>
-        Data from the{" "}
-        <a href="https://www.swpc.noaa.gov" target="_blank" rel="noreferrer">
-          NOAA Space Weather Prediction Center
+        {content.site.footerPrefix}{" "}
+        <a href={content.site.footerLink} target="_blank" rel="noreferrer">
+          {content.site.footerLinkText}
         </a>
       </span>
     </footer>

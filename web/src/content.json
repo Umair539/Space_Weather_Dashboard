@@ -1,0 +1,94 @@
+{
+  "site": {
+    "name": "Space Weather",
+    "brandEmoji": "🪐",
+    "nav": [
+      { "path": "/", "label": "Home", "icon": "◆" },
+      { "path": "/solar-wind", "label": "Solar Wind", "icon": "🛰" },
+      { "path": "/geomagnetic-indices", "label": "Geomagnetic Indices", "icon": "📡" },
+      { "path": "/solar-activity", "label": "Solar Activity", "icon": "☀" }
+    ],
+    "footerPrefix": "Data from the",
+    "footerLinkText": "NOAA Space Weather Prediction Center",
+    "footerLink": "https://www.swpc.noaa.gov",
+    "githubLink": "https://github.com/Umair539/Space_Weather_Dashboard"
+  },
+  "pages": {
+    "home": {
+      "path": "/",
+      "documentTitle": "Space Weather Dashboard",
+      "title": "Current Conditions",
+      "subtitle": "Solar wind parameters and geomagnetic indices, updated continuously from the NOAA Space Weather Prediction Center.",
+      "about": []
+    },
+    "solarWind": {
+      "path": "/solar-wind",
+      "documentTitle": "Solar Wind — Space Weather Dashboard",
+      "title": "Solar Wind",
+      "subtitle": "Plasma and interplanetary magnetic field measured at L1, one minute apart.",
+      "about": [
+        {
+          "title": "About the solar wind",
+          "body": "The solar wind is a continuous stream of charged particles (plasma) emitted by the Sun's atmosphere. When this stream reaches Earth, it transfers energy into the magnetosphere. It has two components: the properties of the plasma (speed, density, temperature) and those of the embedded magnetic field, the Interplanetary Magnetic Field. Geomagnetic storms are typically triggered by high-speed solar wind combined with a strong southward IMF — storm intensity increases as the Bz value becomes more negative."
+        }
+      ]
+    },
+    "geomagIndices": {
+      "path": "/geomagnetic-indices",
+      "documentTitle": "Geomagnetic Indices — Space Weather Dashboard",
+      "title": "Geomagnetic Indices",
+      "subtitle": "How strongly Earth's magnetic field is currently being disturbed.",
+      "about": [
+        {
+          "title": "About the Dst index",
+          "body": "The Disturbance Storm Time index measures geomagnetic storm severity in nanoTeslas, from the average horizontal magnetic field at four near-equatorial observatories, hourly. It tracks the growth and recovery of the ring current in Earth's magnetosphere — the lower the value, the more energy is stored there. Below −50 nT indicates a moderate storm, below −100 nT a severe one. The chart compares observations against the model's predictions."
+        },
+        {
+          "title": "About the Kp index",
+          "body": "The Kp index is a geomagnetic activity index derived from magnetometers around the world, measured every three hours. It is quasi-logarithmic from 0 to 9, where 5 indicates a moderate storm, 7 a severe storm, and 9 an extreme storm."
+        }
+      ]
+    },
+    "solarActivity": {
+      "path": "/solar-activity",
+      "documentTitle": "Solar Activity — Space Weather Dashboard",
+      "title": "Solar Activity",
+      "subtitle": "The Sun's current face, and where we sit in its 11-year cycle.",
+      "about": [
+        {
+          "title": "About the solar cycle",
+          "body": "The Sun follows a periodic 11-year cycle driven by its internal magnetic field, which completely flips orientation once per decade. The progression is most visibly tracked by sunspot number — dark, cooler regions of intense magnetic activity. During solar minimum very few sunspots appear; solar maximum brings a high concentration, often with more frequent flares. A more active Sun releases a more turbulent stream of particles, which is what ties this cycle to everything else on this dashboard."
+        }
+      ]
+    }
+  },
+  "sdoImages": [
+    {
+      "key": "Sunspots",
+      "badge": "SDO · HMI",
+      "color": "#e8913c",
+      "subtitle": "Continuum · visible light",
+      "description": "Active regions and sunspots on the photosphere",
+      "still": "https://sdo.gsfc.nasa.gov/assets/img/latest/latest_512_HMIIC.jpg",
+      "video": "https://sdo.gsfc.nasa.gov/assets/img/latest/mpeg/latest_512_HMIIC.mp4"
+    },
+    {
+      "key": "Eruptions",
+      "badge": "SUVI · 304Å",
+      "color": "#f2564a",
+      "subtitle": "He II · chromosphere",
+      "description": "Filaments, prominences and coronal holes (75 MK)",
+      "still": "https://sdo.gsfc.nasa.gov/assets/img/latest/latest_512_0304.jpg",
+      "video": "https://sdo.gsfc.nasa.gov/assets/img/latest/mpeg/latest_512_0304.mp4"
+    },
+    {
+      "key": "Flares",
+      "badge": "SUVI · 131Å",
+      "color": "#2dd4bf",
+      "subtitle": "Fe VIII/XXI · flare plasma",
+      "description": "High-energy flare and eruptive plasma (10 MK)",
+      "still": "https://sdo.gsfc.nasa.gov/assets/img/latest/latest_512_0131.jpg",
+      "video": "https://sdo.gsfc.nasa.gov/assets/img/latest/mpeg/latest_512_0131.mp4"
+    }
+  ]
+}

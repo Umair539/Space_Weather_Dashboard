@@ -101,6 +101,25 @@ button {
   flex: 1;
 }
 
+/* Plain nav links, present in the prerendered HTML (scripts/prerender.mjs)
+ * before JS has run - real crawlable <a href>s, and something other than
+ * a blank corner while the bundle loads. React discards this entirely on
+ * mount and replaces it with the interactive dropdown (.menu below), so it
+ * only ever needs to look reasonable, not identical.
+ */
+.static-nav {
+  display: flex;
+  gap: 4px;
+}
+
+.static-nav a {
+  padding: 7px 10px;
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+  color: var(--muted);
+  text-decoration: none;
+}
+
 /* Live conditions chip - the one number worth seeing on every page. */
 .status-chip {
   display: inline-flex;

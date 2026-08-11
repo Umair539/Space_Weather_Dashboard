@@ -15,6 +15,9 @@ import { About, Chips, Segmented, Span } from "../components/Controls";
 import { PageHeader, Panel } from "../components/Panel";
 import { Async } from "../components/States";
 import { TimeSeriesChart, toPoints } from "../components/TimeSeriesChart";
+import content from "../content.json";
+
+const { title, subtitle, about } = content.pages.solarWind;
 
 const RANGES = [
   { value: "24h", label: "24 hours" },
@@ -75,11 +78,7 @@ export function SolarWind() {
 
   return (
     <>
-      <PageHeader
-        title="Solar Wind"
-        subtitle="Plasma and interplanetary magnetic field measured at L1, one minute apart."
-        meta={lastUpdated}
-      />
+      <PageHeader title={title} subtitle={subtitle} meta={lastUpdated} />
 
       <div className="toolbar">
         <Segmented
@@ -120,15 +119,11 @@ export function SolarWind() {
       )}
 
       <div style={{ marginTop: 16 }}>
-        <About title="About the solar wind">
-          The solar wind is a continuous stream of charged particles (plasma) emitted
-          by the Sun's atmosphere. When this stream reaches Earth, it transfers energy
-          into the magnetosphere. It has two components: the properties of the plasma
-          (speed, density, temperature) and those of the embedded magnetic field, the
-          Interplanetary Magnetic Field. Geomagnetic storms are typically triggered by
-          high-speed solar wind combined with a strong southward IMF — storm intensity
-          increases as the Bz value becomes more negative.
-        </About>
+        {about.map((section) => (
+          <About key={section.title} title={section.title}>
+            {section.body}
+          </About>
+        ))}
       </div>
     </>
   );

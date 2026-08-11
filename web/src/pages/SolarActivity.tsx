@@ -13,41 +13,18 @@ import { About, Segmented, Span } from "../components/Controls";
 import { PageHeader, Panel } from "../components/Panel";
 import { Async } from "../components/States";
 import { TimeSeriesChart, toPoints } from "../components/TimeSeriesChart";
+import content from "../content.json";
 
+const { title, subtitle, about } = content.pages.solarActivity;
 // services.swpc.noaa.gov's image feed sits behind an AWS WAF challenge that
 // blocks non-browser clients - and since these load as sub-resources, even
 // real browsers can't solve that challenge for them. NASA SDO publishes
 // pre-rendered rolling animations with no such block. 512px keeps the total
 // payload to ~21MB across all three instead of ~130MB at full resolution.
-const SDO = [
-  {
-    key: "Sunspots",
-    badge: "SDO · HMI",
-    color: "#e8913c",
-    subtitle: "Continuum · visible light",
-    description: "Active regions and sunspots on the photosphere",
-    still: "https://sdo.gsfc.nasa.gov/assets/img/latest/latest_512_HMIIC.jpg",
-    video: "https://sdo.gsfc.nasa.gov/assets/img/latest/mpeg/latest_512_HMIIC.mp4",
-  },
-  {
-    key: "Eruptions",
-    badge: "SUVI · 304Å",
-    color: "#f2564a",
-    subtitle: "He II · chromosphere",
-    description: "Filaments, prominences and coronal holes (75 MK)",
-    still: "https://sdo.gsfc.nasa.gov/assets/img/latest/latest_512_0304.jpg",
-    video: "https://sdo.gsfc.nasa.gov/assets/img/latest/mpeg/latest_512_0304.mp4",
-  },
-  {
-    key: "Flares",
-    badge: "SUVI · 131Å",
-    color: "#2dd4bf",
-    subtitle: "Fe VIII/XXI · flare plasma",
-    description: "High-energy flare and eruptive plasma (10 MK)",
-    still: "https://sdo.gsfc.nasa.gov/assets/img/latest/latest_512_0131.jpg",
-    video: "https://sdo.gsfc.nasa.gov/assets/img/latest/mpeg/latest_512_0131.mp4",
-  },
-];
+// The array itself lives in content.json - it's fixed metadata plus fixed
+// NASA URLs, no different from the About text, and the prerender script
+// needs the same data to bake real <img> tags into the static shell.
+const SDO = content.sdoImages;
 
 const RANGES = [
   { value: "1mo", label: "30 days" },
@@ -62,25 +39,17 @@ export function SolarActivity() {
 
   return (
     <>
-      <PageHeader
-        title="Solar Activity"
-        subtitle="The Sun's current face, and where we sit in its 11-year cycle."
-        meta={lastUpdated}
-      />
+      <PageHeader title={title} subtitle={subtitle} meta={lastUpdated} />
       <div className="stack">
         <SolarImages />
         <SunspotPanel />
       </div>
       <div style={{ marginTop: 16 }}>
-        <About title="About the solar cycle">
-          The Sun follows a periodic 11-year cycle driven by its internal magnetic
-          field, which completely flips orientation once per decade. The progression is
-          most visibly tracked by sunspot number — dark, cooler regions of intense
-          magnetic activity. During solar minimum very few sunspots appear; solar
-          maximum brings a high concentration, often with more frequent flares. A more
-          active Sun releases a more turbulent stream of particles, which is what ties
-          this cycle to everything else on this dashboard.
-        </About>
+        {about.map((section) => (
+          <About key={section.title} title={section.title}>
+            {section.body}
+          </About>
+        ))}
       </div>
     </>
   );

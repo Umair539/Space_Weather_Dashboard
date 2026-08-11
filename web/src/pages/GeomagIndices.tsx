@@ -16,6 +16,9 @@ import { About, Segmented, Span } from "../components/Controls";
 import { PageHeader, Panel } from "../components/Panel";
 import { Async, ErrorPanel } from "../components/States";
 import { TimeSeriesChart, toPoints } from "../components/TimeSeriesChart";
+import content from "../content.json";
+
+const { title, subtitle, about } = content.pages.geomagIndices;
 
 const RANGES = [
   { value: "24h", label: "24 hours" },
@@ -28,31 +31,17 @@ export function GeomagIndices() {
 
   return (
     <>
-      <PageHeader
-        title="Geomagnetic Indices"
-        subtitle="How strongly Earth's magnetic field is currently being disturbed."
-        meta={lastUpdated}
-      />
+      <PageHeader title={title} subtitle={subtitle} meta={lastUpdated} />
       <div className="stack">
         <DstPanel />
         <KpPanel />
       </div>
       <div style={{ marginTop: 16 }} className="stack">
-        <About title="About the Dst index">
-          The Disturbance Storm Time index measures geomagnetic storm severity in
-          nanoTeslas, from the average horizontal magnetic field at four
-          near-equatorial observatories, hourly. It tracks the growth and recovery of
-          the ring current in Earth's magnetosphere — the lower the value, the more
-          energy is stored there. Below −50 nT indicates a moderate storm, below
-          −100 nT a severe one. The chart compares observations against the model's
-          predictions.
-        </About>
-        <About title="About the Kp index">
-          The Kp index is a geomagnetic activity index derived from magnetometers
-          around the world, measured every three hours. It is quasi-logarithmic from
-          0 to 9, where 5 indicates a moderate storm, 7 a severe storm, and 9 an
-          extreme storm.
-        </About>
+        {about.map((section) => (
+          <About key={section.title} title={section.title}>
+            {section.body}
+          </About>
+        ))}
       </div>
     </>
   );
