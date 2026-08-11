@@ -30,6 +30,49 @@ const TICK_OPTIONS: Record<Props["tickFormat"], Intl.DateTimeFormatOptions> = {
   "%d %b": { day: "2-digit", month: "short" },
 };
 
+const HOUR_MS = 3_600_000;
+const DAY_MS = 86_400_000;
+
+// Hour-level rounding only for the format that shows a time of day - a
+// day-level chart rounding to the hour would be pointless precision, and
+// an hourly chart rounding to the day would be far too coarse.
+const ROUND_UNIT_MS: Record<Props["tickFormat"], number> = {
+  "%b %d, %H:%M": HOUR_MS,
+  "%b %d %Y": DAY_MS,
+  "%b %Y": DAY_MS,
+  "%Y": DAY_MS,
+  "%d %b": DAY_MS,
+};
+
+/**
+ * Rounds the visible axis span outward to the nearest whole hour/day -
+ * never inward, so real data is never clipped, only ever given a sliver
+ * of extra margin. A rolling window (always "newest minus N") can start
+ * or end at any arbitrary minute, which otherwise leaves the auto-picked
+ * ticks landing anywhere between "right at the edge" and "hours short of
+ * it" - purely by chance, and different every time new data polls in.
+ * Rounding outward first gives ECharts' own tick placement a boundary
+ * that's already a clean number to divide, instead of an arbitrary one.
+ *
+ * A window whose true edge already sits exactly on the unit (e.g. an
+ * exact top-of-the-hour timestamp) rounds to itself - Math.floor/ceil on
+ * an already-exact multiple is a no-op, so nothing is padded unless the
+ * edge genuinely falls mid-unit.
+ */
+function roundedBounds(series: Series[], tickFormat: Props["tickFormat"]) {
+  const unit = ROUND_UNIT_MS[tickFormat];
+  let min = Infinity;
+  let max = -Infinity;
+  for (const s of series) {
+    for (const [t] of s.points) {
+      if (t < min) min = t;
+      if (t > max) max = t;
+    }
+  }
+  if (!Number.isFinite(min) || !Number.isFinite(max)) return {};
+  return { min: Math.floor(min / unit) * unit, max: Math.ceil(max / unit) * unit };
+}
+
 export function TimeSeriesChart({
   series,
   yTitle,
@@ -42,6 +85,7 @@ export function TimeSeriesChart({
   const option = useMemo<EChartsCoreOption>(() => {
     const label = (value: number) =>
       formatUtc(new Date(value), TICK_OPTIONS[tickFormat]);
+    const bounds = roundedBounds(series, tickFormat);
 
     return {
       backgroundColor: "transparent",
@@ -113,6 +157,8 @@ export function TimeSeriesChart({
       },
       xAxis: {
         type: "time",
+        min: bounds.min,
+        max: bounds.max,
         axisLabel: { color: surface.muted, fontSize: 11, formatter: label, hideOverlap: true },
         axisLine: { lineStyle: { color: surface.border } },
         axisTick: { lineStyle: { color: surface.border } },
