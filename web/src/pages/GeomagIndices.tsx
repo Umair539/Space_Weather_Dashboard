@@ -87,18 +87,16 @@ function DstChart({ rows }: { rows: DstRow[] }) {
     [rows],
   );
 
-  const values = rows
-    .flatMap((r) => [r.dst, r.dst_predictions])
-    .filter((v): v is number => v !== null);
-  if (!values.length) return <ErrorPanel message="No Dst data in this window." />;
+  const hasData = rows.some((r) => r.dst !== null || r.dst_predictions !== null);
+  if (!hasData) return <ErrorPanel message="No Dst data in this window." />;
 
   return (
     <TimeSeriesChart
       series={series}
       yTitle="Dst (nT)"
       tickFormat="%b %d, %H:%M"
-      yMin={Math.min(...values) - 5}
-      yMax={Math.max(...values) + 5}
+      // No explicit min/max - see the identical note in Home.tsx's
+      // DstChart. scale:true picks round, evenly-spaced ticks on its own.
       height={340}
       ariaLabel="Observed and predicted Dst index"
     />

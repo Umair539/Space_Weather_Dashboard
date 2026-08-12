@@ -118,20 +118,22 @@ function DstChart({ rows }: { rows: DstRow[] }) {
     [rows],
   );
 
-  // Padded 5 either side and computed across both series, so neither can
-  // leave the frame.
-  const values = rows
-    .flatMap((r) => [r.dst, r.dst_predictions])
-    .filter((v): v is number => v !== null);
-  if (!values.length) return <ErrorPanel message="No Dst data in this window." />;
+  const hasData = rows.some((r) => r.dst !== null || r.dst_predictions !== null);
+  if (!hasData) return <ErrorPanel message="No Dst data in this window." />;
 
   return (
     <TimeSeriesChart
       series={series}
       yTitle="Dst (nT)"
       tickFormat="%d %b"
-      yMin={Math.min(...values) - 5}
-      yMax={Math.max(...values) + 5}
+      // No explicit min/max - unlike Kp's fixed 0-9 scale, Dst has no
+      // natural range, so scale:true (TimeSeriesChart's default when
+      // neither bound is passed) picks round, evenly-spaced ticks with
+      // its own padding. Explicit min/max here used to be the data's own
+      // min/max +-5, which meant the axis boundary was almost never a
+      // round number - ECharts always labels the exact boundary value in
+      // addition to its normal ticks, so a non-round bound (e.g. -65)
+      // showed up cramped right next to the nearest real tick (-60).
       ariaLabel="Observed and predicted Dst index over the last month"
     />
   );
