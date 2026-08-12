@@ -8,6 +8,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from api.db import POLL_INTERVALS
 from api.poller import initial_load, poll_table
+from api.rate_limit import RateLimitMiddleware
 from api.routers import geomag, meta, solar_wind, sun
 
 logging.basicConfig(level=logging.INFO)
@@ -27,6 +28,14 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(title="Space Weather API", lifespan=lifespan)
+
+# No data or DB risk from unrestricted traffic - every endpoint is GET,
+# unauthenticated, public NOAA-derived data, and the in-memory cache
+# already decouples request volume from database load entirely. What this
+# actually bounds is Render compute/bandwidth cost and request queueing
+# (the container runs one worker deliberately, so a flood of concurrent
+# requests can genuinely slow things down for real visitors).
+app.add_middleware(RateLimitMiddleware)
 
 # The React frontend will call this straight from the browser, so without
 # CORS headers those requests fail regardless of the API being fine. The
