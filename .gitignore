@@ -57,3 +57,14 @@ web/node_modules/
 web/dist/
 web/.env
 web/*.tsbuildinfo
+
+# streamlit app + its terraform/deploy tooling - moved to the
+# streamlit-app branch, kept there in case it's ever wanted again
+app/
+docker/app/
+.streamlit/
+.devcontainer/
+terraform/main.tf
+terraform/outputs.tf
+terraform/variables.tf
+terraform/user_data.yaml
