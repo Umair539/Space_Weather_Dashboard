@@ -12,6 +12,7 @@ dynamic = ["dependencies"]
 run_etl = "scripts.run_etl:run_etl_pipeline"
 run_tests = "tests.run_tests:main"
 run_app = "app.cli:launch_app"
+run_api = "api.main:launch"
 
 [tool.setuptools.packages.find]
 where = ["."]

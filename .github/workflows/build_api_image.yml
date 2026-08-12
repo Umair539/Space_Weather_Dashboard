@@ -1,0 +1,43 @@
+name: Build & Push API Container
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "api/**"
+      - "docker/api/**"
+  workflow_dispatch:
+
+# packages: write is what lets GITHUB_TOKEN push to ghcr.io - no separate
+# registry secret needed, unlike the AWS-hosted images elsewhere in this
+# repo which need OIDC role assumption.
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build, tag, and push image
+        run: |
+          # ghcr.io requires a lowercase path; github.repository_owner
+          # ("Umair539") isn't guaranteed to already be one.
+          OWNER=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
+          IMAGE_URI="ghcr.io/$OWNER/space-weather-api"
+          SHORT_SHA=${GITHUB_SHA::7}
+
+          docker build -f docker/api/Dockerfile -t "$IMAGE_URI:$SHORT_SHA" -t "$IMAGE_URI:latest" .
+          docker push "$IMAGE_URI:$SHORT_SHA"
+          docker push "$IMAGE_URI:latest"

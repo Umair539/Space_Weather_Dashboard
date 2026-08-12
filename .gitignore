@@ -35,6 +35,7 @@ scripts/partition_script.py
 scripts/run_extract.py
 scripts/run_transform.py
 scripts/fixture_data.py
+scripts/backfill_ssn.py
 
 #terraform
 terraform/.terraform/
@@ -47,3 +48,12 @@ terraform/.terraform.lock.hcl
 .coverage
 htmlcov/
 tests/unit_tests/utils/*
+tests/unit_tests/api/*
+tests/component_tests/api/*
+tests/integration_tests/api/*
+
+# react frontend
+web/node_modules/
+web/dist/
+web/.env
+web/*.tsbuildinfo
