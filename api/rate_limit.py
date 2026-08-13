@@ -25,15 +25,18 @@ from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
 from starlette.responses import JSONResponse
 
-# 20/minute: generous enough that real browsing never brushes it (the
-# heaviest single page, Home, polls ~3 req/min at steady state; even four
-# tabs open at once combine to ~6/min) while still bounding what a script
-# hammering the API can cost in Render compute/bandwidth - not because
-# anything sensitive is at risk, every response here is public data, but
-# because the container runs one worker deliberately (so the in-memory
-# cache stays one consistent copy), and a flood of concurrent requests can
-# genuinely queue up and slow things down for real visitors.
-_RATE = parse("20/minute")
+# 60/minute: generous enough that real browsing never brushes it. Home
+# alone fires 5 concurrent requests on mount (before settling to ~2.5/min
+# steady state from its 120s poll), and that burst repeats on every
+# reload/navigation and doubles under React StrictMode's dev double-mount -
+# 20/minute left too little headroom above that legitimate traffic. This
+# still bounds what a script hammering the API can cost in Render compute/
+# bandwidth - not because anything sensitive is at risk, every response
+# here is public data, but because the container runs one worker
+# deliberately (so the in-memory cache stays one consistent copy), and a
+# flood of concurrent requests can genuinely queue up and slow things down
+# for real visitors.
+_RATE = parse("60/minute")
 _limiter = MovingWindowRateLimiter(MemoryStorage())
 
 # Render's own health check hits this far more often than any real visitor
@@ -77,7 +80,7 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
 
         if not _limiter.hit(_RATE, client_ip(request)):
             return JSONResponse(
-                {"detail": "Rate limit exceeded: 20 per 1 minute"}, status_code=429
+                {"detail": "Rate limit exceeded: 60 per 1 minute"}, status_code=429
             )
 
         return await call_next(request)
