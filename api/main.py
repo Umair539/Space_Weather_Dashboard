@@ -9,9 +9,16 @@ from fastapi.middleware.cors import CORSMiddleware
 from api.db import POLL_INTERVALS
 from api.poller import initial_load, poll_table
 from api.rate_limit import RateLimitMiddleware
+from api.resource_monitor import log_resource_usage
 from api.routers import geomag, meta, solar_wind, sun
 
 logging.basicConfig(level=logging.INFO)
+
+# How often to log process CPU/RAM usage. Render's own resource dashboard
+# is paywalled, so this is the free substitute - visible straight in the
+# log stream. Configurable since the "right" cadence trades off log volume
+# against how fine-grained the visibility needs to be.
+RESOURCE_LOG_INTERVAL_SECONDS = float(os.environ.get("RESOURCE_LOG_INTERVAL_SECONDS", "60"))
 
 
 @asynccontextmanager
@@ -21,6 +28,7 @@ async def lifespan(app: FastAPI):
         asyncio.create_task(poll_table(table, interval))
         for table, interval in POLL_INTERVALS.items()
     ]
+    tasks.append(asyncio.create_task(log_resource_usage(RESOURCE_LOG_INTERVAL_SECONDS)))
     yield
     for task in tasks:
         task.cancel()
