@@ -18,6 +18,7 @@ permissions:
 jobs:
   build-and-push:
     runs-on: ubuntu-latest
+    environment: prod
 
     steps:
       - name: Checkout
@@ -41,3 +42,27 @@ jobs:
           docker build -f docker/api/Dockerfile -t "$IMAGE_URI:$SHORT_SHA" -t "$IMAGE_URI:latest" .
           docker push "$IMAGE_URI:$SHORT_SHA"
           docker push "$IMAGE_URI:latest"
+
+          # Handed to the deploy step so Render is pointed at this exact
+          # build rather than resolving :latest a second time.
+          echo "IMAGE_REF=$IMAGE_URI:$SHORT_SHA" >> "$GITHUB_ENV"
+
+      # Render does not watch the registry - an image-backed service keeps
+      # serving its current image until something explicitly asks it to
+      # redeploy, so without this the push above would never reach prod.
+      - name: Deploy to Render
+        env:
+          DEPLOY_HOOK: ${{ secrets.RENDER_DEPLOY_HOOK_URL }}
+        run: |
+          if [ -z "$DEPLOY_HOOK" ]; then
+            echo "::error::RENDER_DEPLOY_HOOK_URL secret is not set - image pushed but Render was not redeployed."
+            exit 1
+          fi
+
+          # The hook URL already carries its own ?key=, so -G appends with &.
+          # --data-urlencode matters: imgURL contains / and : characters.
+          curl -fsS --retry 3 --retry-delay 5 -G \
+            --data-urlencode "imgURL=$IMAGE_REF" \
+            "$DEPLOY_HOOK" > /dev/null
+
+          echo "Render deploy triggered for $IMAGE_REF"
