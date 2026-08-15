@@ -690,6 +690,13 @@ label:has(.visually-hidden:focus-visible),
   cursor: grabbing;
 }
 
+/* The element three.js appends its canvas to. Its height is set in JS, next to
+   the camera framing that depends on it; width is the panel's, and the
+   ResizeObserver inside the scene feeds both back to the renderer. */
+.globe-canvas {
+  width: 100%;
+}
+
 .globe-caption {
   margin: 0;
   padding: 10px 16px 14px;

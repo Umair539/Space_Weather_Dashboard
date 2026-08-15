@@ -1,6 +1,6 @@
-import { useEffect, useMemo, useRef, useState } from "react";
-import Globe, { type GlobeMethods } from "react-globe.gl";
+import { useEffect, useRef, useState } from "react";
 import * as THREE from "three";
+import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 
 import {
   api,
@@ -8,7 +8,6 @@ import {
   parseApiTime,
   useApi,
   type AuroraForecast,
-
 } from "../app_utils";
 import { About } from "../components/Controls";
 import { PageHeader, Panel } from "../components/Panel";
@@ -18,448 +17,330 @@ import content from "../content.json";
 const { title, subtitle, about } = content.pages.aurora;
 
 /**
- * Assets are prepared offline and served from public/ rather than loaded from
- * a CDN - the dashboard should not depend on a third-party host staying up to
- * render a page, and the WAF problem that broke the SDO images (see
- * SolarActivity) is a standing reminder of what that costs.
- */
-
-/** The sphere behind the dots. Darker than the ocean dots themselves so it
- *  reads as the gap between them rather than as a surface of its own. */
-const SPHERE = "#050a12";
-
-/** How often the terminator is recomputed. The subsolar point moves 0.25 deg
- *  per minute, so anything finer than this is imperceptible on a globe. */
-const TERMINATOR_REFRESH_MS = 60_000;
-
-/** Half-width of the day/night crossfade, as a cosine of the sun angle.
- *  Larger is a softer, wider dawn band. */
-const TWILIGHT = 0.28;
-
-/**
- * Subsolar point - the latitude and longitude the Sun is directly overhead -
- * for a given instant.
+ * The globe is a port of nosy-b/earthbeats (github.com/nosy-b/earthbeats),
+ * whose readme invites forking. Everything that made that app about
+ * earthquakes is gone - the IRIS feed, the epicentre shockwave, the hover
+ * tooltips - and the OVATION aurora band takes their place as the data layer.
+ * What is kept is the globe itself, close to line-for-line: the point-cloud
+ * Earth, its two shaders, the assembling intro, the rotating radar sweep, and
+ * the ripple that follows the pointer.
  *
- * Declination comes from the standard cosine approximation of Earth's axial
- * tilt through the year, and longitude from the fact that the Sun crosses
- * 15 degrees per hour and sits over the prime meridian at 12:00 UTC. Both are
- * good to about a degree, which is far finer than a terminator drawn on a
- * 700px sphere can show - a full solar position model would be precision
- * nobody can see.
- */
-function subsolarPoint(now: Date): { lat: number; lng: number } {
-  const startOfYear = Date.UTC(now.getUTCFullYear(), 0, 0);
-  const dayOfYear = (now.getTime() - startOfYear) / 86_400_000;
-
-  const lat = -23.44 * Math.cos((2 * Math.PI * (dayOfYear + 10)) / 365.25);
-
-  const utcHours =
-    now.getUTCHours() + now.getUTCMinutes() / 60 + now.getUTCSeconds() / 3600;
-  const lng = -15 * (utcHours - 12);
-
-  return { lat, lng };
-}
-
-/**
- * Convert [lat, lng] into three-globe's world coordinate frame, so the Sun can
- * be placed in the same space as the globe. Matches three-globe's own
- * polar-to-cartesian convention - getting this wrong lights the opposite side
- * of the planet.
- */
-function toCartesian(lat: number, lng: number): THREE.Vector3 {
-  const theta = ((90 - lng) * Math.PI) / 180;
-  const phi = ((90 - lat) * Math.PI) / 180;
-  return new THREE.Vector3(
-    Math.sin(phi) * Math.cos(theta),
-    Math.cos(phi),
-    Math.sin(phi) * Math.sin(theta),
-  );
-}
-
-/**
- * Flat ambient light, and nothing else.
+ * That means no react-globe.gl on this page. Its three-globe scene brings its
+ * own camera, lighting, atmosphere shell and lit sphere, none of which this
+ * look wants, and it does not expose the render loop that drives the shader
+ * uniforms. A bare three.js scene is both closer to the original and less
+ * code than bending the wrapper into this shape.
  *
- * The only lit object left in the scene is the aurora - the sphere is
- * unlit by design and the points carry their own shading (see shadePoints).
- * A directional sun here would therefore only dim the aurora on the night
- * side, which is exactly backwards: night is where it's visible.
+ * Assets are served from public/ rather than a CDN - the dashboard should not
+ * depend on a third-party host staying up to render a page, and the WAF
+ * problem that broke the SDO images (see SolarActivity) is a standing reminder
+ * of what that costs.
  */
-const AMBIENT_INTENSITY = 3.0;
 
 /**
- * The sphere itself is now only a backdrop - ocean is drawn as points like
- * everything else. It stays because it's what hides the far side of the
- * planet: without an opaque surface between them, dots from the back would
- * show through the front and the globe would read as a hollow shell. Basic
- * rather than Phong since nothing about it should catch the light; it is meant
- * to be the dark gap between dots.
+ * NASA's Black Marble 2016 at 0.1 degrees (3600x1800), taken from the source
+ * at science.nasa.gov/earth/earth-observatory/earth-at-night/maps/ rather than
+ * from the earthbeats textures/ directory - it is the same NASA product and
+ * the same navy-ocean palette, but from the publisher, which is the better
+ * provenance for a file with no licence attached to the copy. Its 3km version
+ * is 13500x6750 and far past what a 700-dot lattice can resolve.
+ *
+ * The sprite each dot is stamped with is theirs, unchanged - it is three.js's
+ * own spark1 from the examples.
  */
-function useSphereMaterial(): THREE.MeshBasicMaterial {
-  const material = useMemo(
-    () => new THREE.MeshBasicMaterial({ color: SPHERE }),
-    [],
-  );
-  useEffect(() => () => material.dispose(), [material]);
-  return material;
-}
+const EARTH_TEXTURE_URL = "/black-marble-2016.jpg";
+const SPARK_TEXTURE_URL = "/spark1.png";
 
-/**
- * The whole planet as a latitude/longitude dot lattice - every ring of
- * latitude a row of evenly spaced dots, ocean included, coloured by terrain.
- *
- * Not one of the built-in layers: hexPolygons place dots at the centres of an
- * H3 hexagon grid, which packs them in a honeycomb rather than in rings. The
- * whole character of this look comes from the dots lining up latitudinally,
- * so the grid is generated directly.
- *
- * Everything ends up in one THREE.Points, so the entire planet is a single
- * draw call no matter how many dots are on it.
- */
-/**
- * Each dot takes its colour by sampling this image at its own coordinates, so
- * deserts, forest, ice and ocean all come out of the source imagery rather
- * than a hand-built palette - the planet colours itself.
- *
- * Prepared offline from NASA's daylit Earth at 720x360 with the oceans
- * repainted to the page's navy: the dots are far coarser than any texture
- * detail, so this is 51KB instead of the 240KB original.
- */
-const EARTH_COLOR_URL = "/earth-dots.jpg";
-
-/**
- * The same map as it appears unlit: continents dimmed right down, with NASA's
- * Black Marble city lights laid over them. Each dot samples both images and
- * crossfades between them by sun angle, so the night side shows lit cities
- * rather than just a darker copy of the day side.
- *
- * Black Marble carries a blue ambient cast that isn't city light at all, so
- * the lights were isolated by their warmth (R above B) before compositing -
- * scaling the raw texture instead turns the Sahara cyan.
- */
-const EARTH_NIGHT_URL = "/earth-dots-night.jpg";
+/** Sphere radius in world units. The original's 200, which every other
+ *  distance here is expressed against. */
+const RADIUS = 200;
 
 /**
  * Grid resolution: dots are laid out as MERIDIANS steps around the equator by
- * PARALLELS steps from pole to pole, giving 700 x 350 = ~245,000 of them.
+ * PARALLELS steps from pole to pole, giving 700 x 350 = 245,000 of them in a
+ * single THREE.Points - so the whole planet is one draw call.
+ *
+ * A plain uniform sweep in both angles, with no correction for the rings
+ * shrinking toward the poles, so dots crowd together at the caps. That uneven
+ * distribution is the look, not a flaw in it.
  */
 const MERIDIANS = 700;
 const PARALLELS = MERIDIANS / 2;
 
 /**
- * Dot size, in the same units PointsMaterial uses - screen pixels scaled by
- * distance, not world units.
+ * Dot size, in the units gl_PointSize works out to: size * scale / depth.
  *
- * This is easy to get wrong: gl_PointSize works out to size * scale / depth,
- * so with the camera around 320 units out a value near 1 renders roughly one
- * pixel per dot. At that size the dots stop touching, the lattice breaks into
- * visible rows with gaps between them, and the near-black sphere shows through
- * the whole surface. It needs to be large enough that neighbouring dots meet.
+ * The original hardcodes scale at 300, which is three's own drawingBufferHeight
+ * * 0.5 for a 600px-tall canvas at a device pixel ratio of 1. Kept as a real
+ * uniform instead, because this canvas is 560px inside a panel rather than a
+ * full window, and on a hi-dpi display the constant makes dots come out at
+ * half size - the lattice opens up into visible gaps and the globe thins out.
+ * With the scale measured, 4.0 reproduces the original's dot-to-spacing ratio
+ * of roughly 2.2, which is what makes neighbouring dots just overlap.
  */
-const DOT_SIZE = 2.3;
+const DOT_SIZE = 4.0;
 
 /**
- * Brightness applied to every sampled colour. Both source maps are far dimmer
- * than they need to be once split into discrete dots on a dark page, and
- * lifting here rather than in the JPEG means the mid-tones come up without
- * clipping the highlights - the deserts and city cores stay distinct instead
- * of flattening to white.
+ * Brightness of the sampled night map, and the one place this deliberately
+ * departs from the original.
+ *
+ * earthbeats multiplies by 4, which with dots overlapping ~4 deep under
+ * additive blending drives most of the map past white: saturated purple
+ * oceans and a blown-out polar cap. That is genuinely its look - confirmed by
+ * running earth.html locally against this same renderer, not inferred - and on
+ * an art piece about earthquakes it costs nothing.
+ *
+ * It costs this page its data. Black Marble's Arctic is already near-white,
+ * and the auroral oval sits directly on top of it; additive light over a
+ * saturated cap adds nothing, so the forecast simply disappeared. At 0.55 the
+ * surface reads as a dark night Earth with legible city lights and the oval
+ * comes back. Everything structural above and below this line is still the
+ * original.
  */
-const POINT_GAIN = 3.0;
+const EARTH_GAIN = 0.55;
 
-/** three-globe builds its sphere at radius 100; the dots sit fractionally
- *  proud of it so they aren't swallowed by z-fighting with the ocean. */
-const GLOBE_RADIUS = 100;
+/** The original's, untouched: the sprite's soft falloff pushed most of the way
+ *  to a disc with a feathered rim. */
+const ALPHA_GAIN = 10.0;
 
 /**
- * How far around the curve dots begin fading out, as a cosine of the angle
- * between the surface and the viewer. Dots side-on to the camera drop away
- * instead of piling up into a hard rim, so the globe ends in a soft edge.
+ * Where the camera starts, on the +Y axis looking straight down at the north
+ * pole - which is the view the auroral oval reads best in anyway.
+ *
+ * The distance is the one number of the original's framing that had to change.
+ * It puts the camera at 400, twice the radius, which subtends 30 degrees
+ * against a 20 degree half-field: the globe overflows the viewport top and
+ * bottom. In a full browser window that reads as filling the screen; in a
+ * 560px panel it reads as a cropped sphere. Pulling back to 720 fits it with a
+ * margin, and changes nothing else - dot size and dot spacing both scale as
+ * 1/distance, so their ratio, and with it the texture of the surface, is
+ * exactly what it was.
  */
-const LIMB_FADE = 0.14;
+const CAMERA_FOV = 40;
+const CAMERA_DISTANCE = 720;
 
 /**
- * PointsMaterial can only apply one alpha to every dot, so the limb fade needs
- * a material of its own. The vertex stage works out how squarely each dot
- * faces the viewer and hands that to the fragment stage as an alpha
- * multiplier; colour still comes from the baked per-dot attribute.
+ * Zoom limits. The far one is the original's. The near one is not: 100 is
+ * inside a sphere of radius 200, and once through the surface every dot faces
+ * away from the camera, is culled by the facing term below, and the screen
+ * goes black. This keeps the camera outside.
  */
-const POINT_VERTEX_SHADER = `
-  attribute vec3 aColor;
+const MIN_DISTANCE = RADIUS * 1.3;
+const MAX_DISTANCE = 2000;
+
+/**
+ * The clock driving every animation.
+ *
+ * The original advances it a flat 0.001 per frame, which ties every animation
+ * to the refresh rate: the intro is 225 frames of work, so it runs in 3.7s at
+ * 60fps, 7.5s on a 30fps device, and drags on for minutes on anything falling
+ * back to software rendering - which is exactly what happens in a headless
+ * browser. These are the same rates expressed per second instead, so 60fps
+ * looks identical and slower hardware merely drops frames rather than
+ * stretching the intro out.
+ *
+ * At this rate the intro takes ~3.7s and the radar sweep ~21s per revolution.
+ */
+const TIME_RATE = 0.001 * 60;
+const TIME_SCALE = 40;
+
+/** How fast the pointer ripple dies away once the pointer stops moving -
+ *  the original's 0.02 per frame, likewise per second now. */
+const RIPPLE_DECAY = 0.02 * 60;
+
+/** Frames longer than this - a tab returning from the background, or a stall -
+ *  are clamped rather than jumped over, so the intro can't be skipped past by
+ *  one long pause. */
+const MAX_FRAME_SECONDS = 1 / 15;
+
+/**
+ * The point-cloud Earth's vertex shader, from earthbeats, with the
+ * earthquake-driven branches removed.
+ *
+ * Three things happen on top of the plain projection, and each one overwrites
+ * gl_Position outright rather than accumulating - so the last branch that
+ * matches wins. That is the original's structure and the ordering is load
+ * bearing: the intro comes last because while it is running it should override
+ * everything else.
+ *
+ * `crossProduct` is the facing term, and does the work an opaque sphere would
+ * otherwise do. It goes negative once a dot turns more than about 80 degrees
+ * away from the camera, which clamps its colour and alpha to zero - so the far
+ * side of the planet is culled without any depth buffer involved, and the near
+ * side fades out into the limb instead of piling up against a hard rim.
+ */
+const EARTH_VERTEX_SHADER = `
+  attribute vec2 coords;
+  attribute vec3 positionIntroText;
+  uniform float time;
+  uniform float timeSinceMove;
   uniform float size;
   uniform float scale;
-  varying vec3 vColor;
-  varying float vFacing;
+  uniform vec3 mouse3D;
+  varying vec2 vCoords;
+  varying float crossProduct;
+  varying float vDisplacementRadar;
+  const float M_PI = 3.1415926535897932384626433832795;
 
   void main() {
-    vColor = aColor;
+    vCoords = coords;
+    // GLSL does not zero varyings for you, and the original leaves this one
+    // uninitialised - it only ever gets written inside the radar branch below.
+    vDisplacementRadar = 0.0;
 
-    vec4 worldPosition = modelMatrix * vec4(position, 1.0);
-    // Every dot sits on the sphere's surface, so its position from the centre
-    // is also its surface normal - no normal attribute needed.
-    vec3 surfaceNormal = normalize(worldPosition.xyz);
-    vec3 viewDirection = normalize(cameraPosition - worldPosition.xyz);
-    vFacing = smoothstep(0.0, ${LIMB_FADE}, dot(surfaceNormal, viewDirection));
-
-    vec4 mvPosition = viewMatrix * worldPosition;
-    // Matches PointsMaterial's own attenuation, so dots shrink with distance.
-    gl_PointSize = size * (scale / -mvPosition.z);
+    vec4 mvPosition = modelViewMatrix * vec4( position, 1.0 );
+    gl_PointSize = size * ( scale / -mvPosition.z );
     gl_Position = projectionMatrix * mvPosition;
+    // Clamped before acos: normalizing two vectors can still leave their dot
+    // product a hair outside [-1, 1], and acos of that is NaN - which drops
+    // the dot rather than fading it.
+    crossProduct = min( 0.4 + 1. - acos( clamp( dot( normalize( position ), normalize( cameraPosition ) ), -1., 1. ) ), 1. );
+
+    float distFromMouse = distance( position, mouse3D ) / 10.;
+
+    // A band of longitude sweeping around the planet once every revolution of
+    // angularTime, lifting the dots it passes over slightly off the surface -
+    // and tinting them, in the fragment stage, on the way past.
+    float alpha = atan( position.z, position.x ) + M_PI;
+    float angularTime = mod( time / 8., 2. * M_PI );
+    float modulationSize = 0.02;
+    float distToModulation = abs( alpha - angularTime );
+    if ( distToModulation < modulationSize ) {
+      vDisplacementRadar = modulationSize - distToModulation;
+      vec3 nPos = position * ( 1. + vDisplacementRadar / 2. );
+      gl_Position = projectionMatrix * modelViewMatrix * vec4( nPos, 1.0 );
+    }
+
+    // A standing wave in the surface around wherever the pointer last touched
+    // the globe, decaying with timeSinceMove.
+    if ( distFromMouse < 8. ) {
+      vec3 newPosition = position * ( 1. + 10. * timeSinceMove * sin( distFromMouse * 4. - time * 2. ) / ( distFromMouse * 100. ) );
+      gl_Position = projectionMatrix * modelViewMatrix * vec4( newPosition, 1.0 );
+    }
+
+    // The intro. Every dot starts somewhere random inside a cube and flies to
+    // its place on the sphere, staggered by longitude through coords.x so the
+    // planet assembles as a sweep rather than all at once. The mix factor
+    // starts well above 1 for most dots, which extrapolates past the random
+    // position and throws them far out of frame - so the globe gathers itself
+    // in from outside the viewport.
+    if ( ( time - 8. ) < 1. ) {
+      vec3 interpolatedPos = mix( position, positionIntroText, max( 1. - ( time - 8. * coords.x ), 0. ) );
+      gl_Position = projectionMatrix * modelViewMatrix * vec4( interpolatedPos, 1.0 );
+    }
   }
 `;
-
-const POINT_FRAGMENT_SHADER = `
-  uniform sampler2D pointTexture;
-  varying vec3 vColor;
-  varying float vFacing;
-
-  void main() {
-    float alpha = texture2D(pointTexture, gl_PointCoord).a * vFacing;
-    // Discarding the fully faded ones keeps them out of the depth buffer
-    // entirely rather than blending invisible quads.
-    if (alpha < 0.02) discard;
-    gl_FragColor = vec4(vColor, alpha);
-
-    // Converts the linear colour written above into the renderer's output
-    // colour space. Three's built-in materials get this for free; a
-    // hand-written shader does not, and without it linear values land
-    // unconverted in an sRGB framebuffer - which renders everything at
-    // roughly a fifth of its intended brightness.
-    #include <colorspace_fragment>
-  }
-`;
-
-function loadImage(url: string): Promise<HTMLImageElement> {
-  return new Promise((resolve, reject) => {
-    const img = new Image();
-    img.onload = () => resolve(img);
-    img.onerror = reject;
-    img.src = url;
-  });
-}
 
 /**
- * The point sprite - PointsMaterial draws squares otherwise. Generated rather
- * than shipped: it's a circle.
+ * Colour comes straight out of the night map at the dot's own latitude and
+ * longitude, sampled per fragment rather than baked per dot - so the map keeps
+ * its full resolution instead of being flattened to one colour per dot.
  *
- * The rim fades over the outer few percent instead of ending on a hard edge.
- * alphaTest cuts a binary hole out of whatever it's given, so a hard-edged
- * disc puts a jagged step at every dot; letting it cut through a gradient
- * lands the boundary somewhere smoother.
+ * Deliberately no <colorspace_fragment>: the original predates three's colour
+ * management and writes raw texels to the framebuffer. Its textures are loaded
+ * with NoColorSpace to match, and converting on output here would lift the
+ * whole surface well past where these gains were tuned.
  */
-function discTexture(): THREE.CanvasTexture {
-  const size = 64;
-  const canvas = document.createElement("canvas");
-  canvas.width = canvas.height = size;
-  const ctx = canvas.getContext("2d")!;
-  const r = size / 2;
-  const gradient = ctx.createRadialGradient(r, r, 0, r, r, r);
-  gradient.addColorStop(0, "rgba(255,255,255,1)");
-  gradient.addColorStop(0.78, "rgba(255,255,255,1)");
-  gradient.addColorStop(1, "rgba(255,255,255,0)");
-  ctx.fillStyle = gradient;
-  ctx.fillRect(0, 0, size, size);
-  const texture = new THREE.CanvasTexture(canvas);
-  // No mipmaps. Dots render only a pixel or two across, so the GPU would
-  // sample a heavily reduced level whose average alpha sits below alphaTest -
-  // and the dot is then discarded entirely rather than merely dimmed, thinning
-  // the whole globe out.
-  texture.generateMipmaps = false;
-  texture.minFilter = THREE.LinearFilter;
-  return texture;
+const EARTH_FRAGMENT_SHADER = `
+  uniform sampler2D pointTexture;
+  uniform sampler2D earthTexture;
+  uniform float gain;
+  uniform float alphaGain;
+  varying vec2 vCoords;
+  varying float crossProduct;
+  varying float vDisplacementRadar;
+
+  void main() {
+    vec4 pointSpriteTexture = texture2D( pointTexture, gl_PointCoord );
+    vec4 earthMap = texture2D( earthTexture, vCoords ) * gain;
+    gl_FragColor = crossProduct * earthMap;
+    gl_FragColor.a = crossProduct * pointSpriteTexture.a * alphaGain;
+
+    // The radar sweep, as a magenta wash over the band it is crossing.
+    gl_FragColor.xyz = mix( gl_FragColor.xyz, vec3( 1., 0., 0.5 ), vDisplacementRadar * 25. );
+  }
+`;
+
+/**
+ * lat/lng to the original's world frame. Taken from the way it placed
+ * epicentres, so the aurora lands in the same coordinate system the surface
+ * dots were built in - phi measured from longitude 180, theta down from the
+ * north pole. Getting this wrong puts the oval over the wrong ocean.
+ */
+function toPosition(lat: number, lng: number, radius: number): THREE.Vector3 {
+  const phi = Math.PI + (lng / 180) * Math.PI;
+  const theta = Math.PI / 2 - (lat / 180) * Math.PI;
+  return new THREE.Vector3(
+    -radius * Math.cos(phi) * Math.sin(theta),
+    radius * Math.cos(theta),
+    radius * Math.sin(phi) * Math.sin(theta),
+  );
 }
 
-/** Reads an equirectangular image into a flat RGBA buffer for sampling. */
-async function readPixels(url: string) {
-  const image = await loadImage(url);
-  const canvas = document.createElement("canvas");
-  canvas.width = image.width;
-  canvas.height = image.height;
-  const ctx = canvas.getContext("2d", { willReadFrequently: true })!;
-  ctx.drawImage(image, 0, 0);
-  return ctx.getImageData(0, 0, image.width, image.height);
-}
-
-async function buildGlobeGeometry(): Promise<THREE.BufferGeometry> {
-  const [dayMap, nightMap] = await Promise.all([
-    readPixels(EARTH_COLOR_URL),
-    readPixels(EARTH_NIGHT_URL),
-  ]);
-  const { data, width, height } = dayMap;
-  const nightData = nightMap.data;
-
-  // Reused rather than allocated per dot - there are hundreds of thousands.
-  const sample = new THREE.Color();
-
+function buildEarthGeometry(): THREE.BufferGeometry {
   const positions: number[] = [];
-  const dayColors: number[] = [];
-  const nightColors: number[] = [];
-  // A plain uniform sweep in longitude and latitude: every meridian gets the
-  // same number of dots, with no correction for the rings shrinking toward
-  // the poles. That means the spacing is even in angle rather than on the
-  // ground, so dots crowd together at the poles - which is what gives this
-  // distribution its character, dense caps and an evenly ruled equator.
+  const introPositions: number[] = [];
+  const coords: number[] = [];
+
+  const half = RADIUS / 2;
+
   for (let i = 0; i < MERIDIANS; i++) {
-    const lng = (i / MERIDIANS) * 360 - 180;
-    for (let j = 0; j <= PARALLELS; j++) {
-      const lat = 90 - (j / PARALLELS) * 180;
+    const phi = (i / MERIDIANS) * 2 * Math.PI;
+    for (let j = 0; j < PARALLELS; j++) {
+      const theta = (j / PARALLELS) * Math.PI;
 
-      // Ocean included - the whole surface is dots, so nothing is skipped.
-      const x = Math.min(width - 1, Math.round(((lng + 180) / 360) * (width - 1)));
-      const y = Math.min(height - 1, Math.round(((90 - lat) / 180) * (height - 1)));
-      const px = (y * width + x) * 4;
-
-      const p = toCartesian(lat, lng).multiplyScalar(GLOBE_RADIUS * 1.003);
-      positions.push(p.x, p.y, p.z);
-
-      // setRGB with SRGBColorSpace converts to linear, which is what vertex
-      // colours are expected to be in - skip it and everything washes out.
-      sample.setRGB(
-        data[px] / 255,
-        data[px + 1] / 255,
-        data[px + 2] / 255,
-        THREE.SRGBColorSpace,
+      positions.push(
+        -RADIUS * Math.cos(phi) * Math.sin(theta),
+        RADIUS * Math.cos(theta),
+        RADIUS * Math.sin(phi) * Math.sin(theta),
       );
-      dayColors.push(sample.r * POINT_GAIN, sample.g * POINT_GAIN, sample.b * POINT_GAIN);
 
-      sample.setRGB(
-        nightData[px] / 255,
-        nightData[px + 1] / 255,
-        nightData[px + 2] / 255,
-        THREE.SRGBColorSpace,
+      // Equirectangular lookup, v running down from the north pole.
+      coords.push(i / MERIDIANS, 1 - j / PARALLELS);
+
+      introPositions.push(
+        Math.random() * RADIUS - half,
+        Math.random() * RADIUS - half,
+        Math.random() * RADIUS - half,
       );
-      nightColors.push(sample.r * POINT_GAIN, sample.g * POINT_GAIN, sample.b * POINT_GAIN);
     }
   }
 
   const geometry = new THREE.BufferGeometry();
-  geometry.setAttribute("position", new THREE.Float32BufferAttribute(positions, 3));
-  // Seeded with the day map; shadePoints immediately overwrites it with the
-  // correct crossfade for the current time.
-  geometry.setAttribute("aColor", new THREE.Float32BufferAttribute(dayColors, 3));
-  // Both originals are kept so every relight mixes from source, rather than
-  // compounding on whatever the last pass left behind.
-  geometry.userData.dayColors = Float32Array.from(dayColors);
-  geometry.userData.nightColors = Float32Array.from(nightColors);
+  geometry.setAttribute(
+    "position",
+    new THREE.Float32BufferAttribute(positions, 3),
+  );
+  geometry.setAttribute(
+    "positionIntroText",
+    new THREE.Float32BufferAttribute(introPositions, 3),
+  );
+  geometry.setAttribute("coords", new THREE.Float32BufferAttribute(coords, 2));
   return geometry;
 }
 
-/**
- * Day/night for the point cloud.
- *
- * The sphere is lit by three.js, but points are not - PointsMaterial ignores
- * lights entirely. Since every dot sits on the surface, its position doubles
- * as its surface normal, so the sun angle is just a dot product, and each dot
- * can be crossfaded between the daylit and city-lights maps directly in the
- * colour attribute.
- *
- * Cheaper than it looks: this runs once a minute, not per frame.
- */
-function shadePoints(geometry: THREE.BufferGeometry, sunDirection: THREE.Vector3) {
-  const position = geometry.getAttribute("position");
-  const color = geometry.getAttribute("aColor") as THREE.BufferAttribute;
-  const day = geometry.userData.dayColors as Float32Array;
-  const night = geometry.userData.nightColors as Float32Array;
-  const sun = sunDirection.clone().normalize();
-  const out = color.array as Float32Array;
-
-  for (let i = 0; i < position.count; i++) {
-    const j = i * 3;
-    // position is already radial from the origin, so normalising gives the
-    // surface normal for free.
-    const x = position.getX(i);
-    const y = position.getY(i);
-    const z = position.getZ(i);
-    const length = Math.hypot(x, y, z) || 1;
-    const facing = (x * sun.x + y * sun.y + z * sun.z) / length;
-
-    // Twilight band. Wide on purpose: the two maps are quite different - full
-    // daylight colour against black oceans and city lights - so a narrow
-    // crossfade reads as a hard seam rather than a sunrise.
-    const t = smoothstep(-TWILIGHT, TWILIGHT, facing);
-    out[j] = night[j] + (day[j] - night[j]) * t;
-    out[j + 1] = night[j + 1] + (day[j + 1] - night[j + 1]) * t;
-    out[j + 2] = night[j + 2] + (day[j + 2] - night[j + 2]) * t;
-  }
-  color.needsUpdate = true;
+/** Loaded without a colour space so the texels reach the shader exactly as
+ *  they sit in the file - see the fragment shader's note. */
+function loadRawTexture(url: string): THREE.Texture {
+  const texture = new THREE.TextureLoader().load(url);
+  texture.colorSpace = THREE.NoColorSpace;
+  return texture;
 }
 
-function smoothstep(edge0: number, edge1: number, x: number): number {
-  const t = Math.min(Math.max((x - edge0) / (edge1 - edge0), 0), 1);
-  return t * t * (3 - 2 * t);
-}
-
-function useGlobeDots(
-  globeRef: React.MutableRefObject<GlobeMethods | undefined>,
-  ready: boolean,
-) {
-  useEffect(() => {
-    if (!ready || !globeRef.current) return;
-    const scene = globeRef.current.scene();
-    const drawingBufferHeight =
-      globeRef.current.renderer().getContext().drawingBufferHeight;
-    let dots: THREE.Points | undefined;
-    let timer: ReturnType<typeof setInterval> | undefined;
-    let cancelled = false;
-
-    void buildGlobeGeometry().then((geometry) => {
-      if (cancelled) {
-        geometry.dispose();
-        return;
-      }
-      const material = new THREE.ShaderMaterial({
-        uniforms: {
-          pointTexture: { value: discTexture() },
-          size: { value: DOT_SIZE },
-          // Taken from the real drawing buffer, exactly as three does for
-          // PointsMaterial. Hardcoding the CSS height instead ignores device
-          // pixel ratio, so dots come out the wrong size on any display where
-          // that isn't 1 - and DOT_SIZE then means nothing consistent.
-          scale: { value: drawingBufferHeight * 0.5 },
-        },
-        vertexShader: POINT_VERTEX_SHADER,
-        fragmentShader: POINT_FRAGMENT_SHADER,
-        transparent: true,
-        // The opaque sphere still hides the far side via the depth test, so
-        // these don't need to write depth themselves - and not writing it lets
-        // the faded edges blend instead of punching holes in each other.
-        depthWrite: false,
-      });
-
-      const relight = () => {
-        const { lat, lng } = subsolarPoint(new Date());
-        shadePoints(geometry, toCartesian(lat, lng));
-      };
-      relight();
-      timer = setInterval(relight, TERMINATOR_REFRESH_MS);
-
-      dots = new THREE.Points(geometry, material);
-      scene.add(dots);
-    });
-
-    return () => {
-      cancelled = true;
-      if (timer) clearInterval(timer);
-      if (!dots) return;
-      scene.remove(dots);
-      dots.geometry.dispose();
-      const material = dots.material as THREE.ShaderMaterial;
-      (material.uniforms.pointTexture.value as THREE.Texture).dispose();
-      material.dispose();
-    };
-  }, [globeRef, ready]);
-}
+/* ------------------------------------------------------------------ aurora */
 
 /**
  * The aurora as a continuous glowing band rather than discrete cells.
  *
  * Each forecast point becomes a soft-edged sprite several times wider than the
- * 1-degree spacing between them, drawn with additive blending - so neighbours
- * overlap and sum into one smooth field instead of reading as ~15,000 separate
- * marks. Where the oval is strongest the overlap piles up and the colour
- * climbs the ramp on its own, which is what makes it behave like a heatmap
- * without any binning step.
+ * 1-degree spacing between them, drawn additively - so neighbours overlap and
+ * sum into one smooth field instead of reading as ~15,000 separate marks.
+ * Where the oval is strongest the overlap piles up and the colour climbs the
+ * ramp on its own, which is what makes it behave like a heatmap without any
+ * binning step.
  */
-const BAND_SIZE = 5.5;
+const BAND_SIZE = 11;
+
 /** Sits just above the surface dots so the band floats over the terrain. */
 const BAND_ALTITUDE = 1.02;
 
@@ -469,11 +350,47 @@ const BAND_ALTITUDE = 1.02;
  * is seen edge-on and many sprites stack along the same view ray, which is
  * where clipping shows up first. Lower means more of the ramp survives in the
  * bright core instead of flattening to solid colour.
+ *
+ * Raised from the 0.55 this page used over an opaque sphere. Nothing in the
+ * scene is opaque now, so the band no longer sits on a surface that hides
+ * everything behind it - it competes with the lit dots instead, and needs the
+ * headroom to stay the thing the eye lands on.
  */
-const BAND_GAIN = 0.55;
+const BAND_GAIN = 1.3;
+
+/** Carries the same facing term as the Earth's shader, for the same reason:
+ *  with nothing opaque in the scene, aurora on the far side of the planet
+ *  would otherwise shine straight through the near side. */
+const BAND_VERTEX_SHADER = `
+  attribute vec3 aColor;
+  uniform float size;
+  uniform float scale;
+  varying vec3 vColor;
+  varying float vFacing;
+
+  void main() {
+    vColor = aColor;
+    vec4 mvPosition = modelViewMatrix * vec4( position, 1.0 );
+    gl_PointSize = size * ( scale / -mvPosition.z );
+    gl_Position = projectionMatrix * mvPosition;
+    vFacing = max( min( 0.4 + 1. - acos( clamp( dot( normalize( position ), normalize( cameraPosition ) ), -1., 1. ) ), 1. ), 0. );
+  }
+`;
+
+const BAND_FRAGMENT_SHADER = `
+  uniform sampler2D pointTexture;
+  varying vec3 vColor;
+  varying float vFacing;
+
+  void main() {
+    float alpha = texture2D( pointTexture, gl_PointCoord ).a;
+    gl_FragColor = vec4( vColor * vFacing, alpha );
+  }
+`;
 
 /** Soft radial falloff. A hard-edged disc would show every sprite's outline
- *  no matter how much they overlap. */
+ *  no matter how much they overlap - which is why the band gets its own
+ *  sprite rather than reusing the Earth's spark. */
 function glowTexture(): THREE.CanvasTexture {
   const size = 64;
   const canvas = document.createElement("canvas");
@@ -491,167 +408,246 @@ function glowTexture(): THREE.CanvasTexture {
   return new THREE.CanvasTexture(canvas);
 }
 
-function useAuroraBand(
-  globeRef: React.MutableRefObject<GlobeMethods | undefined>,
-  forecast: AuroraForecast,
-  ready: boolean,
-) {
-  useEffect(() => {
-    if (!ready || !globeRef.current) return;
-    const scene = globeRef.current.scene();
+function buildAuroraBand(forecast: AuroraForecast, scale: number): THREE.Points {
+  const positions: number[] = [];
+  const colors: number[] = [];
 
-    const positions: number[] = [];
-    const colors: number[] = [];
-    const color = new THREE.Color();
+  for (const [lng, lat, probability] of forecast.points) {
+    const p = toPosition(lat, lng, RADIUS * BAND_ALTITUDE);
+    positions.push(p.x, p.y, p.z);
 
-    for (const [lng, lat, probability] of forecast.points) {
-      const p = toCartesian(lat, lng).multiplyScalar(GLOBE_RADIUS * BAND_ALTITUDE);
-      positions.push(p.x, p.y, p.z);
+    // Under additive blending brightness is the only channel available - there
+    // is no per-point alpha - so weak aurora is drawn as a dim colour and lets
+    // the surface below show through on its own.
+    const strength = Math.min(probability / 60, 1);
 
-      // Under additive blending brightness is the only channel available -
-      // there is no per-point alpha - so weak aurora is drawn as a dim colour
-      // and lets the surface below show through on its own.
-      const strength = Math.min(probability / 60, 1);
+    // NOAA's grid is 360 longitudes at every latitude, so the meridians
+    // converge toward the poles: by 89 degrees those points are packed ~57x
+    // more densely on the ground than at the equator. Additively blended that
+    // stacks into a blown-out white cap. Scaling by cos(lat) holds brightness
+    // per unit area constant, which is what the data actually means - the
+    // extra points are sampling resolution, not more aurora.
+    const density = Math.cos((lat * Math.PI) / 180);
 
-      // NOAA's grid is 360 longitudes at every latitude, so the meridians
-      // converge toward the poles: by 89 degrees those points are packed ~57x
-      // more densely on the ground than at the equator. Additively blended
-      // that stacks into a blown-out white cap. Scaling by cos(lat) holds
-      // brightness per unit area constant, which is what the data actually
-      // means - the extra points are sampling resolution, not more aurora.
-      const density = Math.cos((lat * Math.PI) / 180);
+    const gain = BAND_GAIN * strength * density;
+    const [r, g, b] = probabilityRamp(probability);
+    colors.push(r * gain, g * gain, b * gain);
+  }
 
-      const gain = BAND_GAIN * strength * density;
-      color.setStyle(probabilityColor(probability), THREE.SRGBColorSpace);
-      colors.push(color.r * gain, color.g * gain, color.b * gain);
-    }
+  const geometry = new THREE.BufferGeometry();
+  geometry.setAttribute(
+    "position",
+    new THREE.Float32BufferAttribute(positions, 3),
+  );
+  geometry.setAttribute("aColor", new THREE.Float32BufferAttribute(colors, 3));
 
-    const geometry = new THREE.BufferGeometry();
-    geometry.setAttribute("position", new THREE.Float32BufferAttribute(positions, 3));
-    geometry.setAttribute("color", new THREE.Float32BufferAttribute(colors, 3));
+  const material = new THREE.ShaderMaterial({
+    uniforms: {
+      pointTexture: { value: glowTexture() },
+      size: { value: BAND_SIZE },
+      scale: { value: scale },
+    },
+    vertexShader: BAND_VERTEX_SHADER,
+    fragmentShader: BAND_FRAGMENT_SHADER,
+    blending: THREE.AdditiveBlending,
+    // Matching the layer this replaces: nothing in the scene is opaque, so
+    // depth would only let these sprites occlude each other and stop the
+    // overlap - the whole point of the effect - from accumulating.
+    depthTest: false,
+    depthWrite: false,
+    transparent: true,
+  });
 
-    const material = new THREE.PointsMaterial({
-      size: BAND_SIZE,
-      vertexColors: true,
-      map: glowTexture(),
-      transparent: true,
-      blending: THREE.AdditiveBlending,
-      // Additive layers must not write depth or they occlude each other and
-      // the overlap - the whole point of the effect - stops accumulating.
-      depthWrite: false,
-      sizeAttenuation: true,
-    });
+  return new THREE.Points(geometry, material);
+}
 
-    const band = new THREE.Points(geometry, material);
-    scene.add(band);
+/* ------------------------------------------------------------------- scene */
 
-    return () => {
-      scene.remove(band);
-      geometry.dispose();
-      material.map?.dispose();
-      material.dispose();
-    };
-  }, [globeRef, forecast, ready]);
+interface GlobeScene {
+  setForecast(forecast: AuroraForecast): void;
+  dispose(): void;
 }
 
 /**
- * Opens the view on the night side rather than wherever longitude zero happens
- * to be. Aurora is only visible in darkness, so the anti-solar point - the
- * midnight meridian, directly opposite the Sun - is the half of the planet the
- * forecast actually concerns. Landing on the daylit face means the first thing
- * a visitor sees is the half where none of it can be seen.
+ * The whole three.js side, kept out of React: the component mounts it once,
+ * hands it a forecast whenever one arrives, and tears it down on unmount.
  */
-function useNightSideView(
-  globeRef: React.MutableRefObject<GlobeMethods | undefined>,
-  ready: boolean,
-) {
-  useEffect(() => {
-    if (!ready || !globeRef.current) return;
-    const { lat, lng } = subsolarPoint(new Date());
-    globeRef.current.pointOfView(
-      { lat: -lat, lng: ((lng + 360) % 360) - 180, altitude: 2.2 },
-      0,
-    );
-    // Deliberately only on mount: re-aiming the camera later would yank the
-    // view out from under someone who had rotated it themselves.
-  }, [globeRef, ready]);
-}
+function createGlobeScene(container: HTMLDivElement): GlobeScene {
+  const scene = new THREE.Scene();
 
-/**
- * Camera behaviour, tamed around the poles.
- *
- * OrbitControls tracks the camera in spherical coordinates, and azimuth is
- * undefined when you look straight down an axis - so approaching a pole makes
- * a one-pixel drag swing the view through a huge angle, which is the spiky
- * spinning. Holding the polar angle a few degrees short of vertical keeps it
- * out of that singularity; at POLE_MARGIN you can still look almost straight
- * down at the oval, which is the view this page exists for.
- *
- * TrackballControls has no such singularity but carries momentum, which reads
- * as the same runaway spin. Which of the two globe.gl builds depends on its
- * own default, and react-globe.gl doesn't expose the choice - so both are
- * configured by feature detection rather than assuming one.
- */
-const POLE_MARGIN = 0.12;
+  const width = container.clientWidth || 1;
+  const height = container.clientHeight || 1;
 
-/** Zoom range, as multiples of the globe's radius. 1.0 would put the camera
- *  exactly on the surface, so the near limit leaves clearance above it. */
-const MIN_ZOOM = 1.35;
-const MAX_ZOOM = 5.0;
+  const camera = new THREE.PerspectiveCamera(CAMERA_FOV, width / height, 1, 5000);
+  camera.position.y = CAMERA_DISTANCE;
 
-function useCameraControls(
-  globeRef: React.MutableRefObject<GlobeMethods | undefined>,
-  ready: boolean,
-) {
-  useEffect(() => {
-    if (!ready || !globeRef.current) return;
-    const controls = globeRef.current.controls() as unknown as Record<string, unknown>;
+  // alpha, unlike the original's opaque black: the panel paints a radial
+  // gradient behind this canvas and the sphere should read as sitting in the
+  // page rather than in a black box of its own.
+  const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+  // Capped at 2. The original takes the device ratio raw, which on a 3x phone
+  // means shading nine times the fragments for 245,000 additive sprites.
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+  renderer.setSize(width, height);
+  renderer.setClearAlpha(0);
+  renderer.domElement.style.display = "block";
+  container.appendChild(renderer.domElement);
 
-    // Zoom stepping into the same frame as a rotation is what made the two
-    // feel coupled; slowing both keeps a scroll from throwing the view.
-    controls.rotateSpeed = 0.45;
-    controls.zoomSpeed = 0.7;
+  const controls = new OrbitControls(camera, renderer.domElement);
+  controls.enableDamping = true;
+  controls.dampingFactor = 0.05;
+  controls.screenSpacePanning = false;
+  controls.minDistance = MIN_DISTANCE;
+  controls.maxDistance = MAX_DISTANCE;
 
-    // Distance from the globe centre, which has radius GLOBE_RADIUS. Both
-    // controller types honour these. The near limit keeps the camera outside
-    // the sphere - push through it and you end up inside a black shell with
-    // the surface dots facing away - while the far limit stops the planet
-    // shrinking to a speck in the middle of an empty panel.
-    controls.minDistance = GLOBE_RADIUS * MIN_ZOOM;
-    controls.maxDistance = GLOBE_RADIUS * MAX_ZOOM;
+  /** three's own convention for the point-size scale, and what the original's
+   *  hardcoded 300 stands in for. Re-read on resize. */
+  const pointScale = () =>
+    renderer.getContext().drawingBufferHeight * 0.5;
 
-    if ("minPolarAngle" in controls) {
-      controls.minPolarAngle = POLE_MARGIN;
-      controls.maxPolarAngle = Math.PI - POLE_MARGIN;
-      controls.enableDamping = true;
-      controls.dampingFactor = 0.15;
+  let time = 0;
+  let timeSinceMove = 1;
+  const mouse3D = new THREE.Vector3();
+
+  const earthTexture = loadRawTexture(EARTH_TEXTURE_URL);
+  const sparkTexture = loadRawTexture(SPARK_TEXTURE_URL);
+
+  const earthUniforms = {
+    time: { value: 0 },
+    timeSinceMove: { value: timeSinceMove },
+    mouse3D: { value: mouse3D },
+    size: { value: DOT_SIZE },
+    scale: { value: pointScale() },
+    gain: { value: EARTH_GAIN },
+    alphaGain: { value: ALPHA_GAIN },
+    pointTexture: { value: sparkTexture },
+    earthTexture: { value: earthTexture },
+  };
+
+  const earthGeometry = buildEarthGeometry();
+  const earthMaterial = new THREE.ShaderMaterial({
+    uniforms: earthUniforms,
+    vertexShader: EARTH_VERTEX_SHADER,
+    fragmentShader: EARTH_FRAGMENT_SHADER,
+    blending: THREE.AdditiveBlending,
+    depthTest: false,
+    transparent: true,
+  });
+  const earth = new THREE.Points(earthGeometry, earthMaterial);
+  scene.add(earth);
+
+  /**
+   * What the pointer is tested against. The original raycast the earthquake
+   * markers, since the ripple was only ever meant to fire on one of those;
+   * with them gone the globe itself stands in, so the surface still answers
+   * the pointer. Never drawn - it exists only to be hit.
+   */
+  const pickGeometry = new THREE.SphereGeometry(RADIUS, 32, 32);
+  const pickTarget = new THREE.Mesh(
+    pickGeometry,
+    new THREE.MeshBasicMaterial(),
+  );
+  pickTarget.visible = false;
+  scene.add(pickTarget);
+
+  const raycaster = new THREE.Raycaster();
+  const pointer = new THREE.Vector2();
+
+  function onPointerMove(event: PointerEvent) {
+    // Only while nothing is held down - a drag is a rotation, not a hover.
+    if (event.buttons !== 0) return;
+
+    // Against the canvas rect rather than the window: this one lives in a
+    // panel partway down a scrolling page.
+    const rect = renderer.domElement.getBoundingClientRect();
+    pointer.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+    pointer.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+
+    raycaster.setFromCamera(pointer, camera);
+    const [hit] = raycaster.intersectObject(pickTarget);
+    if (!hit) return;
+
+    mouse3D.copy(hit.point);
+    timeSinceMove = 1;
+  }
+
+  renderer.domElement.addEventListener("pointermove", onPointerMove);
+
+  let band: THREE.Points | null = null;
+
+  function disposeBand() {
+    if (!band) return;
+    scene.remove(band);
+    band.geometry.dispose();
+    const material = band.material as THREE.ShaderMaterial;
+    (material.uniforms.pointTexture.value as THREE.Texture).dispose();
+    material.dispose();
+    band = null;
+  }
+
+  const observer = new ResizeObserver(([entry]) => {
+    const w = Math.floor(entry.contentRect.width);
+    const h = Math.floor(entry.contentRect.height);
+    if (w === 0 || h === 0) return;
+    camera.aspect = w / h;
+    camera.updateProjectionMatrix();
+    renderer.setSize(w, h);
+    // The drawing buffer just changed size, so the dots' scale went with it.
+    earthUniforms.scale.value = pointScale();
+    if (band) {
+      (band.material as THREE.ShaderMaterial).uniforms.scale.value = pointScale();
     }
+  });
+  observer.observe(container);
 
-    if ("dynamicDampingFactor" in controls) {
-      // Stop the view coasting on after the pointer is released.
-      controls.staticMoving = true;
-      // Roll tips the globe off its axis entirely, which is disorienting on
-      // something with a meaningful up direction.
-      controls.noRoll = true;
-    }
-  }, [globeRef, ready]);
+  let frame = 0;
+  let lastFrame = performance.now();
+  function animate(now: number) {
+    frame = requestAnimationFrame(animate);
+    controls.update();
+
+    const elapsed = Math.min((now - lastFrame) / 1000, MAX_FRAME_SECONDS);
+    lastFrame = now;
+
+    time += TIME_RATE * elapsed;
+    if (timeSinceMove > 0) timeSinceMove -= RIPPLE_DECAY * elapsed;
+
+    earthUniforms.time.value = time * TIME_SCALE;
+    earthUniforms.timeSinceMove.value = timeSinceMove;
+
+    renderer.render(scene, camera);
+  }
+  animate(lastFrame);
+
+  return {
+    setForecast(forecast) {
+      disposeBand();
+      band = buildAuroraBand(forecast, pointScale());
+      scene.add(band);
+    },
+
+    dispose() {
+      cancelAnimationFrame(frame);
+      observer.disconnect();
+      renderer.domElement.removeEventListener("pointermove", onPointerMove);
+      controls.dispose();
+
+      disposeBand();
+      scene.remove(earth, pickTarget);
+      earthGeometry.dispose();
+      earthMaterial.dispose();
+      earthTexture.dispose();
+      sparkTexture.dispose();
+      pickGeometry.dispose();
+      pickTarget.material.dispose();
+
+      renderer.dispose();
+      renderer.domElement.remove();
+    },
+  };
 }
 
-/**
- * Lights live on the globe instance rather than in the React tree, so this
- * reaches through the ref once the canvas exists. Replaces three-globe's
- * defaults, which include a directional light this scene doesn't want.
- */
-function useAuroraLighting(
-  globeRef: React.MutableRefObject<GlobeMethods | undefined>,
-  ready: boolean,
-) {
-  useEffect(() => {
-    const globe = globeRef.current;
-    if (!ready || !globe) return;
-    globe.lights([new THREE.AmbientLight(0xffffff, AMBIENT_INTENSITY)]);
-  }, [globeRef, ready]);
-}
+/* --------------------------------------------------------------- the page */
 
 /**
  * OVATION is a nowcast that NOAA regenerates every ~5 minutes, and the API
@@ -736,82 +732,59 @@ function ForecastMeta({ forecast }: { forecast: AuroraForecast }) {
  * (Kp, Dst), and a continuous 0-100% likelihood is a different kind of
  * quantity. Green also happens to be the colour of a real aurora at these
  * altitudes, which makes the low end read correctly on sight.
+ *
+ * Returned as 0-1 channels because the band shader wants them that way, and
+ * because the globe's whole pipeline is unmanaged - running these through
+ * THREE.Color's sRGB conversion would put the band in a different colour space
+ * from the surface it sits on.
  */
-function probabilityColor(probability: number, alpha = 1): string {
+function probabilityRamp(probability: number): [number, number, number] {
   const p = Math.max(0, Math.min(100, probability)) / 100;
   // Ramp through green -> yellow -> red rather than interpolating straight
   // from green to red, which would pass through a muddy brown mid-range.
-  const [r, g, b] =
-    p < 0.5
-      ? [Math.round(2 * p * 255), 255, 80]
-      : [255, Math.round((1 - (p - 0.5) * 2) * 255), 60];
-  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+  return p < 0.5
+    ? [2 * p, 1, 80 / 255]
+    : [1, 1 - (p - 0.5) * 2, 60 / 255];
+}
+
+function probabilityColor(probability: number, alpha = 1): string {
+  const [r, g, b] = probabilityRamp(probability);
+  return `rgba(${Math.round(r * 255)}, ${Math.round(g * 255)}, ${Math.round(b * 255)}, ${alpha})`;
 }
 
 function AuroraGlobe({ forecast }: { forecast: AuroraForecast }) {
-  const wrapper = useRef<HTMLDivElement>(null);
-  const size = useContainerWidth(wrapper);
-  const globeRef = useRef<GlobeMethods | undefined>(undefined);
+  const host = useRef<HTMLDivElement>(null);
+  const sceneRef = useRef<GlobeScene | null>(null);
+  const [ready, setReady] = useState(false);
 
-  const sphereMaterial = useSphereMaterial();
-  useCameraControls(globeRef, size.width > 0);
-  useNightSideView(globeRef, size.width > 0);
-  useAuroraLighting(globeRef, size.width > 0);
-  useGlobeDots(globeRef, size.width > 0);
+  useEffect(() => {
+    if (!host.current) return;
+    const globe = createGlobeScene(host.current);
+    sceneRef.current = globe;
+    setReady(true);
+    return () => {
+      globe.dispose();
+      sceneRef.current = null;
+      setReady(false);
+    };
+  }, []);
 
-  useAuroraBand(globeRef, forecast, size.width > 0);
+  // Split from the mount effect so a refreshed forecast swaps the band out
+  // without tearing down the globe and replaying its intro.
+  useEffect(() => {
+    if (!ready) return;
+    sceneRef.current?.setForecast(forecast);
+  }, [forecast, ready]);
 
   return (
-    <div ref={wrapper} className="globe-wrap">
-      {size.width > 0 && (
-        <Globe
-          ref={globeRef}
-          width={size.width}
-          height={GLOBE_HEIGHT}
-          // globeMaterial replaces the surface outright, so globeImageUrl is
-          // deliberately not set - it would only be overwritten.
-          globeMaterial={sphereMaterial}
-          backgroundColor="rgba(0,0,0,0)"
-          // Kept faint: the atmosphere shell is brightest exactly at the limb,
-          // which is also where the aurora band stacks edge-on, and the two
-          // together were what lit up the rim.
-          atmosphereColor="#5b7fd0"
-          atmosphereAltitude={0.04}
-          // Both the surface dots and the aurora band are added straight to
-          // the scene as THREE.Points - see useGlobeDots and useAuroraBand.
-        />
-      )}
+    <div className="globe-wrap">
+      <div ref={host} className="globe-canvas" style={{ height: GLOBE_HEIGHT }} />
       <p className="globe-caption">
-        Chance of visible aurora overhead, with the day/night terminator at the
-        current time — aurora is only visible from the dark side. Drag to
-        rotate, scroll to zoom.
+        Chance of visible aurora overhead, from NOAA's OVATION nowcast, over
+        Earth at night. Drag to rotate, scroll to zoom.
       </p>
     </div>
   );
 }
 
 const GLOBE_HEIGHT = 560;
-
-/**
- * react-globe.gl needs explicit pixel dimensions - it can't size itself to a
- * flex parent - so the container is measured and the value fed back in.
- * ResizeObserver rather than a window resize listener, because the panel also
- * changes width when the layout reflows at a breakpoint without the window
- * itself resizing.
- */
-function useContainerWidth(ref: React.RefObject<HTMLDivElement | null>) {
-  const [size, setSize] = useState({ width: 0 });
-
-  useEffect(() => {
-    const element = ref.current;
-    if (!element) return;
-
-    const observer = new ResizeObserver(([entry]) => {
-      setSize({ width: Math.floor(entry.contentRect.width) });
-    });
-    observer.observe(element);
-    return () => observer.disconnect();
-  }, [ref]);
-
-  return size;
-}
