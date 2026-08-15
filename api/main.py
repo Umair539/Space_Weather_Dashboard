@@ -6,11 +6,12 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from api.aurora import refresh_aurora, refresh_once
 from api.db import POLL_INTERVALS
 from api.poller import initial_load, poll_table
 from api.rate_limit import RateLimitMiddleware
 from api.resource_monitor import log_resource_usage
-from api.routers import geomag, meta, solar_wind, sun
+from api.routers import aurora, geomag, meta, solar_wind, sun
 
 logging.basicConfig(level=logging.INFO)
 
@@ -24,10 +25,17 @@ RESOURCE_LOG_INTERVAL_SECONDS = float(os.environ.get("RESOURCE_LOG_INTERVAL_SECO
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     await initial_load()
+    # Awaited rather than left to the loop's first tick, so /aurora serves a
+    # forecast from the first request instead of 503ing for five minutes.
+    # It can't block startup on NOAA being up: refresh_once swallows its own
+    # failures, and the endpoint reports the outage on its own.
+    await refresh_once()
+
     tasks = [
         asyncio.create_task(poll_table(table, interval))
         for table, interval in POLL_INTERVALS.items()
     ]
+    tasks.append(asyncio.create_task(refresh_aurora()))
     tasks.append(asyncio.create_task(log_resource_usage(RESOURCE_LOG_INTERVAL_SECONDS)))
     yield
     for task in tasks:
@@ -71,6 +79,7 @@ app.add_middleware(
 app.include_router(solar_wind.router)
 app.include_router(geomag.router)
 app.include_router(sun.router)
+app.include_router(aurora.router)
 app.include_router(meta.router)
 
 

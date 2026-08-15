@@ -6,7 +6,8 @@
       { "path": "/", "label": "Home", "icon": "◆" },
       { "path": "/solar-wind", "label": "Solar Wind", "icon": "🛰" },
       { "path": "/geomagnetic-indices", "label": "Geomagnetic Indices", "icon": "📡" },
-      { "path": "/solar-activity", "label": "Solar Activity", "icon": "☀" }
+      { "path": "/solar-activity", "label": "Solar Activity", "icon": "☀" },
+      { "path": "/aurora", "label": "Aurora", "icon": "🌌" }
     ],
     "footerPrefix": "Data from the",
     "footerLinkText": "NOAA Space Weather Prediction Center",
@@ -58,6 +59,22 @@
         {
           "title": "About the solar cycle",
           "body": "The Sun follows a periodic 11-year cycle driven by its internal magnetic field, which completely flips orientation once per decade. The progression is most visibly tracked by sunspot number — dark, cooler regions of intense magnetic activity. During solar minimum very few sunspots appear; solar maximum brings a high concentration, often with more frequent flares. A more active Sun releases a more turbulent stream of particles, which is what ties this cycle to everything else on this dashboard."
+        }
+      ]
+    },
+    "aurora": {
+      "path": "/aurora",
+      "documentTitle": "Aurora Forecast — Space Weather Dashboard",
+      "title": "Aurora Forecast",
+      "subtitle": "Where the aurora is likely to be visible overhead in the next hour, on both hemispheres.",
+      "about": [
+        {
+          "title": "About the aurora forecast",
+          "body": "Aurora happens when charged particles from the solar wind are funnelled down Earth's magnetic field lines and collide with gases in the upper atmosphere, making them glow — green from oxygen at around 100–300 km, red higher up, and blue or purple from nitrogen. Because the particles follow the magnetic field, the display forms an oval centred on each magnetic pole rather than a cap over the geographic ones, and the two hemispheres light up near-simultaneously."
+        },
+        {
+          "title": "How to read the globe",
+          "body": "This is NOAA's OVATION model, which estimates the percentage chance of seeing aurora directly overhead over the next 30 to 90 minutes. It is driven by solar wind measured at L1, roughly a million miles upstream, which is what buys the forecast its short lead time. Colour and height both track that probability: low chances sit close to the surface in green, stronger ones rise and shift through yellow to red. A quiet forecast showing only thin polar ovals is the normal state — the ovals widen and push toward the equator as geomagnetic activity increases, which is the same disturbance the Kp and Dst pages measure."
         }
       ]
     }

@@ -59,6 +59,20 @@ export interface SsnRow {
   swpc_ssn: number;
 }
 
+/** OVATION nowcast point: [longitude -180..180, latitude, probability %]. */
+export type AuroraPoint = [number, number, number];
+
+export interface AuroraForecast {
+  /** When the underlying solar wind measurement was taken. */
+  observation_time: string | null;
+  /** The time the forecast is *for* - roughly an hour ahead of observation. */
+  forecast_time: string | null;
+  max_probability: number;
+  point_count: number;
+  points: AuroraPoint[];
+  retrieved_at?: string;
+}
+
 export class ApiError extends Error {
   constructor(
     message: string,
@@ -157,6 +171,8 @@ export const api = {
 
   ssnFullCycle: (signal?: AbortSignal) =>
     get<SsnRow[]>("/ssn/full-cycle", undefined, signal),
+
+  aurora: (signal?: AbortSignal) => get<AuroraForecast>("/aurora", undefined, signal),
 };
 
 export const apiBaseUrl = BASE;

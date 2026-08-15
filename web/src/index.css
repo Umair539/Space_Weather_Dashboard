@@ -668,3 +668,44 @@ label:has(.visually-hidden:focus-visible),
     width: 100%;
   }
 }
+
+/* ---------------------------------------------------------------- globe
+ * The aurora globe. Centred rather than stretched: the canvas is square-ish
+ * and a wide panel would otherwise leave the sphere pinned left.
+ */
+.globe-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+  /* The canvas paints its own transparent background, so the panel surface
+     shows through and the sphere reads as sitting in the page, not in a box. */
+  background: radial-gradient(ellipse at center, #0e131c 0%, var(--panel) 70%);
+  /* Dragging the globe should rotate it, not scroll the page on touch. */
+  touch-action: none;
+  cursor: grab;
+}
+
+.globe-wrap:active {
+  cursor: grabbing;
+}
+
+.globe-caption {
+  margin: 0;
+  padding: 10px 16px 14px;
+  color: var(--muted);
+  font-size: 13px;
+  text-align: center;
+}
+
+/* Rendered inside three-globe's own tooltip element, which sits outside the
+   React tree - so this can't rely on a parent class for its colours. */
+.globe-tip {
+  background: var(--panel);
+  border: 1px solid var(--border-strong);
+  border-radius: 6px;
+  padding: 5px 9px;
+  color: #e6edf3;
+  font-size: 12px;
+  white-space: nowrap;
+}
