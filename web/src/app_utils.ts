@@ -123,7 +123,6 @@ async function get<T>(
 
 export type SolarInterval = "24h" | "7d";
 export type GeomagInterval = "24h" | "7d" | "1mo";
-export type SsnInterval = "1mo" | "1y";
 
 export const api = {
   solarWindRaw: (
@@ -165,9 +164,6 @@ export const api = {
 
   kpLatest: (signal?: AbortSignal) =>
     get<KpRow | null>("/kp/latest", undefined, signal),
-
-  ssnRaw: (interval: SsnInterval, signal?: AbortSignal) =>
-    get<SsnRow[]>("/ssn/raw", { interval }, signal),
 
   ssnFullCycle: (signal?: AbortSignal) =>
     get<SsnRow[]>("/ssn/full-cycle", undefined, signal),
