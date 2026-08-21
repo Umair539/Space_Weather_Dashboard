@@ -29,10 +29,6 @@ def hour_of(when: datetime) -> datetime:
     return when.replace(minute=0, second=0, microsecond=0)
 
 
-def month_of(when: datetime) -> datetime:
-    return when.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
-
-
 def find(records: tuple[dict, ...], when: datetime) -> dict | None:
     """Binary search by time. Used instead of building a {time: row} index,
     which for the solar table would mean an extra ~44k-entry dict."""
@@ -76,35 +72,6 @@ def recompute_hours(records, buckets, hours, columns) -> None:
             "time": hour,
             **{c: round(sum(row[c] for row in minutes) / 60, 2) for c in columns},
         }
-
-
-def recompute_months(records, buckets, months) -> None:
-    """Monthly means for the given months only, in place on `buckets`.
-
-    Only the current/latest month requires full completeness - averaging a
-    handful of its early days would swing wildly as more arrive (the same
-    problem the SSN backfill investigation started from). Past months are
-    averaged over whatever days are actually present: their gaps are
-    permanent (NOAA never published some solar-minimum days, and the
-    confirmed-zero backfill only fills what LISIRD could verify as
-    spotless), so gating them forever would hide real data for no benefit -
-    unlike the current month, they will never "complete".
-    """
-    if not records:
-        return
-    latest_month = month_of(records[-1]["time"])
-
-    for month in months:
-        days_in_month = calendar.monthrange(month.year, month.month)[1]
-        days = [find(records, month.replace(day=d)) for d in range(1, days_in_month + 1)]
-        present = [row for row in days if row is not None]
-
-        if not present or (month == latest_month and len(present) < days_in_month):
-            buckets.pop(month, None)
-            continue
-
-        total = sum(row["swpc_ssn"] for row in present)
-        buckets[month] = {"time": month, "swpc_ssn": round(total / len(present), 2)}
 
 
 def prune_buckets(buckets: dict, oldest: datetime) -> None:

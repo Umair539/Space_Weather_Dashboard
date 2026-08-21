@@ -1,5 +1,28 @@
 import type { ReactNode } from "react";
 
+/** Markdown-style `[text](url)` links, the only inline markup About bodies
+ *  need - parsed by hand rather than pulling in a markdown renderer for one
+ *  pattern. */
+const LINK_PATTERN = /\[([^\]]+)\]\(([^)]+)\)/g;
+
+function withLinks(text: string): ReactNode[] {
+  const parts: ReactNode[] = [];
+  let lastIndex = 0;
+  let key = 0;
+  for (const match of text.matchAll(LINK_PATTERN)) {
+    const [full, label, href] = match;
+    if (match.index! > lastIndex) parts.push(text.slice(lastIndex, match.index));
+    parts.push(
+      <a key={key++} href={href} target="_blank" rel="noreferrer">
+        {label}
+      </a>,
+    );
+    lastIndex = match.index! + full.length;
+  }
+  parts.push(text.slice(lastIndex));
+  return parts;
+}
+
 interface SegmentedProps<T extends string> {
   options: readonly { value: T; label: string }[];
   value: T;
@@ -97,11 +120,14 @@ export function Chips<T extends string>({
 }
 
 /** Collapsible explainer. Closed by default - it's reference, not the point. */
-export function About({ title, children }: { title: string; children: ReactNode }) {
+export function About({ title, children }: { title: string; children: string }) {
+  // A blank line in the source string breaks it into separate paragraphs.
   return (
     <details className="about">
       <summary>{title}</summary>
-      <p>{children}</p>
+      {children.split("\n\n").map((paragraph, i) => (
+        <p key={i}>{withLinks(paragraph)}</p>
+      ))}
     </details>
   );
 }

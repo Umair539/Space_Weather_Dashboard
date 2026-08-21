@@ -392,8 +392,14 @@ button {
 /* ---------------------------------------------------------- metric cards */
 .metric-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  grid-template-columns: repeat(4, 1fr);
   gap: 12px;
+}
+
+@media (max-width: 860px) {
+  .metric-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
 }
 
 .metric {
@@ -452,10 +458,24 @@ button {
 }
 
 /* --------------------------------------------------------------- imagery */
+/* Same step-down as .metric-grid: 4 across when there's room, 2x2, then
+   1x4 on mobile - the four cards read as a matching set. */
 .image-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  grid-template-columns: repeat(4, 1fr);
   gap: 12px;
+}
+
+@media (max-width: 860px) {
+  .image-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 640px) {
+  .image-grid {
+    grid-template-columns: 1fr;
+  }
 }
 
 .sdo-card {
@@ -471,6 +491,41 @@ button {
   aspect-ratio: 1/1;
   display: block;
   background: #000;
+}
+
+.sdo-media-wrap {
+  position: relative;
+  display: block;
+  width: 100%;
+  padding: 0;
+  border: none;
+  background: none;
+  cursor: pointer;
+}
+
+.sdo-play {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+  color: #fff;
+  background: rgba(0, 0, 0, 0.45);
+  opacity: 0;
+  transition: opacity 0.15s ease;
+  pointer-events: none;
+}
+
+.sdo-media-wrap:hover .sdo-play,
+.sdo-media-wrap:focus-visible .sdo-play {
+  opacity: 1;
+}
+
+/* A quiet hint that playback can be stopped, brightening to full on
+   hover/focus like the play icon does. */
+.sdo-media-wrap[data-playing="true"] .sdo-play {
+  opacity: 0.55;
 }
 
 .sdo-caption {
@@ -549,6 +604,13 @@ button {
    * a sane overall reading width on its own. A second, stricter cap on top
    * of that just left a dead gap next to text, unlike every other panel
    * on the page (charts, images, metric cards), which fill edge to edge. */
+}
+
+/* Reads as body text, not a call to action - underlined instead of the
+ * global accent colour, which is reserved for interactive controls. */
+.about a {
+  color: inherit;
+  text-decoration: underline;
 }
 
 /* ---------------------------------------------------------------- states */
@@ -667,6 +729,10 @@ label:has(.visually-hidden:focus-visible),
     text-align: left;
     width: 100%;
   }
+
+  .metric-grid {
+    grid-template-columns: 1fr;
+  }
 }
 
 /* ---------------------------------------------------------------- globe
@@ -695,6 +761,29 @@ label:has(.visually-hidden:focus-visible),
    ResizeObserver inside the scene feeds both back to the renderer. */
 .globe-canvas {
   width: 100%;
+}
+
+/* The aurora scale. Sits between the globe and its caption, narrow enough that
+   it reads as a key rather than as another element competing with the sphere. */
+.globe-scale {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  max-width: 320px;
+  padding: 12px 16px 0;
+  color: var(--muted);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+
+.globe-scale-bar {
+  flex: 1;
+  height: 8px;
+  border-radius: 4px;
+  /* The low end of the ramp fades to near-black, which would otherwise vanish
+     against the panel - the outline keeps the bar's extent readable. */
+  box-shadow: inset 0 0 0 1px var(--border-strong);
 }
 
 .globe-caption {

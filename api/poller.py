@@ -3,24 +3,16 @@ import logging
 
 from sqlalchemy import text
 
-from api.aggregates import (
-    hour_of,
-    merge_dst,
-    month_of,
-    prune_buckets,
-    recompute_hours,
-    recompute_months,
-)
+from api.aggregates import hour_of, merge_dst, prune_buckets, recompute_hours
 from api.db import RETENTION_DAYS, TABLE_COLUMNS, get_engine
 from api.store import store
 
 logger = logging.getLogger("api.poller")
 
-# Working state for the bucketed aggregates: {bucket_start: row}. Only the
-# poller touches these, and only one task polls a given table, so they need
-# no lock - what gets published to the store is an immutable tuple.
+# Working state for the bucketed aggregate: {bucket_start: row}. Only the
+# poller touches this, and only one task polls solar, so it needs no lock -
+# what gets published to the store is an immutable tuple.
 _solar_hourly_buckets: dict = {}
-_ssn_monthly_buckets: dict = {}
 
 
 def _poll_once(table: str) -> set:
@@ -72,14 +64,6 @@ def _recompute_derived(table: str, changed_times: set) -> None:
         prune_buckets(_solar_hourly_buckets, hour_of(records[0]["time"]))
         store.set_derived(
             "solar_hourly", tuple(_solar_hourly_buckets[k] for k in sorted(_solar_hourly_buckets))
-        )
-
-    elif table == "ssn":
-        records = store.ssn.snapshot()
-        recompute_months(records, _ssn_monthly_buckets, {month_of(t) for t in changed_times})
-        prune_buckets(_ssn_monthly_buckets, month_of(records[0]["time"]))
-        store.set_derived(
-            "ssn_monthly", tuple(_ssn_monthly_buckets[k] for k in sorted(_ssn_monthly_buckets))
         )
 
     elif table in ("dst", "dst_predictions"):

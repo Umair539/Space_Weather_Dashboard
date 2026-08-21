@@ -396,3 +396,15 @@ export function bzSeverity(bz: number): Severity {
   if (bz <= -5) return severityOf("minor");
   return severityOf("quiet");
 }
+
+/**
+ * Peak OVATION probability, as a percentage chance of aurora overhead
+ * somewhere on the globe. Bands match the globe's own colour ramp on the
+ * Aurora page (probabilityRamp in Aurora.tsx), which pivots green-to-red
+ * at 50%: green below it, red at the top, orange as the step between.
+ */
+export function auroraSeverity(probability: number): Severity {
+  if (probability >= 80) return severityOf("severe");
+  if (probability >= 50) return severityOf("moderate");
+  return severityOf("quiet");
+}

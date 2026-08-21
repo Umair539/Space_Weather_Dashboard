@@ -61,7 +61,6 @@ class Store:
 
         self._derived: dict[str, tuple[dict, ...]] = {
             "solar_hourly": (),
-            "ssn_monthly": (),
             "dst_merged": (),
         }
         self._derived_lock = threading.Lock()

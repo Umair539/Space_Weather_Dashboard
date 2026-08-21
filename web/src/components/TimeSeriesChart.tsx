@@ -30,42 +30,96 @@ const TICK_OPTIONS: Record<Props["tickFormat"], Intl.DateTimeFormatOptions> = {
   "%d %b": { day: "2-digit", month: "short" },
 };
 
-const HOUR_MS = 3_600_000;
-const DAY_MS = 86_400_000;
-const TICK_COUNT = 6;
+/** Date and time split onto their own line each, rather than run together as
+ *  "13 Jul 15:00" - the only format here that carries both, and on the axis
+ *  the two halves read as one heavier label unless something separates them. */
+const DATE_PART: Intl.DateTimeFormatOptions = { month: "short", day: "2-digit" };
+const TIME_PART: Intl.DateTimeFormatOptions = { hour: "2-digit", minute: "2-digit" };
 
-// The unit ticks anchor to - whole hours for the chart that shows a time
-// of day, whole days (midnight) for every date-only chart, matching what
-// each format can actually display: a "%d %b" tick sitting at 14:00 would
-// still just print "04 Aug", so hour-precision there conveys nothing a
-// viewer can see - midnight is the round number that format can show.
-const ANCHOR_UNIT_MS: Record<Props["tickFormat"], number> = {
-  "%b %d, %H:%M": HOUR_MS,
-  "%b %d %Y": DAY_MS,
-  "%b %Y": DAY_MS,
-  "%Y": DAY_MS,
-  "%d %b": DAY_MS,
+const HOUR_MS = 3_600_000;
+const TARGET_TICKS = 7;
+
+// Which kind of calendar unit each format's ticks step through - hours (or
+// whole days, which are just a 24h step) for anything with a day or finer
+// in it, months/years for the two coarsest formats.
+type TickKind = "hour" | "month" | "year";
+const TICK_KIND: Record<Props["tickFormat"], TickKind> = {
+  "%b %d, %H:%M": "hour",
+  "%b %d %Y": "hour",
+  "%d %b": "hour",
+  "%b %Y": "month",
+  "%Y": "year",
 };
 
+// Spacings to try, smallest first, until the span fits in TARGET_TICKS
+// ticks - so a 24h chart gets one tick every 4h, a 7d chart one per
+// midnight, a 30d chart one every 5 days, and so on, rather than a fixed
+// count of ticks landing wherever that happens to divide the span.
+// Every value here divides evenly into a day, so stepping from the Unix
+// epoch (itself a UTC midnight) always lands on a round clock time or a
+// midnight, never an arbitrary offset.
+const HOUR_STEPS = [1, 2, 3, 4, 6, 8, 12, 24, 48, 72, 120, 144, 240, 360, 720];
+// Calendar steps for the month/year axes. Both divide evenly into 12, so
+// stepping from a fixed origin lands on the same months/years every time
+// (Jan/Apr/Jul/Oct for a 3-month step) rather than drifting with wherever
+// the data happens to start.
+const CALENDAR_STEPS = [1, 2, 3, 4, 6, 12];
+
+function hourTicks(min: number, max: number): number[] {
+  for (const stepH of HOUR_STEPS) {
+    const stepMs = stepH * HOUR_MS;
+    const first = Math.ceil(min / stepMs) * stepMs;
+    const last = Math.floor(max / stepMs) * stepMs;
+    const count = last >= first ? Math.round((last - first) / stepMs) + 1 : 0;
+    if (count <= TARGET_TICKS || stepH === HOUR_STEPS[HOUR_STEPS.length - 1]) {
+      const ticks: number[] = [];
+      for (let t = first; t <= last; t += stepMs) ticks.push(t);
+      return ticks.length ? ticks : [min, max];
+    }
+  }
+  return [min, max];
+}
+
+const monthIndex = (t: number) => {
+  const d = new Date(t);
+  return d.getUTCFullYear() * 12 + d.getUTCMonth();
+};
+const fromMonthIndex = (i: number) => Date.UTC(Math.floor(i / 12), i % 12, 1);
+
+function calendarTicks(min: number, max: number, unit: "month" | "year"): number[] {
+  const toIndex = unit === "month" ? monthIndex : (t: number) => new Date(t).getUTCFullYear();
+  const fromIndex = unit === "month" ? fromMonthIndex : (i: number) => Date.UTC(i, 0, 1);
+  const minIdx = toIndex(min);
+  const maxIdx = toIndex(max);
+
+  for (const step of CALENDAR_STEPS) {
+    const first = Math.ceil(minIdx / step) * step;
+    const last = Math.floor(maxIdx / step) * step;
+    const count = last >= first ? Math.round((last - first) / step) + 1 : 0;
+    if (count <= TARGET_TICKS || step === CALENDAR_STEPS[CALENDAR_STEPS.length - 1]) {
+      const ticks: number[] = [];
+      for (let i = first; i <= last; i += step) ticks.push(fromIndex(i));
+      return ticks.length ? ticks : [min, max];
+    }
+  }
+  return [min, max];
+}
+
 /**
- * Explicit tick positions, anchored near each true edge of the data on a
- * round unit, evenly spread between - as opposed to leaving the axis's
- * own bounds untouched (they still match the real data exactly, so the
- * line always fills the full width) and separately controlling where
- * labels land within that.
+ * Explicit tick positions, chosen at a calendar-nice spacing (whole hours,
+ * days, months or years - never an arbitrary fraction of the span) and
+ * anchored to a fixed origin, as opposed to leaving the axis's own bounds
+ * untouched (they still match the real data exactly, so the line always
+ * fills the full width) and separately controlling where labels land
+ * within that.
  *
  * A rolling window (always "newest minus N") can start or end at any
  * arbitrary minute, and ECharts' automatic tick algorithm doesn't know or
- * care where the window's real edges are - it picks ticks aligned to its
- * own absolute clock grid, which can land anywhere from right at an edge
- * to a full unit short of it, by chance, differently every time new data
- * polls in. This computes the tick values directly instead: the nearest
- * unit at-or-after the true start, the nearest unit at-or-before the true
- * end, and evenly interpolated (then unit-snapped) points between the two
- * - so the first and last labelled ticks are always close to the edges,
- * not wherever the absolute clock grid happens to fall.
+ * care where the window's real edges are. This computes the tick values
+ * directly instead, at the coarsest nice spacing that still keeps the
+ * axis under TARGET_TICKS labels.
  */
-function anchoredTicks(series: Series[], unit: number): number[] | undefined {
+function niceTicks(series: Series[], tickFormat: Props["tickFormat"]): number[] | undefined {
   let min = Infinity;
   let max = -Infinity;
   for (const s of series) {
@@ -76,16 +130,8 @@ function anchoredTicks(series: Series[], unit: number): number[] | undefined {
   }
   if (!Number.isFinite(min) || !Number.isFinite(max)) return undefined;
 
-  const first = Math.ceil(min / unit) * unit;
-  const last = Math.floor(max / unit) * unit;
-  if (last <= first) return [min, max];
-
-  const ticks = new Set<number>();
-  for (let i = 0; i < TICK_COUNT; i++) {
-    const raw = first + ((last - first) * i) / (TICK_COUNT - 1);
-    ticks.add(Math.round(raw / unit) * unit);
-  }
-  return [...ticks].sort((a, b) => a - b);
+  const kind = TICK_KIND[tickFormat];
+  return kind === "hour" ? hourTicks(min, max) : calendarTicks(min, max, kind);
 }
 
 export function TimeSeriesChart({
@@ -98,9 +144,16 @@ export function TimeSeriesChart({
   ariaLabel,
 }: Props) {
   const option = useMemo<EChartsCoreOption>(() => {
-    const label = (value: number) =>
-      formatUtc(new Date(value), TICK_OPTIONS[tickFormat]);
-    const ticks = anchoredTicks(series, ANCHOR_UNIT_MS[tickFormat]);
+    const label = (value: number) => {
+      const date = new Date(value);
+      // Wrapped onto two lines only for the format that carries both parts -
+      // a date-only or year-only tick has nothing to split.
+      if (tickFormat === "%b %d, %H:%M") {
+        return `${formatUtc(date, DATE_PART)}\n${formatUtc(date, TIME_PART)}`;
+      }
+      return formatUtc(date, TICK_OPTIONS[tickFormat]);
+    };
+    const ticks = niceTicks(series, tickFormat);
 
     return {
       backgroundColor: "transparent",
@@ -120,7 +173,9 @@ export function TimeSeriesChart({
         left: 72,
         right: 44,
         top: series.length > 1 ? 48 : 16,
-        bottom: 44,
+        // Extra room when the label wraps to two lines - unwrapped labels
+        // only need enough for one.
+        bottom: tickFormat === "%b %d, %H:%M" ? 56 : 44,
       },
       // A legend is required once identity is in play; with one series the
       // heading already names it, so the box would be noise.
@@ -183,12 +238,24 @@ export function TimeSeriesChart({
         axisLabel: {
           color: surface.muted,
           fontSize: 11,
+          lineHeight: 14,
           formatter: label,
-          hideOverlap: true,
+          // niceTicks already spaces these deliberately to avoid crowding -
+          // both of ECharts' own thinning heuristics (hideOverlap, and the
+          // default auto interval that applies even with customValues set)
+          // were dropping some of them anyway, so both are switched off.
+          hideOverlap: false,
+          interval: 0,
+          showMinLabel: true,
+          showMaxLabel: true,
           customValues: ticks,
         },
-        axisTick: { customValues: ticks, lineStyle: { color: surface.border } },
-        axisLine: { lineStyle: { color: surface.border } },
+        axisTick: { customValues: ticks, lineStyle: { color: surface.muted } },
+        // onZero:false keeps the axis pinned to the bottom of the plot -
+        // ECharts otherwise draws it through the y-axis's zero line, which
+        // for a signed series (Bz, By, Bx) puts it through the middle of
+        // the chart instead.
+        axisLine: { onZero: false, lineStyle: { color: surface.muted } },
         splitLine: { show: false },
       },
       yAxis: {

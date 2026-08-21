@@ -18,8 +18,9 @@ const { title, subtitle, about } = content.pages.solarActivity;
 // services.swpc.noaa.gov's image feed sits behind an AWS WAF challenge that
 // blocks non-browser clients - and since these load as sub-resources, even
 // real browsers can't solve that challenge for them. NASA SDO publishes
-// pre-rendered rolling animations with no such block. 512px keeps the total
-// payload to ~21MB across all three instead of ~130MB at full resolution.
+// pre-rendered rolling animations with no such block. 512px keeps each
+// animation to a few MB instead of tens of MB at full resolution, and each
+// only loads once someone plays it (see SolarCard) rather than all at once.
 // The array itself lives in content.json - it's fixed metadata plus fixed
 // NASA URLs, no different from the About text, and the prerender script
 // needs the same data to bake real <img> tags into the static shell.
@@ -53,54 +54,55 @@ export function SolarActivity() {
 }
 
 function SolarImages() {
-  // Animations are ~21MB total; stills are ~0.6MB. Default to stills and let
-  // people opt into the heavier animated view.
-  const [animate, setAnimate] = useState(false);
-
   return (
-    <Panel
-      title="Latest Solar View"
-      subtitle="NASA SDO"
-      right={
-        <label style={{ display: "inline-flex", gap: 7, alignItems: "center", cursor: "pointer" }}>
-          <input
-            type="checkbox"
-            checked={animate}
-            onChange={(e) => setAnimate(e.target.checked)}
-          />
-          Animate (~21 MB)
-        </label>
-      }
-      pad
-    >
+    <Panel title="Latest Solar View" subtitle="NASA SDO" pad>
       <div className="image-grid">
         {SDO.map((image) => (
-          <figure key={image.key} className="sdo-card">
-            {animate ? (
-              <video
-                className="sdo-media"
-                autoPlay
-                loop
-                muted
-                playsInline
-                aria-label={image.key}
-              >
-                <source src={image.video} type="video/mp4" />
-              </video>
-            ) : (
-              <img className="sdo-media" src={image.still} alt={image.key} loading="lazy" />
-            )}
-            <figcaption className="sdo-caption">
-              <span className="sdo-badge" style={{ color: image.color }}>
-                {image.badge}
-              </span>
-              <div className="sdo-sub">{image.subtitle}</div>
-              <div className="sdo-desc">{image.description}</div>
-            </figcaption>
-          </figure>
+          <SolarCard key={image.key} image={image} />
         ))}
       </div>
     </Panel>
+  );
+}
+
+/**
+ * Each still starts static (~0.6MB); the ~21MB animation only loads once
+ * someone actually wants it. Hovering (or, on touch, the first tap) shows
+ * a play icon over the still as a hint; clicking it fetches and starts the
+ * animation. Playing shows the same hint as a pause icon, which drops the
+ * video and reverts to the still.
+ */
+function SolarCard({ image }: { image: (typeof SDO)[number] }) {
+  const [playing, setPlaying] = useState(false);
+
+  return (
+    <figure className="sdo-card">
+      <button
+        type="button"
+        className="sdo-media-wrap"
+        data-playing={playing}
+        onClick={() => setPlaying((p) => !p)}
+        aria-label={playing ? `Pause ${image.key} animation` : `Play ${image.key} animation`}
+      >
+        {playing ? (
+          <video className="sdo-media" autoPlay loop muted playsInline aria-label={image.key}>
+            <source src={image.video} type="video/mp4" />
+          </video>
+        ) : (
+          <img className="sdo-media" src={image.still} alt={image.key} loading="lazy" />
+        )}
+        <span className="sdo-play" aria-hidden>
+          {playing ? "⏸" : "▶"}
+        </span>
+      </button>
+      <figcaption className="sdo-caption">
+        <span className="sdo-badge" style={{ color: image.color }}>
+          {image.badge}
+        </span>
+        <div className="sdo-sub">{image.subtitle}</div>
+        <div className="sdo-desc">{image.description}</div>
+      </figcaption>
+    </figure>
   );
 }
 
@@ -120,7 +122,7 @@ function SunspotPanel() {
   return (
     <Panel
       title="Sunspot Number"
-      subtitle={range === "cycle" ? "monthly mean" : "daily"}
+      subtitle="daily"
       right={
         <>
           {state.data?.length ? (
@@ -139,9 +141,7 @@ function SunspotPanel() {
       }
     >
       <Async state={state}>
-        {(rows) => (
-          <SsnChart rows={rows} tickFormat={tickFormat} monthly={range === "cycle"} />
-        )}
+        {(rows) => <SsnChart rows={rows} tickFormat={tickFormat} />}
       </Async>
     </Panel>
   );
@@ -150,21 +150,24 @@ function SunspotPanel() {
 function SsnChart({
   rows,
   tickFormat,
-  monthly,
 }: {
   rows: SsnRow[];
   tickFormat: "%b %d %Y" | "%b %Y" | "%Y";
-  monthly: boolean;
 }) {
   const series = useMemo(
     () => [
       {
-        name: monthly ? "Monthly mean" : "Sunspot number",
+        name: "Sunspot number",
         color: singleSeries,
         points: toPoints(rows, "swpc_ssn"),
       },
+      {
+        name: "Monthly mean",
+        color: "#fff",
+        points: monthlyMeanPoints(rows),
+      },
     ],
-    [rows, monthly],
+    [rows],
   );
 
   return (
@@ -176,6 +179,24 @@ function SsnChart({
       ariaLabel="Sunspot number over time"
     />
   );
+}
+
+/** One point per calendar month, averaging whatever daily values it has -
+ *  a trend line over the raw daily series, not a replacement for it. */
+function monthlyMeanPoints(rows: SsnRow[]): [number, number | null][] {
+  const buckets = new Map<number, { sum: number; count: number }>();
+  for (const row of rows) {
+    if (typeof row.swpc_ssn !== "number") continue;
+    const d = parseApiTime(row.time);
+    const month = Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), 1);
+    const bucket = buckets.get(month) ?? { sum: 0, count: 0 };
+    bucket.sum += row.swpc_ssn;
+    bucket.count += 1;
+    buckets.set(month, bucket);
+  }
+  return [...buckets.entries()]
+    .sort(([a], [b]) => a - b)
+    .map(([month, { sum, count }]) => [month, Math.round((sum / count) * 100) / 100]);
 }
 
 function caption(iso: string | undefined): string {

@@ -30,7 +30,7 @@ type Range = (typeof RANGES)[number]["value"];
 const AXIS_TITLES: Record<SolarColumn, string> = {
   density: "Particle density (p/cm³)",
   speed: "Speed (km/s)",
-  temperature: "Temperature (K)",
+  temperature: "Temperature (10³ K)",
   pressure: "Dynamic pressure (nPa)",
   bz: "IMF Bz (nT)",
   by: "IMF By (nT)",
@@ -142,7 +142,14 @@ function FeatureChart({
       {
         name: PANEL_TITLES[feature],
         color: paramColors[feature],
-        points: toPoints(rows, feature),
+        // Temperature is plotted in kK to keep the axis numbers short - raw
+        // Kelvin values run to six figures.
+        points:
+          feature === "temperature"
+            ? toPoints(rows, feature).map(
+                ([t, v]): [number, number | null] => [t, v === null ? null : v / 1000],
+              )
+            : toPoints(rows, feature),
       },
     ],
     [rows, feature],

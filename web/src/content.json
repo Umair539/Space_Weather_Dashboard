@@ -19,18 +19,18 @@
       "path": "/",
       "documentTitle": "Space Weather Dashboard",
       "title": "Current Conditions",
-      "subtitle": "Solar wind parameters and geomagnetic indices, updated continuously from the NOAA Space Weather Prediction Center.",
+      "subtitle": "Solar wind parameters and geomagnetic indices, updated continuously using data from the NOAA Space Weather Prediction Center.",
       "about": []
     },
     "solarWind": {
       "path": "/solar-wind",
       "documentTitle": "Solar Wind — Space Weather Dashboard",
       "title": "Solar Wind",
-      "subtitle": "Plasma and interplanetary magnetic field measured at L1, one minute apart.",
+      "subtitle": "Plasma and interplanetary magnetic field properties, provided by satellites at the L1 Lagrange point.",
       "about": [
         {
           "title": "About the solar wind",
-          "body": "The solar wind is a continuous stream of charged particles (plasma) emitted by the Sun's atmosphere. When this stream reaches Earth, it transfers energy into the magnetosphere. It has two components: the properties of the plasma (speed, density, temperature) and those of the embedded magnetic field, the Interplanetary Magnetic Field. Geomagnetic storms are typically triggered by high-speed solar wind combined with a strong southward IMF — storm intensity increases as the Bz value becomes more negative."
+          "body": "The solar wind is a continuous stream of charged particles (plasma) emitted by the Sun's atmosphere. When this stream reaches Earth, it transfers energy into the magnetosphere. It has two components: the properties of the plasma (speed, density, temperature) and those of the embedded magnetic field, the Interplanetary Magnetic Field. Geomagnetic storms are typically triggered by high-speed solar wind combined with a strong southward IMF — storm intensity increases as the Bz value becomes more negative.\n\nThese measurements are captured by satellites stationed at the L1 Lagrange point, about 1.5 million km sunward of Earth, where they see the solar wind roughly an hour before it arrives. Current active satellites include NOAA's [SOLAR-1](https://www.nesdis.noaa.gov/our-satellites/future-programs/swfo/space-weather-observations-l1-advance-readiness-solar-1) and NASA's [IMAP](https://science.nasa.gov/mission/imap/)."
         }
       ]
     },
@@ -70,11 +70,7 @@
       "about": [
         {
           "title": "About the aurora forecast",
-          "body": "Aurora happens when charged particles from the solar wind are funnelled down Earth's magnetic field lines and collide with gases in the upper atmosphere, making them glow — green from oxygen at around 100–300 km, red higher up, and blue or purple from nitrogen. Because the particles follow the magnetic field, the display forms an oval centred on each magnetic pole rather than a cap over the geographic ones, and the two hemispheres light up near-simultaneously."
-        },
-        {
-          "title": "How to read the globe",
-          "body": "This is NOAA's OVATION model, which estimates the percentage chance of seeing aurora directly overhead over the next 30 to 90 minutes. It is driven by solar wind measured at L1, roughly a million miles upstream, which is what buys the forecast its short lead time. Colour and height both track that probability: low chances sit close to the surface in green, stronger ones rise and shift through yellow to red. A quiet forecast showing only thin polar ovals is the normal state — the ovals widen and push toward the equator as geomagnetic activity increases, which is the same disturbance the Kp and Dst pages measure."
+          "body": "Aurora forms when solar wind is channeled along Earth's magnetic field lines into the upper atmosphere: oxygen emits green between 100 and 300 km altitude, and red at higher altitudes, while nitrogen contributes blue and violet. Because particles follow field lines rather than falling vertically, the display forms an oval around each magnetic pole (offset from the geographic poles), with both hemispheres lit simultaneously. The globe shows NOAA's OVATION model: probability of aurora overhead in the next 30–90 minutes, per the scale below. This lead time comes from measuring solar wind at L1, 1.5 million km upstream, roughly an hour before arrival. A narrow oval reflects quiet conditions; rising geomagnetic activity brightens it and pushes it equatorward."
         }
       ]
     }
@@ -90,8 +86,17 @@
       "video": "https://sdo.gsfc.nasa.gov/assets/img/latest/mpeg/latest_512_HMIIC.mp4"
     },
     {
+      "key": "Corona",
+      "badge": "SDO · AIA 171Å",
+      "color": "#f0c419",
+      "subtitle": "Fe IX/X · quiet corona",
+      "description": "Coronal loops and coronal holes (0.6 MK)",
+      "still": "https://sdo.gsfc.nasa.gov/assets/img/latest/latest_512_0171.jpg",
+      "video": "https://sdo.gsfc.nasa.gov/assets/img/latest/mpeg/latest_512_0171.mp4"
+    },
+    {
       "key": "Eruptions",
-      "badge": "SUVI · 304Å",
+      "badge": "SDO · AIA 304Å",
       "color": "#f2564a",
       "subtitle": "He II · chromosphere",
       "description": "Filaments, prominences and coronal holes (75 MK)",
@@ -100,7 +105,7 @@
     },
     {
       "key": "Flares",
-      "badge": "SUVI · 131Å",
+      "badge": "SDO · AIA 131Å",
       "color": "#2dd4bf",
       "subtitle": "Fe VIII/XXI · flare plasma",
       "description": "High-energy flare and eruptive plasma (10 MK)",
