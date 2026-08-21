@@ -41,6 +41,23 @@ Part of this came from knowing how the data actually works. Despite being called
 **6. Streamlit Community Cloud > EC2**
 Moved the app to a self-hosted EC2 instance to eliminate cold starts and allow for always-on availability. Co-locating app and DB in the same EU region had the additional benefit of reduced database latency.
 
+**7. Streamlit on EC2 > React + FastAPI on Render/Cloudflare**
+
+The final shape of the frontend. Previously: a Streamlit app, containerised on a `t4g.micro` EC2 instance with an Elastic IP, provisioned with Terraform, served over HTTPS through Nginx and Certbot, with instance access via SSM Session Manager and deploys driven by `ssm send-command`. This setup functioned smoothly with no issues, and served a purpose: it gave experience provisioning infrastructure with Terraform and setting up EC2 networking. But it had real limitations - the cost of hosting, database egress under Streamlit, and constraints on what the UI could do.
+
+Replaced by two pieces: a FastAPI service holding the served data in memory (`api/`), hosted on Render, and a React frontend (`web/`), hosted on Cloudflare Pages.
+
+What the change bought:
+
+- **Substantially cheaper.** EC2 and the Elastic IP were the only line items with a real recurring cost. Render's free tier hosts the API and Cloudflare Pages hosts the static frontend, so ongoing hosting cost went to zero.
+- **More frequent frontend updates.** Streamlit was polling full tables straight from the database on every refresh, eating into the available egress and keeping refreshes infrequent to stay within it. Now the API holds the data in memory and only polls Postgres for what's changed, so the database sees the same small load no matter how often the frontend refreshes - and the frontend can refresh far more often as a result.
+- **More customisable UI.** React gives direct control over layout and behaviour that Streamlit's component model didn't allow, giving the site a more unique feel.
+- **Far less to secure and operate.** No security groups, no Elastic IP, no Nginx config, no Certbot renewal, no SSM Session Manager, no `user_data.yaml` cloud-init, no Terraform state. TLS and DNS are Cloudflare's problem; container runtime is Render's. The remaining security surface is small enough to fit in a list (see below).
+
+One tradeoff: EC2 was originally chosen to avoid cold starts, and Render's free tier spins the API down after 15 minutes idle. An uptime monitor pings it every 5 minutes to keep it warm.
+
+The code for the Streamlit app and its deployment are saved on the `streamlit-app` branch for reference. The AWS infrastructure it ran on was destroyed.
+
 ---
 
 ## The Lambda Scaling Problem
@@ -80,9 +97,44 @@ Lambda duration and memory are now stable, no longer growing with time.
 
 ---
 
+## Load-Path Optimisation
+
+With the API caching layer and React frontend in place, the frontend could support more frequent updates without the egress cost that ruled it out under Streamlit - which made increasing the ETL's own run frequency worth pursuing. That meant getting the Lambda's load path lighter and faster first: a load refactor, threaded partition loads, gzip+orjson raw storage, and a shared S3 client.
+
+**Storage.** Raw S3 objects moved from plain JSON to gzip+orjson. The largest single partition, `mag/dicts/2026-07`, went from 17.1 MB to 1.2 MB.
+
+**Duration and memory.** Measured from CloudWatch, comparing a four-day baseline before the work against four days after:
+
+| Metric | Before | After | Delta |
+|---|---|---|---|
+| Duration | 8.39s | 7.50s | -11% |
+| Peak memory | ~357MB | ~536MB | +50% |
+
+**Note:** memory went up, not down. These changes increased memory consumption, but the Lambda has 1024MB assigned, so it stays comfortably under the limit.
+
+---
+
+## The API Caching Layer
+
+The API loads each table into memory once at startup, and a background poller checks each table on its own interval, fetching only rows with `updated_at` greater than the last fetch. Requests are served entirely from memory, so the database sees the same small load regardless of traffic.
+
+---
+
+## Alerting
+
+CloudWatch alarms, notifying via SNS:
+
+- **Per-source silence** - one alarm per data source, fires if it hasn't fetched fresh data in an hour. This is what caught the NOAA WAF issue below.
+- **Schema change** - fires if the incoming data doesn't match the expected schema.
+- **Lambda crash** - fires on function errors.
+
+Plus GitHub Actions notifies on any failed deployment, or if the dev ETL pipeline crashes.
+
+---
+
 ## NOAA WAF Blocking
 
-`services.swpc.noaa.gov` started failing, caught by a CloudWatch alarm built to detect endpoint downtime. Set up an alternative official source for each dataset: NOAA's S3 bucket on AWS Data Exchange (mag/plasma/predicted-solar-cycle), GFZ Potsdam (Kp, the index's official source), Kyoto WDC (Dst, the index's official source), LISIRD (sunspot number, mirrors SILSO, the authoritative source). Solar imagery moved to NASA SDO's pre-rendered animations.
+`services.swpc.noaa.gov` started failing, caught by the per-source silence alarm above. Set up an alternative official source for each dataset: NOAA's S3 bucket on AWS Data Exchange (mag/plasma/predicted-solar-cycle), GFZ Potsdam (Kp, the index's official source), Kyoto WDC (Dst, the index's official source), LISIRD (sunspot number, mirrors SILSO, the authoritative source). Solar imagery moved to NASA SDO's pre-rendered animations.
 
 ---
 
@@ -90,16 +142,13 @@ Lambda duration and memory are now stable, no longer growing with time.
 
 ### Security
 - **AWS credentials** - GitHub Actions uses OIDC to assume an IAM role at runtime, no long-lived AWS keys stored
-- **Instance access** - SSH removed. Port 22 closed on the security group. Access via AWS Systems Manager Session Manager; no inbound ports required. GitHub Actions deploy uses `ssm send-command`
-- **DB read connection string** - stored on the EC2 instance, only accessible to the app
+- **GHCR push** - uses the workflow's own `GITHUB_TOKEN` with `packages: write`, so no separate registry credential exists to leak
+- **Render deploy hook** - stored as a GitHub Actions secret, and pinned to an explicit image tag rather than resolving `:latest` a second time on Render's side
+- **DB read connection string** - injected as a Render environment variable, never in the image
 - **DB write connection string** - stored as a Lambda environment variable
-- **Streamlit read-only DB role** - Streamlit only has SELECT permissions, no write access to the database
+- **API read-only DB role** - the API connects with SELECT permissions only, no write access to the database
 - **R2 credentials** - dev only, stored as GitHub Actions secrets for the dev ETL workflow
 - **AWS root account** - IAM user with admin access used for day-to-day operations, root account not used
-- **EC2 auto-recovery** - CloudWatch alarm on `StatusCheckFailed_System` triggers `ec2:recover` automatically on hardware failure. Provisioned in Terraform
-
-### Cloudflare R2 as dev/backup
-Dev ETL runs on GitHub Actions with R2 as raw storage. If prod S3 is ever lost, R2 serves as a backup source, which was an unpredicted benefit of having a separate ETL pipeline.
 
 ### Fully decoupled ETL pipeline
 Load writes to storage, transform reads from storage. No data threading between stages:
@@ -119,17 +168,16 @@ After monthly partitioning was introduced, this broke down. The model used for i
 
 The original coupling was a reasonable micro-optimisation at the time. Partitioning made it unworkable.
 
-### Terraform for EC2 provisioning
-Deliberate learning choice to gain IaC experience. Managing EC2, ECR, IAM, security groups, and networking in production via Terraform.
-
 ---
 
 ## Cost & Performance Optimisations
 
-- **EC2 over ECS** - avoids the cost of an Application Load Balancer; a single `t4g.micro` runs Docker/nginx/Certbot directly
+- **Managed hosting over self-hosted** - Render free tier for the API, Cloudflare Pages for the frontend; removed the EC2 instance and Elastic IP. The only remaining cost is the ETL pipeline, which is negligible
+- **In-memory API cache** - request volume is fully decoupled from database load, so refresh rate is a UI decision rather than a Supabase egress cost
+- **Bounded in-memory retention** - a full-history ETL backfill can't pull a year of data into the API's memory
 - **ECR lifecycle policy** - retain only the latest image, old images auto-deleted to prevent silent storage accumulation
+- **gzip+orjson raw storage** - smaller S3 objects, reducing per-run transfer
 - **CloudWatch log retention** - 30 days, not indefinite
 - **AWS Budgets alerts** - spend visibility and early warning on free tier
 - **24hr upsert window** (`upsert_hours`) - minimises data transferred to Supabase each run; doubles as a full-DB recovery lever
-- **Streamlit caching** - reduces repeated DB queries, important on free tier
 - **`del` after large datasets in ETL** - explicit cleanup after datasets are no longer needed; minor contribution to peak memory reduction

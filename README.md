@@ -2,7 +2,7 @@
 
 ## Summary
 
-End-to-end space weather data platform that ingests near real-time NOAA data, processes and stores it in AWS infrastructure, and runs machine learning-based Dst index predictions as part of an automated ETL pipeline. The system is orchestrated using AWS Lambda and EventBridge, with S3 for raw storage and Supabase for serving processed data, and is visualised through a live Streamlit dashboard. It includes handling for API schema changes, failure recovery across pipeline stages, and performance optimisation for serverless constraints.
+End-to-end space weather data platform that ingests near real-time NOAA data, processes and stores it in AWS infrastructure, and runs machine learning-based Dst index predictions as part of an automated ETL pipeline. The system is orchestrated using AWS Lambda and EventBridge, with S3 for raw storage and Supabase for serving processed data. A FastAPI service holds the served data in memory and keeps it fresh by polling the database for changes, and a React frontend reads exclusively from that API. It includes handling for NOAA API schema changes, failure recovery across pipeline stages, and performance optimisation for serverless constraints.
 
 ## Motivation
 
@@ -16,7 +16,7 @@ Space weather was a natural fit. Having studied it through my dissertation, and 
 
 ## Tech Stack
 
-**AWS** (Lambda · ECR · EventBridge · S3 · CloudWatch · SNS · IAM · EC2 · SSM) · **Streamlit** · **Supabase** (PostgreSQL database) · **Pandas** · **Keras / TensorFlow** · **GitHub Actions** · **Python** · **Docker** · **Terraform** · **Nginx** · **Cloudflare**
+**AWS** (Lambda · ECR · EventBridge · S3 · CloudWatch · SNS · IAM) · **FastAPI** · **React** · **Supabase** (PostgreSQL database) · **Pandas** · **ONNX** (Keras / TensorFlow) · **GitHub Actions** · **Python** · **Docker** · **Render** · **Cloudflare**
 
 ---
 
@@ -32,13 +32,14 @@ For a full record of architecture decisions and problems solved, see [DECISIONS.
 ---
 ## Core Logic
 
-This project is engineered as a decoupled system where data ingestion and visualisation operate independently to ensure high availability and UI responsiveness.
+This project is engineered as a decoupled system where data ingestion, serving, and visualisation operate independently to ensure high availability and UI responsiveness.
 
 ### 1. Automated ETL Pipeline
 * **Extract:** Pulls near-real-time JSON data from NOAA API endpoints.
 * **Transform:** Uses Pandas to clean, align, and transform datasets.
-* **Load:** Saves raw extracted JSON to AWS S3, then upserts transformed data into a serverless PostgreSQL database hosted on Supabase, replacing the previous 24 hours of data to account for any updates at source.
-* **Graceful Degradation:** Each stage failing independently means the next layer continues to serve data. Extraction failures do not affect the transform step, which falls back to the latest raw data in S3. Transform failures do not affect the dashboard, which reads from the cloud database. In the event of database failure, raw data persisted in S3 ensures the database can be fully reproduced. A parallel dev pipeline running on GitHub Actions with a Cloudflare R2 bucket provides an additional layer of redundancy - if prod raw storage is lost, the dev pipeline's R2 bucket can serve as a backup source.
+* **Load:** Saves raw extracted JSON to AWS S3 as gzipped payloads, then upserts transformed data into a serverless PostgreSQL database hosted on Supabase, replacing the previous 24 hours of data to account for any updates at source.
+* **Diff-Only Upserts:** Every table carries an `updated_at` column, set only when a row is new or a value has actually changed. Unchanged rows are left untouched.
+* **Graceful Degradation:** Each stage failing independently means the next layer continues to serve data. Extraction failures do not affect the transform step, which falls back to the latest raw data in S3. Transform failures do not affect the dashboard, which reads from the cloud database. In the event of database failure, raw data persisted in S3 ensures the database can be fully reproduced.
 * **Schema Flexible:** Handles format changes in NOAA API responses. After observing the Dst and Kp Index endpoints switching from a list of lists to a list of dictionaries format, format detection was introduced at extraction time to parse either structure correctly. The pipeline is also forward-compatible with future switches between the two formats.
 
 ### 2. ML Inference
@@ -49,30 +50,24 @@ This project is engineered as a decoupled system where data ingestion and visual
 * The model was trained on historical space weather data as part of a Final Year Project at university. For full details on the architecture, training process, and evaluation, see the [dissertation repository](https://github.com/Umair539/Dissertation).
 * The trained Keras model was converted to ONNX format, removing the TensorFlow dependency so that the memory consumption of the Lambda function would be significantly reduced.
 
-### 3. Interactive Dashboard
-* **Interactive Controls:** Uses radio buttons and dropdowns to let users filter date ranges (Last 24 Hours, Last Week, Last Month, etc.) and toggle between different space weather metrics.
-* **Dynamic Querying:** Uses dynamic SQL queries to pull only the data required for the user's current view based on what user has filtered, keeping the app lightweight.
-* **Auto-Refresh:** Automatically updates the charts to show the newest data from the scheduled pipeline without a manual reload.
-* **Caching:** Query results are cached to minimise repeated database calls and avoid exceeding free tier limits.
+### 3. API Caching Layer
+* **In-Memory Store:** A FastAPI service (`api/`) holds every served table in memory, updated in place by a background poller that only fetches new or updated rows.
+* **Bounded Memory:** Rolling retention per table keeps memory consumption stable.
+* Hosted on **Render**.
 
-### 4. Scheduled Orchestration
+### 4. Frontend
+* **Pages:** Home, Solar Wind, Geomagnetic Indices, Solar Activity, and an interactive Aurora globe.
+* **Auto-Refresh:** Charts and readings update automatically as new data arrives from the pipeline, no manual reload needed.
+* Built with React and ECharts, reading exclusively from the FastAPI caching layer.
+* Hosted on **Cloudflare Pages**.
+
+### 5. Scheduled Orchestration
 * The ETL pipeline is packaged as a Docker container, stored in **AWS ECR**, and deployed as an **AWS Lambda** function.
 * **AWS EventBridge Scheduler** triggers the Lambda every 15 minutes, keeping both S3 and the database continuously up to date.
 * **AWS CloudWatch** captures Lambda logs for monitoring and debugging each pipeline run.
 * **AWS SNS** sends alarm notifications when the pipeline fails, enabling rapid incident response.
 * **GitHub Actions** automates the deployment pipeline: on every push to main that changes relevant files, the Docker image is rebuilt, pushed to ECR, and the Lambda function is updated to use the latest image.
 * As NOAA API endpoints only provide the last week of data, this ensures the database is kept up to date during periods of inactivity.
-
-### 5. App Hosting
-
-* The Streamlit frontend is containerised and self-hosted on an **AWS EC2 instance**, provisioned with **Terraform** and served over HTTPS via Nginx and Certbot.
-* **Infrastructure as Code:** Terraform provisions the EC2 instance (`t4g.micro`), ECR repository, IAM role, security group, and Elastic IP.
-* **Automated Setup:** A `user_data.yaml` cloud-init config runs on first boot. It installs Docker and Nginx, authenticates with ECR via IAM role, pulls the app image, and starts the container.
-* **Reverse Proxy:** Nginx forwards traffic from port 80/443 to the Streamlit container on port 8501.
-* **TLS:** HTTPS provided by Certbot (Let's Encrypt). DNS managed via Cloudflare, pointed at the Elastic IP, serving the dashboard at https://spaceweatherdashboard.com
-* **Instance Access:** Port 22 is closed. Instance access uses AWS Systems Manager Session Manager, with no open inbound ports required.
-* **Auto-Recovery:** A CloudWatch alarm on `StatusCheckFailed_System` automatically recovers the EC2 instance on underlying hardware failure.
-* **CD:** GitHub Actions builds and pushes a new app image to ECR on every relevant push to `main`, then connects to the EC2 instance via SSM to pull the latest image and restart the container automatically.
 
 ### 6. Testing
 * **Unit tests** cover all individual transform functions -- outlier filtering, missing data handling, source fallback logic, column filtering, pressure calculation, model inference helpers, and more.
@@ -84,7 +79,8 @@ This project is engineered as a decoupled system where data ingestion and visual
 ### 7. Development Environment
 * A parallel dev environment mirrors the production pipeline for testing purposes.
 * The dev branch runs the pipeline on GitHub Actions (in contrast to AWS Lambda/EventBridge in prod), stores raw data in a Cloudflare R2 bucket, and writes to a separate dev Supabase instance, keeping test runs fully isolated from production data.
-* The Streamlit frontend can also be run locally for UI testing without affecting the live dashboard. It reads exclusively from the FastAPI caching layer (`run_api`, `API_BASE_URL`), holding no database connection of its own -- so running it end to end doubles as a live check that every API endpoint the planned React frontend will use returns what the charts expect.
+* The API runs locally with `run_api --env dev`, loading `.env.dev` and pointing at the dev database.
+* The frontend runs locally with `npm run dev` in `web/`, reading from `VITE_API_BASE_URL` (defaulting to `http://localhost:8000`).
 
 ---
 ## Data Source and Description
@@ -100,3 +96,4 @@ The data used can be seen in the table below
 | **Solar Wind Plasma** | Minute | `time_tag`, `speed`, `density`, `temperature` | AWS Open Data (S3) | — |
 | **Sunspots** | Daily | `Obsdate`, `swpc_ssn` | LISIRD | — |
 | **Predicted Solar Cycle** | Monthly | `time-tag`, `predicted_ssn` | AWS Open Data (S3) | `predicted_ssn` represents the predicted 13-month smoothed SSN, required as part of model input. Not used for visualisation. |
+| **Aurora (OVATION)** | ~5 minutes | `coordinates` (lon, lat, probability) | — | Nowcast only, served straight from the API's memory. Not stored in the database. |
