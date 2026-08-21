@@ -8,7 +8,7 @@ import {
   useApi,
   type SsnRow,
 } from "../app_utils";
-import { About, Segmented, Span } from "../components/Controls";
+import { About, Span } from "../components/Controls";
 import { PageHeader, Panel } from "../components/Panel";
 import { Async } from "../components/States";
 import { TimeSeriesChart, toPoints } from "../components/TimeSeriesChart";
@@ -25,14 +25,6 @@ const { title, subtitle, about } = content.pages.solarActivity;
 // NASA URLs, no different from the About text, and the prerender script
 // needs the same data to bake real <img> tags into the static shell.
 const SDO = content.sdoImages;
-
-const RANGES = [
-  { value: "1mo", label: "30 days" },
-  { value: "1y", label: "1 year" },
-  { value: "cycle", label: "Full cycle" },
-] as const;
-
-type Range = (typeof RANGES)[number]["value"];
 
 export function SolarActivity() {
   return (
@@ -107,53 +99,29 @@ function SolarCard({ image }: { image: (typeof SDO)[number] }) {
 }
 
 function SunspotPanel() {
-  // Defaults to the full cycle, matching the Streamlit radio's index=2.
-  const [range, setRange] = useState<Range>("cycle");
-  const state = useApi(
-    (signal) => (range === "cycle" ? api.ssnFullCycle(signal) : api.ssnRaw(range, signal)),
-    [range],
-    300_000,
-  );
-
-  // The x-axis span changes by two orders of magnitude across these ranges,
-  // so the tick format has to change with it - days, months, then years.
-  const tickFormat = range === "1mo" ? "%b %d %Y" : range === "1y" ? "%b %Y" : "%Y";
+  // Full cycle only - the daily/monthly ranges added little over the raw
+  // ~12 years, which already renders fine at full resolution.
+  const state = useApi(api.ssnFullCycle, [], 300_000);
 
   return (
     <Panel
       title="Sunspot Number"
       subtitle="daily"
       right={
-        <>
-          {state.data?.length ? (
-            <Span
-              from={caption(state.data.at(0)?.time)}
-              to={caption(state.data.at(-1)?.time)}
-            />
-          ) : null}
-          <Segmented
-            options={RANGES}
-            value={range}
-            onChange={setRange}
-            legend="Sunspot time range"
+        state.data?.length ? (
+          <Span
+            from={caption(state.data.at(0)?.time)}
+            to={caption(state.data.at(-1)?.time)}
           />
-        </>
+        ) : null
       }
     >
-      <Async state={state}>
-        {(rows) => <SsnChart rows={rows} tickFormat={tickFormat} />}
-      </Async>
+      <Async state={state}>{(rows) => <SsnChart rows={rows} />}</Async>
     </Panel>
   );
 }
 
-function SsnChart({
-  rows,
-  tickFormat,
-}: {
-  rows: SsnRow[];
-  tickFormat: "%b %d %Y" | "%b %Y" | "%Y";
-}) {
+function SsnChart({ rows }: { rows: SsnRow[] }) {
   const series = useMemo(
     () => [
       {
@@ -174,7 +142,7 @@ function SsnChart({
     <TimeSeriesChart
       series={series}
       yTitle="Sunspot count"
-      tickFormat={tickFormat}
+      tickFormat="%Y"
       height={340}
       ariaLabel="Sunspot number over time"
     />
