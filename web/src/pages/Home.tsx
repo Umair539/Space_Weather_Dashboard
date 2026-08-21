@@ -1,22 +1,15 @@
-import { useMemo } from "react";
-
 import {
   api,
+  auroraSeverity,
   bzSeverity,
-  dstColors,
   dstSeverity,
-  formatUtc,
-  kpSeverity,
-  parseApiTime,
   speedSeverity,
   useApi,
-  type DstRow,
 } from "../app_utils";
 import { KpGauge } from "../components/KpGauge";
 import { MetricCard } from "../components/MetricCard";
 import { PageHeader, Panel } from "../components/Panel";
 import { Async, ChartSkeleton, ErrorPanel } from "../components/States";
-import { TimeSeriesChart, toPoints } from "../components/TimeSeriesChart";
 import content from "../content.json";
 
 const { title, subtitle } = content.pages.home;
@@ -25,24 +18,23 @@ const { title, subtitle } = content.pages.home;
 const REFRESH_MS = 120_000;
 
 export function Home() {
-  const dst = useApi((s) => api.dst("1mo", s), [], REFRESH_MS);
-  const prediction = useApi((s) => api.dstNextPrediction(s), [], REFRESH_MS);
   const dstNow = useApi((s) => api.dstLatest(s), [], REFRESH_MS);
   const kpNow = useApi((s) => api.kpLatest(s), [], REFRESH_MS);
+  const aurora = useApi((s) => api.aurora(s), [], REFRESH_MS);
   const solarNow = useApi((s) => api.solarWindLatest(["speed", "bz"], s), [], REFRESH_MS);
 
   return (
     <>
       <PageHeader title={title} subtitle={subtitle} />
 
-      {/* The four readings lead, before any chart - they answer "what is it
-          doing right now", which the charts then put in context. */}
+      {/* The four readings lead - they answer what it is doing right now. */}
       <div className="metric-grid">
-        {kpNow.data && (
+        {aurora.data && (
           <MetricCard
-            label="Kp Index"
-            value={kpNow.data.Kp.toFixed(2)}
-            severity={kpSeverity(kpNow.data.Kp)}
+            label="Aurora Chance"
+            value={aurora.data.max_probability.toFixed(0)}
+            unit="%"
+            severity={auroraSeverity(aurora.data.max_probability)}
           />
         )}
         {dstNow.data && (
@@ -72,24 +64,6 @@ export function Home() {
       </div>
 
       <div className="stack" style={{ marginTop: 16 }}>
-        <Panel
-          title="Dst Index"
-          subtitle="last 30 days"
-          right={
-            prediction.data ? (
-              <span>
-                next hour{" "}
-                <strong style={{ color: "var(--text)", fontVariantNumeric: "tabular-nums" }}>
-                  {prediction.data.dst_predictions.toFixed(2)} nT
-                </strong>{" "}
-                · {predictionWindow(prediction.data.time)} UTC
-              </span>
-            ) : null
-          }
-        >
-          <Async state={dst}>{(rows) => <DstChart rows={rows} />}</Async>
-        </Panel>
-
         <div className="split">
           <Panel title="Planetary K-index" subtitle="now">
             <Async state={kpNow} height={290}>
@@ -103,52 +77,6 @@ export function Home() {
       </div>
     </>
   );
-}
-
-function DstChart({ rows }: { rows: DstRow[] }) {
-  const series = useMemo(
-    () => [
-      { name: "Observed", color: dstColors.observed, points: toPoints(rows, "dst") },
-      {
-        name: "Model prediction",
-        color: dstColors.predicted,
-        points: toPoints(rows, "dst_predictions"),
-      },
-    ],
-    [rows],
-  );
-
-  const hasData = rows.some((r) => r.dst !== null || r.dst_predictions !== null);
-  if (!hasData) return <ErrorPanel message="No Dst data in this window." />;
-
-  return (
-    <TimeSeriesChart
-      series={series}
-      yTitle="Dst (nT)"
-      tickFormat="%d %b"
-      // No explicit min/max - unlike Kp's fixed 0-9 scale, Dst has no
-      // natural range, so scale:true (TimeSeriesChart's default when
-      // neither bound is passed) picks round, evenly-spaced ticks with
-      // its own padding. Explicit min/max here used to be the data's own
-      // min/max +-5, which meant the axis boundary was almost never a
-      // round number - ECharts always labels the exact boundary value in
-      // addition to its normal ticks, so a non-round bound (e.g. -65)
-      // showed up cramped right next to the nearest real tick (-60).
-      ariaLabel="Observed and predicted Dst index over the last month"
-    />
-  );
-}
-
-/** "09 Aug 19:00 – 20:00" - predictions are for the hour they open. */
-function predictionWindow(iso: string): string {
-  const start = parseApiTime(iso);
-  const end = new Date(start.getTime() + 3_600_000);
-  return `${formatUtc(start, {
-    day: "2-digit",
-    month: "short",
-    hour: "2-digit",
-    minute: "2-digit",
-  })}–${formatUtc(end, { hour: "2-digit", minute: "2-digit" })}`;
 }
 
 function signed(value: number, digits: number): string {
