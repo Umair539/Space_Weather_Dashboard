@@ -320,9 +320,10 @@ button {
   padding: 16px;
 }
 
-/* Time series charts render at a fixed width rather than squeezing their
-   axis labels to fit - below that width this scrolls horizontally instead
-   of scrunching the ticks. */
+/* Time series charts fill the panel but never shrink past their own
+   min-width, rather than squeezing their axis labels to fit - below that
+   width this scrolls horizontally instead of scrunching the ticks. Above it
+   there's nothing to scroll and the bar never appears. */
 .chart-scroll {
   overflow-x: auto;
 }
