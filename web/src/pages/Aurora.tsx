@@ -384,6 +384,7 @@ function createGlobeScene(container: HTMLDivElement): GlobeScene {
   const controls = new OrbitControls(camera, renderer.domElement);
   controls.enableDamping = true;
   controls.dampingFactor = 0.05;
+  controls.enablePan = false;
   controls.screenSpacePanning = false;
   controls.minDistance = MIN_DISTANCE;
   controls.maxDistance = MAX_DISTANCE;
