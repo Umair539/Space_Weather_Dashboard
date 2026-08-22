@@ -37,7 +37,11 @@ const DATE_PART: Intl.DateTimeFormatOptions = { month: "short", day: "2-digit" }
 const TIME_PART: Intl.DateTimeFormatOptions = { hour: "2-digit", minute: "2-digit" };
 
 const HOUR_MS = 3_600_000;
-const TARGET_TICKS = 7;
+const TARGET_TICKS = 5;
+// Fixed chart width, regardless of viewport - wide enough that TARGET_TICKS
+// axis labels never crowd each other, even wrapped to two lines. Narrower
+// screens scroll to see the rest instead of squeezing this down.
+const CHART_WIDTH = 760;
 
 // Which kind of calendar unit each format's ticks step through - hours (or
 // whole days, which are just a 24h step) for anything with a day or finer
@@ -294,7 +298,10 @@ export function TimeSeriesChart({
     };
   }, [series, yTitle, tickFormat, yMin, yMax]);
 
-  return <EChart option={option} height={height} ariaLabel={ariaLabel} />;
+  // A fixed width rather than filling the container - on a narrow viewport
+  // that would otherwise crowd the axis ticks together, so this scrolls
+  // horizontally instead and keeps the same layout at every width.
+  return <EChart option={option} height={height} ariaLabel={ariaLabel} width={CHART_WIDTH} />;
 }
 
 /** Rows from the API -> chart points, dropping absent columns safely. */

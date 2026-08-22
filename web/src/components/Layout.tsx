@@ -73,9 +73,15 @@ function SectionMenu() {
         className="menu-button"
         aria-expanded={open}
         aria-haspopup="menu"
+        // The label itself hides below the width breakpoint (CSS), leaving
+        // an icon-only button - this keeps naming it for screen readers.
+        aria-label={`Section: ${current.label}`}
         onClick={() => setOpen((v) => !v)}
       >
-        {current.label}
+        <span className="menu-button-icon" aria-hidden>
+          {current.icon}
+        </span>
+        <span className="menu-button-label">{current.label}</span>
         <svg
           className="menu-chevron"
           width="12"

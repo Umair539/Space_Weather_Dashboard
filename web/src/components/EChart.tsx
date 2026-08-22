@@ -26,6 +26,12 @@ interface Props {
   height: number;
   /** Announced to screen readers, which can't read a canvas. */
   ariaLabel: string;
+  /**
+   * Fixed pixel width instead of filling the container. The chart itself
+   * sits in a horizontally-scrollable wrapper, so a narrow (mobile) viewport
+   * scrolls to see the rest rather than squeezing the axis labels together.
+   */
+  width?: number;
 }
 
 /**
@@ -33,7 +39,7 @@ interface Props {
  * wind window is ~10k points per series, which as SVG would be tens of
  * thousands of DOM nodes for React to reconcile on every hover.
  */
-export function EChart({ option, height, ariaLabel }: Props) {
+export function EChart({ option, height, ariaLabel, width }: Props) {
   const container = useRef<HTMLDivElement>(null);
   const chart = useRef<echarts.ECharts>(null);
 
@@ -62,12 +68,17 @@ export function EChart({ option, height, ariaLabel }: Props) {
     chart.current?.setOption(option, { notMerge: true });
   }, [option]);
 
-  return (
+  const canvas = (
     <div
       ref={container}
       role="img"
       aria-label={ariaLabel}
-      style={{ width: "100%", height }}
+      style={{ width: width ?? "100%", height }}
     />
   );
+
+  // Fixed-width charts need their own scroll wrapper - without one a narrow
+  // viewport would just clip the chart against the container edge instead
+  // of letting it scroll into view.
+  return width === undefined ? canvas : <div className="chart-scroll">{canvas}</div>;
 }

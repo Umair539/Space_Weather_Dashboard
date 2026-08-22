@@ -85,6 +85,8 @@ button {
   display: inline-flex;
   align-items: center;
   gap: 10px;
+  flex: none;
+  white-space: nowrap;
   font-weight: 650;
   font-size: 15px;
   color: var(--text);
@@ -169,6 +171,11 @@ button {
 
 .menu-button:hover {
   border-color: var(--accent);
+}
+
+.menu-button-icon {
+  font-size: 14px;
+  line-height: 1;
 }
 
 .menu-chevron {
@@ -313,6 +320,13 @@ button {
   padding: 16px;
 }
 
+/* Time series charts render at a fixed width rather than squeezing their
+   axis labels to fit - below that width this scrolls horizontally instead
+   of scrunching the ticks. */
+.chart-scroll {
+  overflow-x: auto;
+}
+
 /* ------------------------------------------------------ segmented control */
 .segmented {
   display: inline-flex;
@@ -396,7 +410,7 @@ button {
   gap: 12px;
 }
 
-@media (max-width: 860px) {
+@media (max-width: 640px) {
   .metric-grid {
     grid-template-columns: repeat(2, 1fr);
   }
@@ -719,6 +733,20 @@ label:has(.visually-hidden:focus-visible),
   outline-offset: 2px;
 }
 
+/* Below this the label and the brand name are fighting for the same row -
+ * drop the label and let the icon+chevron stand in for "this button opens
+ * the page picker", same as any icon-only nav button. */
+@media (max-width: 480px) {
+  .menu-button-label {
+    display: none;
+  }
+
+  .menu-button {
+    padding: 0 8px;
+    gap: 4px;
+  }
+}
+
 @media (max-width: 640px) {
   .status-chip {
     display: none;
@@ -728,10 +756,6 @@ label:has(.visually-hidden:focus-visible),
     margin-left: 0;
     text-align: left;
     width: 100%;
-  }
-
-  .metric-grid {
-    grid-template-columns: 1fr;
   }
 }
 

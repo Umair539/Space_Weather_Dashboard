@@ -26,12 +26,22 @@ const RANGES = [
 ] as const;
 
 export function GeomagIndices() {
+  // Defaults to 30 days, matching the Streamlit radio's index=2. Shared
+  // across both panels - one range applies to Dst and Kp together, rather
+  // than each plot carrying its own independent picker.
+  const [range, setRange] = useState<GeomagInterval>("1mo");
+
   return (
     <>
       <PageHeader title={title} subtitle={subtitle} />
+
+      <div className="toolbar">
+        <Segmented options={RANGES} value={range} onChange={setRange} legend="Time range" />
+      </div>
+
       <div className="stack">
-        <DstPanel />
-        <KpPanel />
+        <DstPanel range={range} />
+        <KpPanel range={range} />
       </div>
       <div style={{ marginTop: 16 }} className="stack">
         {about.map((section) => (
@@ -44,29 +54,19 @@ export function GeomagIndices() {
   );
 }
 
-function DstPanel() {
-  // Defaults to 30 days, matching the Streamlit radio's index=2.
-  const [range, setRange] = useState<GeomagInterval>("1mo");
+function DstPanel({ range }: { range: GeomagInterval }) {
   const state = useApi((s) => api.dst(range, s), [range], 120_000);
 
   return (
     <Panel
       title="Dst Index"
       right={
-        <>
-          {state.data?.length ? (
-            <Span
-              from={caption(state.data.at(0)?.time)}
-              to={caption(state.data.at(-1)?.time)}
-            />
-          ) : null}
-          <Segmented
-            options={RANGES}
-            value={range}
-            onChange={setRange}
-            legend="Dst time range"
+        state.data?.length ? (
+          <Span
+            from={caption(state.data.at(0)?.time)}
+            to={caption(state.data.at(-1)?.time)}
           />
-        </>
+        ) : null
       }
     >
       <Async state={state}>{(rows) => <DstChart rows={rows} />}</Async>
@@ -103,28 +103,19 @@ function DstChart({ rows }: { rows: DstRow[] }) {
   );
 }
 
-function KpPanel() {
-  const [range, setRange] = useState<GeomagInterval>("1mo");
+function KpPanel({ range }: { range: GeomagInterval }) {
   const state = useApi((s) => api.kp(range, s), [range], 120_000);
 
   return (
     <Panel
       title="Kp Index"
       right={
-        <>
-          {state.data?.length ? (
-            <Span
-              from={caption(state.data.at(0)?.time)}
-              to={caption(state.data.at(-1)?.time)}
-            />
-          ) : null}
-          <Segmented
-            options={RANGES}
-            value={range}
-            onChange={setRange}
-            legend="Kp time range"
+        state.data?.length ? (
+          <Span
+            from={caption(state.data.at(0)?.time)}
+            to={caption(state.data.at(-1)?.time)}
           />
-        </>
+        ) : null
       }
     >
       <Async state={state}>{(rows) => <KpChart rows={rows} />}</Async>
