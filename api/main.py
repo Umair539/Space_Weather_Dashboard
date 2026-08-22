@@ -92,13 +92,18 @@ def launch():
     parser = argparse.ArgumentParser()
     parser.add_argument("--env", choices=["dev", "prod"], default="dev")
     parser.add_argument("--port", type=int, default=8000)
+    # Localhost-only by default; --expose binds all interfaces so other
+    # devices on the same network (e.g. a phone testing the frontend) can
+    # reach it at this machine's LAN IP.
+    parser.add_argument("--expose", action="store_true")
     args = parser.parse_args()
 
     # Before uvicorn starts, so the engine (created lazily on first poll)
     # sees DATABASE_READ_URL. Deployed containers set env vars directly and
     # run `uvicorn api.main:app`, skipping this path entirely.
     load_dotenv(f".env.{args.env}", override=True)
-    uvicorn.run(app, host="0.0.0.0", port=args.port)
+    host = "0.0.0.0" if args.expose else "127.0.0.1"
+    uvicorn.run(app, host=host, port=args.port)
 
 
 if __name__ == "__main__":
