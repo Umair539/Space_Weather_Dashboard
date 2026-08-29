@@ -32,22 +32,10 @@ REFRESH_SECONDS = 300
 REQUEST_TIMEOUT = 30
 
 # Aurora values are a percentage chance of visible aurora overhead. Points
-# below this are the vast dim background covering most of both hemispheres:
-# ~2/3 of the grid is exactly 0, and what remains under 2% is not visible on
-# a globe at any zoom. Dropping them is what turns ~920KB into ~150KB. It is
-# a display floor, not a data correction - the raw feed is unmodified for
-# anyone who wants it.
-MIN_PROBABILITY = 2
-
-# The OVATION grid carries a thin band of low nonzero values along the
-# equator (latitudes -2..0, typically 1-5%) with nothing at all between
-# roughly 12 and 28 degrees either side of it. Aurora cannot occur there:
-# the oval sits over the magnetic poles, and even the Carrington event, the
-# most extreme storm on record, only pushed it to about 20 degrees magnetic
-# latitude. Rendered on a globe the band draws as a false equatorial ring,
-# so it's cut here. The 20 degree cutoff is well outside any real aurora
-# while sitting far above the artifact.
-MIN_ABS_LATITUDE = 20
+# below this are the vast dim background covering most of both hemispheres.
+# Dropping non-auroral values keeps payload bandwidth low while preserving
+# spatial continuity where the oval actually forms.
+MIN_PROBABILITY = 0
 
 
 class AuroraCache:
@@ -77,25 +65,22 @@ def parse_ovation(raw: dict) -> dict:
     """Turn NOAA's payload into the compact shape the globe consumes.
 
     Coordinates arrive as [longitude, latitude, probability] with longitude
-    on NOAA's 0-360 convention. The frontend (and every mapping library)
-    wants -180..180, so it's converted here rather than in the browser -
-    doing it server-side means it happens once per refresh instead of once
-    per visitor, and keeps the wire format immediately usable.
+    on NOAA's 0-360 convention. Converted to -180..180 here so the wire format
+    is immediately usable by standard mapping projections.
     """
+    raw_coords = raw.get("coordinates", ())
+
+    # Filter out empty background points below display threshold without slicing
+    # latitude gaps across the grid equator.
     points = [
-        # Rounded to whole percent: the source grid is integer-valued
-        # already, and floats would only add bytes.
         [lon if lon <= 180 else lon - 360, lat, value]
-        for lon, lat, value in raw.get("coordinates", ())
-        if value >= MIN_PROBABILITY and abs(lat) >= MIN_ABS_LATITUDE
+        for lon, lat, value in raw_coords
+        if value >= MIN_PROBABILITY
     ]
 
     return {
         "observation_time": raw.get("Observation Time"),
         "forecast_time": raw.get("Forecast Time"),
-        # Saves the frontend a pass over 20k points just to scale its colour
-        # ramp, and means an all-quiet forecast can't be rendered as though
-        # its dim maximum were a strong one.
         "max_probability": max((p[2] for p in points), default=0),
         "point_count": len(points),
         "points": points,
@@ -110,14 +95,7 @@ def fetch_ovation() -> dict:
 
 
 async def refresh_once() -> bool:
-    """One fetch/publish cycle. Returns whether the cache was updated.
-
-    Failures are logged and swallowed rather than raised: a refresh that
-    fails leaves the previous forecast in place, which is the right
-    behaviour for a nowcast that's replaced every few minutes anyway. The
-    endpoint reports how old what it's serving is, so a stall is visible to
-    clients instead of silently pretending to be current.
-    """
+    """One fetch/publish cycle. Returns whether the cache was updated."""
     try:
         payload = await asyncio.to_thread(fetch_ovation)
     except Exception:
