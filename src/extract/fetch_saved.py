@@ -37,6 +37,9 @@ def _fetch_full(storage, file_path):
     return pd.DataFrame(parse_data(raw))
 
 
+MIN_FULL_DAYS = 8
+
+
 def _fetch_partitions(storage, folder, filter_raw):
     logger.info(f"Fetching partitions for {folder} [filter_raw={filter_raw}]...")
 
@@ -44,13 +47,55 @@ def _fetch_partitions(storage, folder, filter_raw):
     if not metadata or "partitions" not in metadata:
         return pd.DataFrame()
 
-    if filter_raw:
-        months = metadata["partitions"][-2:]
+    partitions = metadata["partitions"]
+    if not partitions:
+        return pd.DataFrame()
+
+    if not filter_raw:
+        logger.info(f"Fetching months: {partitions}")
+        return _download_partitions(storage, folder, partitions)
+
+    # filter_raw: pull the last partition first, and only reach back to the
+    # month before it if the last one doesn't yet cover MIN_FULL_DAYS - e.g.
+    # early in a new month, the current partition alone is too thin a window.
+    last_month = partitions[-1]
+    last_data = storage.download_json(f"{folder}/dicts/{last_month}.json")
+
+    if _has_min_full_days(last_data, MIN_FULL_DAYS) or len(partitions) < 2:
+        months = [last_month]
     else:
-        months = metadata["partitions"]
+        months = [partitions[-2], last_month]
+        logger.info(
+            f"{folder}: {last_month} has fewer than {MIN_FULL_DAYS} full days, "
+            f"also fetching {partitions[-2]}"
+        )
+
+    if months == [last_month]:
+        # Already downloaded above - avoid fetching it again.
+        if not last_data:
+            logger.warning(
+                f"No partition data found for {folder}, returning empty DataFrame."
+            )
+            return pd.DataFrame()
+        return pd.DataFrame(parse_data(last_data))
+
     logger.info(f"Fetching months: {months}")
 
     return _download_partitions(storage, folder, months)
+
+
+def _has_min_full_days(data, min_days):
+    """Proxy check: assumes the partition starts on day 1 with no gaps, so the
+    day-of-month of its latest record is a stand-in for days elapsed. The
+    latest day itself may still be partial, so it needs day-of-month > min_days
+    (not >=) to count as min_days full days."""
+    if not data:
+        return False
+    records = parse_data(data)
+    if not records:
+        return False
+    max_day = max(int(record["time_tag"][8:10]) for record in records)
+    return max_day > min_days
 
 
 def _get_metadata(storage, folder):
