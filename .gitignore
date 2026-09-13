@@ -42,15 +42,12 @@ terraform/.terraform/
 terraform/*.tfstate
 terraform/*.tfstate.backup
 terraform/*.tfvars
-terraform/.terraform.lock.hcl
+# .terraform.lock.hcl deliberately NOT ignored - it should be committed
+# for reproducible provider versions (standard Terraform practice).
 
 #tests
 .coverage
 htmlcov/
-tests/unit_tests/utils/*
-tests/unit_tests/api/*
-tests/component_tests/api/*
-tests/integration_tests/api/*
 
 # react frontend
 web/node_modules/
@@ -58,13 +55,15 @@ web/dist/
 web/.env
 web/*.tsbuildinfo
 
-# streamlit app + its terraform/deploy tooling - moved to the
-# streamlit-app branch, kept there in case it's ever wanted again
+# streamlit app - moved to the streamlit-app branch, kept there in case
+# it's ever wanted again
 app/
 docker/app/
 .streamlit/
 .devcontainer/
-terraform/main.tf
-terraform/outputs.tf
-terraform/variables.tf
-terraform/user_data.yaml
+# NOTE: its old terraform/ deploy tooling used to be gitignored here too
+# (terraform/main.tf, outputs.tf, variables.tf, user_data.yaml) - removed
+# once the new terraform/ setup (prod ETL infra) started reusing those
+# same conventional filenames and got silently dropped by `git add
+# terraform/` with no warning. If a *.tf file ever mysteriously won't
+# stage, check here first.

@@ -13,6 +13,7 @@ run_etl = "scripts.run_etl:run_etl_pipeline"
 run_tests = "tests.run_tests:main"
 run_api = "api.main:launch"
 run_web = "scripts.run_web:run_web"
+run_compact_ovation = "scripts.compact_ovation:run_compact_ovation"
 
 [tool.setuptools.packages.find]
 where = ["."]

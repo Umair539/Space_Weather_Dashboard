@@ -1,0 +1,20 @@
+# Copy to terraform.tfvars (gitignored) and fill in the REPLACE_ME values.
+# Everything else already defaults to the real, live value - confirmed via
+# read-only AWS CLI access against the space-weather-etl IAM user
+# (aws lambda/ecr/events/iam/cloudwatch/sns/budgets describe/list/get calls).
+#
+# Sensitive values are better passed via TF_VAR_<name> env vars or a
+# secrets manager than committed here even locally - REPLACE_ME just marks
+# where a real value belongs.
+
+lambda_image_uri = "494487213442.dkr.ecr.eu-west-2.amazonaws.com/space-weather-etl:latest"
+
+database_url = "REPLACE_ME" # Supabase prod write connection string (Lambda env var, not readable via the CLI - dashboard write role differs from any read access granted)
+
+alert_email        = "REPLACE_ME" # already subscribed & confirmed on the live SNS topic - use that same address
+budget_alert_email = ""           # falls back to alert_email if left blank
+
+# --- Cloudflare R2 ---
+cloudflare_api_token = "REPLACE_ME" # R2 buckets aren't visible via the AWS credentials above - needs its own Cloudflare API token
+r2_access_key_id      = "REPLACE_ME" # R2 (S3-compatible) credentials, also not AWS-readable
+r2_secret_access_key  = "REPLACE_ME"

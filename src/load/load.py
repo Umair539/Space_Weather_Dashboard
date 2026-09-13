@@ -3,6 +3,7 @@ from concurrent.futures import ThreadPoolExecutor
 from src.utils.logging_utils import setup_logger
 from src.load.load_raw_json import load_raw_json
 from src.load.load_raw_rtsw import load_raw_rtsw
+from src.load.load_ovation import load_ovation
 from src.load.load_data_into_db import load_data_into_db
 
 logger = setup_logger("load_data", "load_data.log")
@@ -14,6 +15,7 @@ LOADERS = {
     "kp": load_raw_json,
     "ssn": load_raw_json,
     "smoothed_ssn": load_raw_json,
+    "ovation": load_ovation,
 }
 
 

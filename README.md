@@ -8,7 +8,7 @@ End-to-end space weather data platform that ingests near real-time NOAA data, pr
 
 My [dissertation](https://github.com/Umair539/Dissertation) involved training and testing machine learning models with historical space weather data. After working with static data, I wanted to gain experience working with live, frequently updated data, building something that continuously ingests, transforms, and delivers data to a frontend application.
 
-Space weather was a natural fit. Having studied it through my dissertation, and with astronomy being a genuine interest of mine, it made sense to keep working in the same domain. What started as a way to gain experience ended up growing into a full production-grade AWS pipeline with automated orchestration, ML inference, and a live dashboard.
+Space weather was a natural fit. Having studied it through my dissertation, and with astronomy being a genuine interest of mine, it made sense to keep working in the same domain. What started as a way to gain experience grew into a fully automated AWS data pipeline with scheduled orchestration, ML inference, and a live dashboard.
 
 **Live Dashboard Link:** https://spaceweatherdashboard.com
 
@@ -63,9 +63,8 @@ This project is engineered as a decoupled system where data ingestion, serving, 
 
 ### 5. Scheduled Orchestration
 * The ETL pipeline is packaged as a Docker container, stored in **AWS ECR**, and deployed as an **AWS Lambda** function.
-* **AWS EventBridge Scheduler** triggers the Lambda every 15 minutes, keeping both S3 and the database continuously up to date.
-* **AWS CloudWatch** captures Lambda logs for monitoring and debugging each pipeline run.
-* **AWS SNS** sends alarm notifications when the pipeline fails, enabling rapid incident response.
+* **AWS EventBridge** triggers the Lambda every ~3 minutes, keeping both S3 and the database continuously up to date. A separate trigger runs every day at midnight to compact that day's OVATION aurora data into a single Parquet file, which is then exported to a prod bucket in Cloudflare R2.
+* **AWS CloudWatch** captures Lambda logs for monitoring and debugging each pipeline run, plus per-source silence alarms, a schema-error alarm, and a Lambda-crash alarm, all notifying via **AWS SNS**.
 * **GitHub Actions** automates the deployment pipeline: on every push to main that changes relevant files, the Docker image is rebuilt, pushed to ECR, and the Lambda function is updated to use the latest image.
 * As NOAA API endpoints only provide the last week of data, this ensures the database is kept up to date during periods of inactivity.
 
@@ -73,8 +72,9 @@ This project is engineered as a decoupled system where data ingestion, serving, 
 * **Unit tests** cover all individual transform functions -- outlier filtering, missing data handling, source fallback logic, column filtering, pressure calculation, model inference helpers, and more.
 * **Component tests** cover all transform orchestrators end to end -- `process_rtsw`, `process_dst`, `process_kp`, `process_ssn`, `prepare_model_inputs`, `model_inference`, and others.
 * **Integration tests** run the full transform pipeline against a fixed fixture snapshot of real NOAA data, asserting schema, null counts and datetime index integrity.
+* **API tests** cover the FastAPI caching layer, poller, and every router, plus OVATION aurora data parsing.
 * **Coverage** of 90% across the transform layer enforced in CI, currently at 99%.
-* **CI gate** runs lint, unit, component, and integration tests on every push to `main` before the Docker build, blocking deploy on any failure.
+* **CI gate** runs lint and the full test suite on every push to `main` before either the Lambda or the API image is built, blocking deploy on any failure.
 
 ### 7. Development Environment
 * A parallel dev environment mirrors the production pipeline for testing purposes.

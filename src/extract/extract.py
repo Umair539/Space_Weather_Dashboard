@@ -1,3 +1,4 @@
+import os
 from concurrent.futures import ThreadPoolExecutor
 
 from src.utils.fetch_utils import put_fetch_metric
@@ -7,6 +8,7 @@ from src.extract.fetch_kp import fetch_kp
 from src.extract.fetch_dst import fetch_dst
 from src.extract.fetch_ssn import fetch_ssn
 from src.extract.fetch_smoothed_ssn import fetch_smoothed_ssn
+from src.extract.fetch_ovation import fetch_ovation
 from src.utils.logging_utils import setup_logger
 
 logger = setup_logger("extract_data", "extract_data.log")
@@ -23,6 +25,7 @@ LIVE_FETCHERS = {
     "kp": fetch_kp,
     "ssn": fetch_ssn,
     "smoothed_ssn": fetch_smoothed_ssn,
+    "ovation": fetch_ovation,
 }
 
 DATA_FOLDERS = {
@@ -41,7 +44,18 @@ def extract_live_data():
     logger.info("Starting live data extraction...")
     results = {}
 
+    # OVATION only runs in prod: dev's hourly cadence is too coarse to be a
+    # useful nowcast history, and letting the dev pipeline write into the
+    # same R2 archive as prod would mix test runs into the real record.
+    # Checked here rather than when LIVE_FETCHERS is built, since scripts
+    # that load ENV from a .env file (see run_etl.py) only set it after
+    # this module has already been imported.
+    skip_ovation = os.environ.get("ENV", "dev") != "prod"
+
     for name, fetcher in LIVE_FETCHERS.items():
+        if name == "ovation" and skip_ovation:
+            logger.info("ovation: skipping fetch, only runs in prod")
+            continue
         try:
             results[name] = fetcher()
             logger.info(f"Successfully retrieved data for {name}")

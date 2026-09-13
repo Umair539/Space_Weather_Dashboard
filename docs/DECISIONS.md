@@ -114,7 +114,7 @@ With the API caching layer and React frontend in place, the frontend could suppo
 
 ---
 
-## The API Caching Layer
+## API Caching Layer
 
 The API loads each table into memory once at startup, and a background poller checks each table on its own interval, fetching only rows with `updated_at` greater than the last fetch. Requests are served entirely from memory, so the database sees the same small load regardless of traffic.
 
@@ -124,11 +124,19 @@ The API loads each table into memory once at startup, and a background poller ch
 
 CloudWatch alarms, notifying via SNS:
 
-- **Per-source silence** - one alarm per data source, fires if it hasn't fetched fresh data in an hour. This is what caught the NOAA WAF issue below.
-- **Schema change** - fires if the incoming data doesn't match the expected schema.
+- **Per-source silence** - one alarm per data source, fires if it hasn't fetched fresh data in an hour. This is what caught the NOAA WAF issue below. Deliberately scoped to sustained downtime, not transient per-run failures - a source that fails outright but recovers within the hour doesn't page anyone, by design.
+- **Schema change** - a log metric filter on the Lambda's own logs (matching the literal string emitted when schema validation raises) feeds a single alarm, rather than a metric emitted directly by the pipeline code.
 - **Lambda crash** - fires on function errors.
 
+All three also notify on recovery (back to OK), not just on going into alarm.
+
 Plus GitHub Actions notifies on any failed deployment, or if the dev ETL pipeline crashes.
+
+---
+
+## Infrastructure as Code
+
+The prod AWS ETL stack and the Cloudflare R2 bucket were originally set up by hand in the AWS and Cloudflare consoles. Now under Terraform (`terraform/`), making future changes easier.
 
 ---
 

@@ -11,6 +11,9 @@ from src.utils.r2 import R2Client
 _client = None
 _lock = threading.Lock()
 
+_ovation_client = None
+_ovation_lock = threading.Lock()
+
 
 def get_storage_client():
     global _client
@@ -22,3 +25,15 @@ def get_storage_client():
                 else:
                     _client = R2Client()
     return _client
+
+
+def get_ovation_storage_client():
+    """OVATION grids are read straight from object storage rather than
+    proxied through the API, so unlike get_storage_client() this always
+    returns R2 - including in prod - regardless of ENV."""
+    global _ovation_client
+    if _ovation_client is None:
+        with _ovation_lock:
+            if _ovation_client is None:
+                _ovation_client = R2Client()
+    return _ovation_client

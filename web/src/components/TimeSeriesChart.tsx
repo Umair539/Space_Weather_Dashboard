@@ -1,5 +1,5 @@
 import type { EChartsCoreOption } from "echarts/core";
-import { useMemo } from "react";
+import { useCallback, useMemo, useState } from "react";
 
 import { formatUtc, parseApiTime, surface } from "../app_utils";
 import { EChart } from "./EChart";
@@ -37,11 +37,32 @@ const DATE_PART: Intl.DateTimeFormatOptions = { month: "short", day: "2-digit" }
 const TIME_PART: Intl.DateTimeFormatOptions = { hour: "2-digit", minute: "2-digit" };
 
 const HOUR_MS = 3_600_000;
-const TARGET_TICKS = 5;
-// Fixed chart width, regardless of viewport - wide enough that TARGET_TICKS
-// axis labels never crowd each other, even wrapped to two lines. Narrower
-// screens scroll to see the rest instead of squeezing this down.
-const CHART_WIDTH = 760;
+// Floor on the chart's width, not a fixed size: wide enough that the axis
+// labels never crowd each other even wrapped to two lines, and narrower
+// screens scroll to see the rest instead of squeezing this down. Above it
+// the chart fills whatever the panel gives it, so a desktop window doesn't
+// leave half the panel empty.
+const MIN_CHART_WIDTH = 760;
+// Plot-area insets, shared between the grid option and the tick-density
+// maths below - the labels are spaced across the plot, not the whole canvas.
+const GRID_LEFT = 72;
+const GRID_RIGHT = 44;
+// Roughly the closest two labels can sit before they read as crowded, which
+// is what the old fixed width was chosen around: 760 - 72 - 44 = 644px of
+// plot over 5 ticks. Holding the spacing rather than the count is what keeps
+// a stretched chart from ending up with five labels strung across 1200px.
+const TICK_SPACING = 130;
+const MIN_TICKS = 3;
+const MAX_TICKS = 12;
+// Until the chart has been measured, assume the floor - the same 5 ticks the
+// fixed-width version always drew, so the first paint never has to reflow.
+const DEFAULT_TARGET_TICKS = targetTicksFor(MIN_CHART_WIDTH);
+
+/** How many labels fit across a chart of this width without crowding. */
+function targetTicksFor(chartWidth: number): number {
+  const plot = chartWidth - GRID_LEFT - GRID_RIGHT;
+  return Math.min(MAX_TICKS, Math.max(MIN_TICKS, Math.round(plot / TICK_SPACING)));
+}
 
 // Which kind of calendar unit each format's ticks step through - hours (or
 // whole days, which are just a 24h step) for anything with a day or finer
@@ -55,8 +76,8 @@ const TICK_KIND: Record<Props["tickFormat"], TickKind> = {
   "%Y": "year",
 };
 
-// Spacings to try, smallest first, until the span fits in TARGET_TICKS
-// ticks - so a 24h chart gets one tick every 4h, a 7d chart one per
+// Spacings to try, smallest first, until the span fits in the target tick
+// count - so a 24h chart gets one tick every 4h, a 7d chart one per
 // midnight, a 30d chart one every 5 days, and so on, rather than a fixed
 // count of ticks landing wherever that happens to divide the span.
 // Every value here divides evenly into a day, so stepping from the Unix
@@ -69,13 +90,13 @@ const HOUR_STEPS = [1, 2, 3, 4, 6, 8, 12, 24, 48, 72, 120, 144, 240, 360, 720];
 // the data happens to start.
 const CALENDAR_STEPS = [1, 2, 3, 4, 6, 12];
 
-function hourTicks(min: number, max: number): number[] {
+function hourTicks(min: number, max: number, targetTicks: number): number[] {
   for (const stepH of HOUR_STEPS) {
     const stepMs = stepH * HOUR_MS;
     const first = Math.ceil(min / stepMs) * stepMs;
     const last = Math.floor(max / stepMs) * stepMs;
     const count = last >= first ? Math.round((last - first) / stepMs) + 1 : 0;
-    if (count <= TARGET_TICKS || stepH === HOUR_STEPS[HOUR_STEPS.length - 1]) {
+    if (count <= targetTicks || stepH === HOUR_STEPS[HOUR_STEPS.length - 1]) {
       const ticks: number[] = [];
       for (let t = first; t <= last; t += stepMs) ticks.push(t);
       return ticks.length ? ticks : [min, max];
@@ -90,7 +111,12 @@ const monthIndex = (t: number) => {
 };
 const fromMonthIndex = (i: number) => Date.UTC(Math.floor(i / 12), i % 12, 1);
 
-function calendarTicks(min: number, max: number, unit: "month" | "year"): number[] {
+function calendarTicks(
+  min: number,
+  max: number,
+  unit: "month" | "year",
+  targetTicks: number,
+): number[] {
   const toIndex = unit === "month" ? monthIndex : (t: number) => new Date(t).getUTCFullYear();
   const fromIndex = unit === "month" ? fromMonthIndex : (i: number) => Date.UTC(i, 0, 1);
   const minIdx = toIndex(min);
@@ -100,7 +126,7 @@ function calendarTicks(min: number, max: number, unit: "month" | "year"): number
     const first = Math.ceil(minIdx / step) * step;
     const last = Math.floor(maxIdx / step) * step;
     const count = last >= first ? Math.round((last - first) / step) + 1 : 0;
-    if (count <= TARGET_TICKS || step === CALENDAR_STEPS[CALENDAR_STEPS.length - 1]) {
+    if (count <= targetTicks || step === CALENDAR_STEPS[CALENDAR_STEPS.length - 1]) {
       const ticks: number[] = [];
       for (let i = first; i <= last; i += step) ticks.push(fromIndex(i));
       return ticks.length ? ticks : [min, max];
@@ -121,9 +147,15 @@ function calendarTicks(min: number, max: number, unit: "month" | "year"): number
  * arbitrary minute, and ECharts' automatic tick algorithm doesn't know or
  * care where the window's real edges are. This computes the tick values
  * directly instead, at the coarsest nice spacing that still keeps the
- * axis under TARGET_TICKS labels.
+ * axis under targetTicks labels - which is itself a function of how wide
+ * the chart ended up, so a stretched chart gets more of them rather than
+ * the same five spread thinner.
  */
-function niceTicks(series: Series[], tickFormat: Props["tickFormat"]): number[] | undefined {
+function niceTicks(
+  series: Series[],
+  tickFormat: Props["tickFormat"],
+  targetTicks: number,
+): number[] | undefined {
   let min = Infinity;
   let max = -Infinity;
   for (const s of series) {
@@ -135,7 +167,9 @@ function niceTicks(series: Series[], tickFormat: Props["tickFormat"]): number[] 
   if (!Number.isFinite(min) || !Number.isFinite(max)) return undefined;
 
   const kind = TICK_KIND[tickFormat];
-  return kind === "hour" ? hourTicks(min, max) : calendarTicks(min, max, kind);
+  return kind === "hour"
+    ? hourTicks(min, max, targetTicks)
+    : calendarTicks(min, max, kind, targetTicks);
 }
 
 export function TimeSeriesChart({
@@ -147,6 +181,16 @@ export function TimeSeriesChart({
   height = 400,
   ariaLabel,
 }: Props) {
+  // How many labels the axis can carry, derived from the width the chart
+  // actually got. Storing the tick count rather than the raw pixel width
+  // means dragging a window edge only re-renders when the answer changes,
+  // instead of on every observed frame.
+  const [targetTicks, setTargetTicks] = useState(DEFAULT_TARGET_TICKS);
+  const onResize = useCallback(
+    (chartWidth: number) => setTargetTicks(targetTicksFor(chartWidth)),
+    [],
+  );
+
   const option = useMemo<EChartsCoreOption>(() => {
     const label = (value: number) => {
       const date = new Date(value);
@@ -157,7 +201,7 @@ export function TimeSeriesChart({
       }
       return formatUtc(date, TICK_OPTIONS[tickFormat]);
     };
-    const ticks = niceTicks(series, tickFormat);
+    const ticks = niceTicks(series, tickFormat, targetTicks);
 
     return {
       backgroundColor: "transparent",
@@ -174,8 +218,8 @@ export function TimeSeriesChart({
       // edge, since ECharts centres a label on its tick rather than
       // clamping it inside the plot area.
       grid: {
-        left: 72,
-        right: 44,
+        left: GRID_LEFT,
+        right: GRID_RIGHT,
         top: series.length > 1 ? 48 : 16,
         // Extra room when the label wraps to two lines - unwrapped labels
         // only need enough for one.
@@ -296,12 +340,21 @@ export function TimeSeriesChart({
         sampling: "lttb",
       })),
     };
-  }, [series, yTitle, tickFormat, yMin, yMax]);
+  }, [series, yTitle, tickFormat, yMin, yMax, targetTicks]);
 
-  // A fixed width rather than filling the container - on a narrow viewport
-  // that would otherwise crowd the axis ticks together, so this scrolls
-  // horizontally instead and keeps the same layout at every width.
-  return <EChart option={option} height={height} ariaLabel={ariaLabel} width={CHART_WIDTH} />;
+  // Fills the container, down to a floor - on a narrow viewport anything
+  // less would crowd the axis ticks together, so below MIN_CHART_WIDTH this
+  // scrolls horizontally instead; above it the chart takes the full width of
+  // the panel and adds labels to match.
+  return (
+    <EChart
+      option={option}
+      height={height}
+      ariaLabel={ariaLabel}
+      minWidth={MIN_CHART_WIDTH}
+      onResize={onResize}
+    />
+  );
 }
 
 /** Rows from the API -> chart points, dropping absent columns safely. */

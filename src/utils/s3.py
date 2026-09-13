@@ -39,3 +39,36 @@ class S3Client:
             ContentType="application/json",
             ContentEncoding="gzip",
         )
+
+    def download_bytes(self, key):
+        # See r2.py - same reasoning, no gzip suffix for already-compressed
+        # binary formats like Parquet.
+        try:
+            response = self.client.get_object(Bucket=self.bucket, Key=key)
+            return response["Body"].read()
+        except self.client.exceptions.NoSuchKey:
+            return None
+
+    def upload_bytes(self, key, data, content_type="application/octet-stream"):
+        self.client.put_object(
+            Bucket=self.bucket,
+            Key=key,
+            Body=data,
+            ContentType=content_type,
+        )
+
+    def list_keys(self, prefix):
+        keys = []
+        paginator = self.client.get_paginator("list_objects_v2")
+        for page in paginator.paginate(Bucket=self.bucket, Prefix=prefix):
+            keys.extend(obj["Key"] for obj in page.get("Contents", []))
+        return keys
+
+    def delete_objects(self, keys):
+        # delete_objects caps at 1000 keys per call.
+        for i in range(0, len(keys), 1000):
+            batch = keys[i : i + 1000]
+            self.client.delete_objects(
+                Bucket=self.bucket,
+                Delete={"Objects": [{"Key": k} for k in batch]},
+            )
