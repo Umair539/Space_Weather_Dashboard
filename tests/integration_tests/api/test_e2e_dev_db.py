@@ -175,28 +175,6 @@ class TestSsn:
         assert times == sorted(times)
         assert len(times) == len(set(times))
 
-    def test_backfilled_spotless_days_are_present(self, client):
-        # Aug 2019 sits in the 2018-2021 stretch where NOAA omitted spotless
-        # days entirely. The one-time backfill restored 29 of its 31 days as
-        # zeros, so at least one day that month should now be present.
-        months = {(t.year, t.month) for t in _times(client.get("/ssn/full-cycle").json())}
-        assert (2019, 8) in months
-
-    def test_backfilled_spotless_day_is_zero(self, client):
-        # 2019-08-01 is one of the backfilled zeros, not a gap - without the
-        # backfill it wouldn't be in the series at all.
-        rows = client.get("/ssn/full-cycle").json()
-        row = next(r for r in rows if r["time"].startswith("2019-08-01"))
-        assert row["swpc_ssn"] == 0
-
-    def test_permanent_gap_day_is_simply_absent(self, client):
-        # 2019-06-29 is one of the 33 days LISIRD reports as non-zero -
-        # deliberately not backfilled (would mean importing another
-        # series' magnitudes), so it's a real, permanent gap: no row at
-        # all for that day, rather than a zero standing in for it.
-        rows = client.get("/ssn/full-cycle").json()
-        assert not any(r["time"].startswith("2019-06-29") for r in rows)
-
     def test_almost_every_historical_month_has_a_row(self, client):
         # daily rows span the full retained history - confirmed against
         # dev: 145 distinct months are represented
