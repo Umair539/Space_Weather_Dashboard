@@ -14,27 +14,17 @@ permissions:
   contents: read
 
 jobs:
+  test:
+    uses: ./.github/workflows/test.yml
+
   deploy:
+    needs: test
     runs-on: ubuntu-latest
     environment: prod
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.11"
-
-      - name: Install dependencies
-        run: pip install -e ".[dev]"
-
-      - name: Run lint
-        run: run_tests lint
-
-      - name: Run all tests
-        run: run_tests all
 
       - name: Configure AWS credentials (OIDC)
         uses: aws-actions/configure-aws-credentials@v4
