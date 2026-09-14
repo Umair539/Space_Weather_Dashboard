@@ -42,6 +42,12 @@ def test_setup_logger_creates_logger_with_handlers(mock_get_logger):
         mock_logger.setLevel.assert_called_once_with(logging.DEBUG)
         assert mock_logger.addHandler.call_count == 2
 
+        # Close the real FileHandler setup_logger opened on test.log -
+        # otherwise the tempdir cleanup below fails on Windows, which
+        # (unlike POSIX) won't remove a directory with an open file in it.
+        for call in mock_logger.addHandler.call_args_list:
+            call.args[0].close()
+
 
 @patch("src.utils.logging_utils.logging.getLogger")
 def test_setup_logger_skips_handlers_if_already_exist(mock_get_logger):

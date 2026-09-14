@@ -8,15 +8,19 @@ def _ensure_log_directory(base_path: Optional[str] = None) -> Path:
     """Create logs directory if it doesn't exist.
 
     Args:
-        base_path: Base path for log directory. Defaults to project root.
+        base_path: Directory to put the logs directory under. Only ever
+            passed by tests, to keep them off the real project logs/ -
+            defaults to this module's project root.
 
     Returns:
         Path to the logs directory.
     """
     if os.environ.get("AWS_LAMBDA_FUNCTION_NAME"):
         log_directory = Path("/tmp/logs")
+    elif base_path is not None:
+        log_directory = Path(base_path) / "logs"
     else:
-        project_root = Path(base_path or __file__).resolve().parent.parent
+        project_root = Path(__file__).resolve().parent.parent
         log_directory = project_root / "logs"
 
     log_directory.mkdir(parents=True, exist_ok=True)
