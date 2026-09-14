@@ -70,18 +70,11 @@ def _fetch_partitions(storage, folder, filter_raw):
             f"also fetching {partitions[-2]}"
         )
 
-    if months == [last_month]:
-        # Already downloaded above - avoid fetching it again.
-        if not last_data:
-            logger.warning(
-                f"No partition data found for {folder}, returning empty DataFrame."
-            )
-            return pd.DataFrame()
-        return pd.DataFrame(parse_data(last_data))
-
     logger.info(f"Fetching months: {months}")
 
-    return _download_partitions(storage, folder, months)
+    # last_month is already downloaded above - reuse it instead of fetching
+    # it again.
+    return _download_partitions(storage, folder, months, prefetched={last_month: last_data})
 
 
 def _has_min_full_days(data, min_days):
@@ -105,20 +98,32 @@ def _get_metadata(storage, folder):
     return metadata
 
 
-def _download_partitions(storage, folder, months):
+def _download_partitions(storage, folder, months, prefetched=None):
     if not months:
         return pd.DataFrame()
 
-    # Each month is its own object in storage - independent downloads, so
-    # fetch them concurrently instead of one at a time. This is what made
-    # mag/plasma (5 months each) the slowest part of extraction.
-    with ThreadPoolExecutor(max_workers=len(months)) as executor:
-        results = executor.map(
-            lambda month: storage.download_json(f"{folder}/dicts/{month}.json"), months
-        )
+    prefetched = prefetched or {}
+    to_fetch = [month for month in months if month not in prefetched]
+
+    fetched = {}
+    if to_fetch:
+        # Each month is its own object in storage - independent downloads, so
+        # fetch them concurrently instead of one at a time. This is what made
+        # mag/plasma (5 months each) the slowest part of extraction.
+        with ThreadPoolExecutor(max_workers=len(to_fetch)) as executor:
+            fetched = dict(
+                zip(
+                    to_fetch,
+                    executor.map(
+                        lambda month: storage.download_json(f"{folder}/dicts/{month}.json"),
+                        to_fetch,
+                    ),
+                )
+            )
 
     records = []
-    for data in results:
+    for month in months:
+        data = prefetched.get(month, fetched.get(month))
         if data:
             records.extend(data)
 
