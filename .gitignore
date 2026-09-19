@@ -29,13 +29,9 @@ model/*.keras
 # vscode
 .vscode
 
-# one-time scripts
-scripts/r2_migration.py
-scripts/partition_script.py
-scripts/run_extract.py
-scripts/run_transform.py
-scripts/fixture_data.py
-scripts/backfill_ssn.py
+# non-prod scripts (one-time migrations, dev-testing tools, etc.) - anything that isn't wired up
+# as one of pyproject.toml's [project.scripts] entry points belongs here, not scripts/ directly
+scripts/dev/
 
 #terraform
 terraform/.terraform/
